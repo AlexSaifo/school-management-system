@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
     //   };
     // }
 
+    
     // Filter announcements based on user role (for non-admin users)
     if (userRole && userRole !== 'ADMIN') {
       // Map user roles to target roles
