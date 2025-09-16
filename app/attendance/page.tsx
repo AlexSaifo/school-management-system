@@ -6,6 +6,8 @@ import SidebarLayout from '@/components/layout/SidebarLayout';
 import TeacherAttendance from '@/components/attendance/TeacherAttendance';
 import ParentAttendance from '@/components/attendance/ParentAttendance';
 import StudentAttendance from '@/components/attendance/StudentAttendance';
+import AdminAttendance from '@/components/attendance/AdminAttendance';
+import { useTranslation } from 'react-i18next';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -39,6 +41,7 @@ function a11yProps(index: number) {
 }
 
 export default function AttendancePage() {
+  const { t } = useTranslation();
   const [userRole, setUserRole] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
@@ -159,19 +162,21 @@ export default function AttendancePage() {
         <Box>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={tabValue} onChange={handleTabChange} aria-label="attendance tabs">
-              <Tab label="Teacher View" {...a11yProps(0)} />
-              <Tab label="Parent View" {...a11yProps(1)} />
-              <Tab label="Student View" {...a11yProps(2)} />
+              <Tab label={t('attendance.admin.overview')} {...a11yProps(0)} />
+              <Tab label={t('attendance.admin.teacherView')} {...a11yProps(1)} />
             </Tabs>
           </Box>
 
           <TabPanel value={tabValue} index={0}>
-            <TeacherAttendance />
+            <AdminAttendance />
           </TabPanel>
           <TabPanel value={tabValue} index={1}>
-            <ParentAttendance />
+            <TeacherAttendance />
           </TabPanel>
           <TabPanel value={tabValue} index={2}>
+            <ParentAttendance />
+          </TabPanel>
+          <TabPanel value={tabValue} index={3}>
             <StudentAttendance />
           </TabPanel>
         </Box>
@@ -186,7 +191,7 @@ export default function AttendancePage() {
         return (
           <Box>
             <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 3 }}>
-              Teacher Attendance Management
+              {t('attendance.admin.teacherDescription')}
             </Typography>
             <TeacherAttendance />
           </Box>
@@ -195,27 +200,17 @@ export default function AttendancePage() {
         return (
           <Box>
             <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 3 }}>
-              My Children's Attendance
+              {t('attendance.admin.parentDescription')}
             </Typography>
             <ParentAttendance />
           </Box>
         );
-      case 'STUDENT':
-        return (
-          <Box>
-            <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 3 }}>
-              My Attendance
-            </Typography>
-            <Alert severity="info" sx={{ mt: 2 }}>
-              Students cannot access attendance management. Please contact your teacher or parent for attendance information.
-            </Alert>
-          </Box>
-        );
+
       default:
         return (
           <Box>
             <Typography variant="h6" color="text.secondary">
-              Please log in to view attendance information.
+              {t('attendance.admin.error')}
             </Typography>
           </Box>
         );
@@ -227,10 +222,10 @@ export default function AttendancePage() {
       <SidebarLayout>
         <Box>
           <Typography variant="h4" component="h1" gutterBottom>
-            Attendance Management
+            {t('attendance.admin.pageTitle')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Loading...
+            {t('attendance.admin.loading')}
           </Typography>
         </Box>
       </SidebarLayout>
@@ -241,14 +236,14 @@ export default function AttendancePage() {
     <SidebarLayout>
       <Box>
         <Typography variant="h4" component="h1" gutterBottom>
-          Attendance Management
+          {t('attendance.admin.pageTitle')}
         </Typography>
 
         {/* Only show tabs-related state for ADMIN users */}
         {userRole === 'ADMIN' && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              Admin View - Switch between different user perspectives
+              {t('attendance.admin.adminDescription')}
             </Typography>
           </Box>
         )}

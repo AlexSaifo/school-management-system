@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Only parents can access this endpoint
-    if (decoded.role !== 'PARENT') {
+    // Only parents and admins can access this endpoint
+    if (decoded.role !== 'PARENT' && decoded.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 

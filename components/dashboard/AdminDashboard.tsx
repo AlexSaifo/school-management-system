@@ -45,9 +45,11 @@ import {
   School,
   TrendingUp,
   Settings,
+  Assessment,
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import AdminAttendance from '@/components/attendance/AdminAttendance';
 
 interface User {
   id: string;
@@ -88,6 +90,11 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [events, setEvents] = useState<SchoolEvent[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementType[]>([]);
+  const [attendanceStats, setAttendanceStats] = useState({
+    totalStudents: 0,
+    presentToday: 0,
+    attendanceRate: 0,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -133,6 +140,10 @@ export default function AdminDashboard() {
     else if (tabValue === 1) fetchEvents();
     else if (tabValue === 2) fetchAnnouncements();
   }, [tabValue]);
+
+  useEffect(() => {
+    fetchAttendanceStats();
+  }, [token]);
 
   const fetchUsers = async () => {
     if (!token) return;
@@ -185,6 +196,26 @@ export default function AdminDashboard() {
       setError('Failed to fetch announcements');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAttendanceStats = async () => {
+    if (!token) return;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/attendance/summary?date=${today}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAttendanceStats({
+          totalStudents: data.overallStats.totalStudents,
+          presentToday: data.overallStats.totalPresent,
+          attendanceRate: data.overallStats.overallAttendanceRate,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch attendance stats:', error);
     }
   };
 
@@ -319,7 +350,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const StatsCard = ({ title, value, icon, color = 'primary' }: any) => (
+  const StatsCard = ({ title, value, subtitle, icon, color = 'primary' }: any) => (
     <Card sx={{ height: '100%' }}>
       <CardContent>
         <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -330,6 +361,11 @@ export default function AdminDashboard() {
             <Typography variant="h4" component="h2" color={`${color}.main`} fontWeight="bold">
               {value}
             </Typography>
+            {subtitle && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {subtitle}
+              </Typography>
+            )}
           </Box>
           <Box sx={{ color: `${color}.main` }}>
             {icon}
@@ -351,7 +387,7 @@ export default function AdminDashboard() {
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Total Students"
+            title={t('dashboard.totalStudents')}
             value={users.filter(u => u.role === 'STUDENT').length}
             icon={<People fontSize="large" />}
             color="primary"
@@ -359,7 +395,7 @@ export default function AdminDashboard() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Total Teachers"
+            title={t('dashboard.totalTeachers')}
             value={users.filter(u => u.role === 'TEACHER').length}
             icon={<School fontSize="large" />}
             color="success"
@@ -367,7 +403,7 @@ export default function AdminDashboard() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Active Events"
+            title={t('dashboard.activeEvents')}
             value={events.filter(e => e.isActive).length}
             icon={<Event fontSize="large" />}
             color="warning"
@@ -375,10 +411,19 @@ export default function AdminDashboard() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Announcements"
+            title={t('announcements')}
             value={announcements.filter(a => a.isActive).length}
             icon={<Announcement fontSize="large" />}
             color="error"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatsCard
+            title={t('todayAttendance')}
+            value={`${attendanceStats.attendanceRate}%`}
+            subtitle={`${attendanceStats.presentToday}/${attendanceStats.totalStudents} ${t('attendance.present').toLowerCase()}`}
+            icon={<Assessment fontSize="large" />}
+            color="info"
           />
         </Grid>
       </Grid>
@@ -386,10 +431,11 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <Paper sx={{ width: '100%' }}>
         <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tab label="User Management" />
-          <Tab label="Events" />
-          <Tab label="Announcements" />
-          <Tab label="Settings" />
+          <Tab label={t('navigation.userManagement')} />
+          <Tab label={t('navigation.events')} />
+          <Tab label={t('navigation.announcements')} />
+          <Tab label={t('navigation.attendance')} />
+          <Tab label={t('common.settings')} />
         </Tabs>
 
         {/* Users Tab */}
@@ -566,8 +612,13 @@ export default function AdminDashboard() {
           </Box>
         )}
 
-        {/* Settings Tab */}
+        {/* Attendance Tab */}
         {tabValue === 3 && (
+          <AdminAttendance />
+        )}
+
+        {/* Settings Tab */}
+        {tabValue === 4 && (
           <Box sx={{ p: 3 }}>
             <Typography variant="h5" fontWeight="bold" mb={3}>
               System Settings

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    if (decoded.role !== 'STUDENT') {
+    if (decoded.role !== 'STUDENT' && decoded.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
