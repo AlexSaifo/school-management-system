@@ -1,0 +1,571 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum TargetRole {
+  ALL
+  STUDENTS
+  PARENTS
+  TEACHERS
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String?
+  role      Role     @default(STUDENT)
+  status    Status   @default(ACTIVE)
+  firstName String
+  lastName  String
+  phone     String?
+  address   String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Role-specific relationships
+  admin   Admin?
+  teacher Teacher?
+  student Student?
+  parent  Parent?
+
+  // Authentication sessions
+  sessions Session[]
+  accounts Account[]
+
+  // Created content
+  events        Event[]
+  announcements Announcement[]
+
+  @@map("users")
+}
+
+model Event {
+  id            String      @id @default(cuid())
+  title         String
+  titleAr       String?
+  description   String?
+  descriptionAr String?
+  eventDate     DateTime
+  eventTime     String?
+  location      String?
+  locationAr    String?
+  type          EventType   @default(GENERAL)
+  targetRoles   TargetRole[] @default([ALL])
+  createdById   String
+  creator       User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("events")
+}
+
+model Admin {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissions Json? // Store admin permissions as JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model Teacher {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId    String   @unique
+  department    String
+  qualification String
+  experience    Int // years of experience
+  salary        Decimal?
+  joinDate      DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  classRoomsAsTeacher ClassRoom[]      @relation("ClassTeacher")
+  teacherSubjects     TeacherSubject[]
+  attendances         Attendance[]
+  assignments         Assignment[]
+  exams               Exam[]
+  timetables          Timetable[]
+
+  @@map("teachers")
+}
+
+model Student {
+  id               String     @id @default(cuid())
+  userId           String     @unique
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId        String     @unique
+  classRoomId      String?
+  classRoom        ClassRoom? @relation(fields: [classRoomId], references: [id])
+  rollNumber       String?
+  dateOfBirth      DateTime
+  bloodGroup       String?
+  emergencyContact String?
+  admissionDate    DateTime
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Relationships
+  parents               StudentParent[]
+  attendances           Attendance[]
+  grades                Grade[]
+  assignmentSubmissions AssignmentSubmission[]
+  examResults           ExamResult[]
+
+  @@map("students")
+}
+
+model Parent {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occupation String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
+  children StudentParent[]
+
+  @@map("parents")
+}
+
+model StudentParent {
+  id           String  @id @default(cuid())
+  studentId    String
+  parentId     String
+  relationship String // Father, Mother, Step-Father, Step-Mother, Guardian, etc.
+  student      Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent       Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, parentId])
+  @@map("student_parents")
+}
+
+// ClassRoom model - combines class and its main room (الشعبة مع غرفتها الأساسية)
+model ClassRoom {
+  id             String     @id @default(cuid())
+  name           String // "الصف الأول الابتدائي - شعبة أولى"
+  nameAr         String // Arabic name
+  section        String // "أولى", "ثانية", "ثالثة"
+  sectionNumber  Int // 1, 2, 3, 4...
+  gradeLevelId   String
+  gradeLevel     GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  classTeacherId String? // Main class teacher
+  classTeacher   Teacher?   @relation("ClassTeacher", fields: [classTeacherId], references: [id])
+
+  // Room information (integrated)
+  roomNumber String // "101", "102", "201A"
+  floor      Int // Floor number
+  capacity   Int // Maximum students
+  facilities String[] // Basic facilities for this classroom
+
+  academicYear String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relationships
+  students    Student[]
+  attendances Attendance[]
+  assignments Assignment[]
+  exams       Exam[]
+  timetables  Timetable[]
+
+  @@unique([gradeLevelId, sectionNumber, academicYear])
+  @@unique([roomNumber])
+  @@map("classrooms")
+}
+
+// Special Locations - for labs, computer rooms, music rooms, etc. (الأماكن الخاصة)
+model SpecialLocation {
+  id          String       @id @default(cuid())
+  name        String // "Science Lab", "Computer Room", "Music Room"
+  nameAr      String // "مختبر العلوم", "غرفة الحاسوب", "غرفة الموسيقى"
+  type        LocationType
+  floor       Int // Floor number
+  capacity    Int // Maximum students
+  facilities  String[] // Special equipment/facilities
+  description String? // Additional info
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relationships - only for special classes/activities
+  timetables Timetable[]
+
+  @@unique([name])
+  @@map("special_locations")
+}
+
+enum LocationType {
+  LABORATORY // مختبر
+  COMPUTER_LAB // غرفة حاسوب
+  LIBRARY // مكتبة
+  GYMNASIUM // صالة رياضية
+  AUDITORIUM // قاعة محاضرات
+  ART_ROOM // غرفة فنون
+  MUSIC_ROOM // غرفة موسيقى
+  CAFETERIA // كافيتيريا
+  PLAYGROUND // باحة المدرسة
+  STORAGE // مخزن
+  OFFICE // مكتب
+  OTHER // أخرى
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  name        String // English name
+  nameAr      String // Arabic name
+  code        String   @unique
+  description String?
+  color       String? // Color code for timetable display
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  gradeSubjects   GradeSubject[]
+  grades          Grade[]
+  assignments     Assignment[]
+  exams           Exam[]
+  timetables      Timetable[]
+  teacherSubjects TeacherSubject[]
+
+  @@map("subjects")
+}
+
+model GradeSubject {
+  id           String     @id @default(cuid())
+  gradeLevelId String
+  subjectId    String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id], onDelete: Cascade)
+  subject      Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  isRequired   Boolean    @default(true)
+  weeklyHours  Int        @default(3) // Hours per week for this subject in this grade
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([gradeLevelId, subjectId])
+  @@map("grade_subjects")
+}
+
+model TeacherSubject {
+  id        String   @id @default(cuid())
+  teacherId String
+  subjectId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  isPrimary Boolean  @default(false) // Is this the primary subject for the teacher
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teacherId, subjectId])
+  @@map("teacher_subjects")
+}
+
+model Attendance {
+  id          String           @id @default(cuid())
+  studentId   String
+  teacherId   String
+  classRoomId String
+  timetableId String? // Link to specific timetable entry (subject/time slot) - nullable for migration
+  date        DateTime
+  status      AttendanceStatus
+  remarks     String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classRoom ClassRoom @relation(fields: [classRoomId], references: [id], onDelete: Cascade)
+  timetable Timetable? @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, timetableId, date]) // One attendance per student per subject per day
+  @@map("attendances")
+}
+
+model Grade {
+  id         String   @id @default(cuid())
+  studentId  String
+  subjectId  String
+  marks      Decimal
+  totalMarks Decimal
+  examType   String // Midterm, Final, Quiz, Assignment
+  examDate   DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("grades")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+model Announcement {
+  id          String      @id @default(cuid())
+  title       String
+  content     String
+  targetRoles TargetRole[] @default([ALL])
+  priority    Priority    @default(NORMAL)
+  isActive    Boolean     @default(true)
+  expiresAt   DateTime?
+  createdById String
+  creator     User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("announcements")
+}
+
+model Assignment {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  classRoomId  String
+  classRoom    ClassRoom @relation(fields: [classRoomId], references: [id], onDelete: Cascade)
+  subjectId    String
+  subject      Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId    String
+  teacher      Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  dueDate      DateTime
+  totalMarks   Decimal
+  instructions String?
+  attachments  Json? // Array of file URLs
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Student submissions
+  submissions AssignmentSubmission[]
+
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id            String     @id @default(cuid())
+  assignmentId  String
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  content       String?
+  attachments   Json? // Array of file URLs
+  submittedAt   DateTime   @default(now())
+  marksObtained Decimal?
+  feedback      String?
+  gradedAt      DateTime?
+  gradedById    String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@map("assignment_submissions")
+}
+
+model Exam {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  classRoomId  String
+  classRoom    ClassRoom @relation(fields: [classRoomId], references: [id], onDelete: Cascade)
+  subjectId    String
+  subject      Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId    String
+  teacher      Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  examDate     DateTime
+  duration     Int // in minutes
+  totalMarks   Decimal
+  instructions String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Exam results
+  results ExamResult[]
+
+  @@map("exams")
+}
+
+model ExamResult {
+  id            String   @id @default(cuid())
+  examId        String
+  exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  marksObtained Decimal
+  grade         String?
+  remarks       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([examId, studentId])
+  @@map("exam_results")
+}
+
+model Timetable {
+  id String @id @default(cuid())
+
+  // Main classroom (الشعبة الأساسية)
+  classRoomId String
+  classRoom   ClassRoom @relation(fields: [classRoomId], references: [id], onDelete: Cascade)
+
+  // Subject and teacher
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Location - either in main classroom or special location
+  specialLocationId String?
+  specialLocation   SpecialLocation? @relation(fields: [specialLocationId], references: [id])
+
+  // Time information
+  timeSlotId String
+  timeSlot   TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int // 0-6 (Sunday to Saturday)
+  slotType   SlotType @default(LESSON)
+  notes      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
+  attendances Attendance[]
+
+  @@unique([classRoomId, timeSlotId, dayOfWeek])
+  @@map("timetables")
+}
+
+model TimeSlot {
+  id        String   @id @default(cuid())
+  name      String // Period 1, Period 2, Break, etc.
+  nameAr    String // الحصة الأولى, الحصة الثانية, الراحة, etc.
+  startTime String // HH:MM format
+  endTime   String // HH:MM format
+  slotOrder Int // Order of the slot in the day (1, 2, 3, etc.)
+  slotType  SlotType @default(LESSON)
+  duration  Int // Duration in minutes
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  timetables Timetable[]
+
+  @@unique([slotOrder])
+  @@map("time_slots")
+}
+
+enum SlotType {
+  LESSON // Regular class/subject
+  BREAK // Rest/break time
+  LUNCH // Lunch break
+  ASSEMBLY // Morning assembly
+  FREE // Free period
+  ACTIVITY // Extra-curricular activity
+}
+
+// Academic Grade Levels
+model GradeLevel {
+  id          String   @id @default(cuid())
+  name        String // English name (Grade 1, Grade 2, etc.)
+  nameAr      String // Arabic name (الصف الأول, الصف الثاني, etc.)
+  level       Int // Numeric level (1, 2, 3, etc.)
+  description String? // Optional description
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  classRooms    ClassRoom[] // Updated relationship
+  gradeSubjects GradeSubject[]
+
+  @@unique([level])
+  @@map("grade_levels")
+}
+
+enum EventType {
+  GENERAL
+  ACADEMIC
+  SPORTS
+  CULTURAL
+  MEETING
+  HOLIDAY
+  EXAM
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}

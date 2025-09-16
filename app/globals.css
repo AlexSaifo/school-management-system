@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Custom styles for the school management system */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Smooth transitions */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* RTL/LTR Support */
+[dir='rtl'] {
+  font-family: 'Tajawal', 'Cairo', 'Amiri', 'Noto Sans Arabic', sans-serif;
+}
+
+[dir='ltr'] {
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+}
+
+/* RTL specific adjustments */
+[dir='rtl'] .MuiDrawer-paper {
+  border-left: 1px solid #e0e0e0 !important;
+  border-right: none !important;
+}
+
+[dir='ltr'] .MuiDrawer-paper {
+  border-right: 1px solid #e0e0e0 !important;
+  border-left: none !important;
+}
+
+/* RTL text alignment */
+[dir='rtl'] .MuiTypography-root {
+  text-align: right;
+}
+
+[dir='ltr'] .MuiTypography-root {
+  text-align: left;
+}
+
+/* Input field alignment for RTL */
+[dir='rtl'] .MuiInputBase-input {
+  text-align: right;
+}
+
+[dir='ltr'] .MuiInputBase-input {
+  text-align: left;
+}
+
+/* Table cell alignment */
+[dir='rtl'] .MuiTableCell-root {
+  text-align: right;
+}
+
+[dir='ltr'] .MuiTableCell-root {
+  text-align: left;
+}
+
+/* Menu item alignment */
+[dir='rtl'] .MuiMenuItem-root {
+  justify-content: flex-end;
+}
+
+[dir='ltr'] .MuiMenuItem-root {
+  justify-content: flex-start;
+}
+
+/* Smooth transitions for language switching */
+html {
+  transition: direction 0.3s ease;
+}
+
+/* Arabic number support */
+[dir='rtl'] {
+  font-feature-settings: 'liga' off;
+  font-variant-numeric: lining-nums;
+}
+
+/* Custom animation for RTL/LTR transition */
+.language-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+/* RTL Button Icon Spacing Fixes */
+[dir='rtl'] .MuiButton-root .MuiButton-startIcon {
+  margin-left: 8px;
+  margin-right: 0;
+}
+
+[dir='rtl'] .MuiButton-root .MuiButton-endIcon {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+[dir='ltr'] .MuiButton-root .MuiButton-startIcon {
+  margin-left: 8px;
+  margin-right: 0;
+}
+
+[dir='ltr'] .MuiButton-root .MuiButton-endIcon {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+/* Additional spacing for better visual separation in RTL */
+[dir='rtl'] .MuiButton-root {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+[dir='rtl'] .MuiButton-root.MuiButton-sizeSmall {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+[dir='rtl'] .MuiButton-root.MuiButton-sizeLarge {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* Chip icon spacing for RTL */
+[dir='rtl'] .MuiChip-root .MuiChip-icon {
+  margin-left: 6px;
+  margin-right: 0;
+  order: 2; /* Move icon to the right of text */
+}
+
+[dir='rtl'] .MuiChip-root .MuiChip-label {
+  order: 1; /* Keep text on the left */
+}
+
+[dir='ltr'] .MuiChip-root .MuiChip-icon {
+  margin-left: 0;
+  margin-right: 6px;
+  order: 1;
+}
+
+[dir='ltr'] .MuiChip-root .MuiChip-label {
+  order: 2;
+}
