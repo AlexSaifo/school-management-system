@@ -38,6 +38,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface GradeAttendance {
   id: string;
@@ -79,6 +80,7 @@ interface OverallStats {
 export default function AdminAttendance() {
   const { token } = useAuth();
   const { t } = useTranslation();
+  const { language } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [attendanceData, setAttendanceData] = useState<{
     date: string;
@@ -87,6 +89,11 @@ export default function AdminAttendance() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Helper function to get the appropriate name based on current language
+  const getLocalizedName = (item: { name: string; nameAr: string }) => {
+    return language === 'ar' ? item.nameAr : item.name;
+  };
 
   const fetchAttendanceData = async (date: string) => {
     setLoading(true);
@@ -264,7 +271,7 @@ export default function AdminAttendance() {
               <CardContent>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography variant="h6" fontWeight="bold">
-                    {grade.name} ({t('attendance.admin.level')} {grade.level})
+                    {getLocalizedName(grade)} ({t('attendance.admin.level')} {grade.level})
                   </Typography>
                   <Chip
                     label={`${grade.attendanceRate}%`}
@@ -291,7 +298,7 @@ export default function AdminAttendance() {
                       {grade.classrooms.map((classroom) => (
                         <TableRow key={classroom.id}>
                           <TableCell>
-                            {classroom.name} - {classroom.section}
+                            {getLocalizedName(classroom)} - {classroom.section}
                           </TableCell>
                           <TableCell>{classroom.roomNumber}</TableCell>
                           <TableCell align="center">{classroom.totalStudents}</TableCell>

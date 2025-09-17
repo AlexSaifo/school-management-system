@@ -29,12 +29,15 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Snackbar,
+  Alert as MuiAlert,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Grade {
   id: string;
@@ -95,6 +98,7 @@ interface Student {
 
 export default function TeacherAttendance() {
   const { t } = useTranslation();
+  const { language } = useLanguage();
   const [grades, setGrades] = useState<Grade[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -106,14 +110,47 @@ export default function TeacherAttendance() {
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(dayjs());
 
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info',
+  });
 
   const [attendanceDialog, setAttendanceDialog] = useState<{
     open: boolean;
     student: Student | null;
   }>({ open: false, student: null });
+
+  // Helper functions for snackbar
+  const showSuccessSnackbar = (message: string) => {
+    setSnackbar({
+      open: true,
+      message,
+      severity: 'success',
+    });
+  };
+
+  const showErrorSnackbar = (message: string) => {
+    setSnackbar({
+      open: true,
+      message,
+      severity: 'error',
+    });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  // Helper function to get the appropriate name based on current language
+  const getLocalizedName = (item: { name: string; nameAr: string }) => {
+    return language === 'ar' ? item.nameAr : item.name;
+  };
 
   // Load grades on component mount
   useEffect(() => {
@@ -155,10 +192,10 @@ export default function TeacherAttendance() {
         const data = await response.json();
         setGrades(data);
       } else {
-        setError('Failed to load grades');
+        showErrorSnackbar(t('attendance.failedToLoadGrades', 'Failed to load grades'));
       }
     } catch (error) {
-      setError('Failed to load grades');
+      showErrorSnackbar(t('attendance.failedToLoadGrades', 'Failed to load grades'));
     } finally {
       setLoading(false);
     }
@@ -172,10 +209,10 @@ export default function TeacherAttendance() {
         const data = await response.json();
         setClassrooms(data);
       } else {
-        setError('Failed to load classrooms');
+        showErrorSnackbar(t('attendance.failedToLoadClassrooms', 'Failed to load classrooms'));
       }
     } catch (error) {
-      setError('Failed to load classrooms');
+      showErrorSnackbar(t('attendance.failedToLoadClassrooms', 'Failed to load classrooms'));
     } finally {
       setLoading(false);
     }
@@ -189,10 +226,10 @@ export default function TeacherAttendance() {
         const data = await response.json();
         setSubjects(data);
       } else {
-        setError('Failed to load subjects');
+        showErrorSnackbar(t('attendance.failedToLoadSubjects', 'Failed to load subjects'));
       }
     } catch (error) {
-      setError('Failed to load subjects');
+      showErrorSnackbar(t('attendance.failedToLoadSubjects', 'Failed to load subjects'));
     } finally {
       setLoading(false);
     }
@@ -206,16 +243,22 @@ export default function TeacherAttendance() {
         const data = await response.json();
         setStudents(data);
       } else {
-        setError('Failed to load students');
+        showErrorSnackbar(t('attendance.failedToLoadStudents', 'Failed to load students'));
       }
     } catch (error) {
-      setError('Failed to load students');
+      showErrorSnackbar(t('attendance.failedToLoadStudents', 'Failed to load students'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAttendanceChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED') => {
+  const handleAttendanceChange = async (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED') => {
+    if (!selectedClassroom || !selectedSubject || !selectedDate) {
+      showErrorSnackbar(t('attendance.selectGradeClassroomSubjectDate', 'Please select grade, classroom, subject, and date'));
+      return;
+    }
+
+    // Update local state immediately for UI responsiveness
     setStudents(prevStudents =>
       prevStudents.map(student =>
         student.id === studentId
@@ -230,6 +273,64 @@ export default function TeacherAttendance() {
           : student
       )
     );
+
+    try {
+      const response = await fetch('/api/attendance/students', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          classroomId: selectedClassroom,
+          subjectId: selectedSubject,
+          date: selectedDate.format('YYYY-MM-DD'),
+          attendanceRecords: [{
+            studentId,
+            status,
+            remarks: students.find(s => s.id === studentId)?.attendance?.remarks || '',
+          }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        showErrorSnackbar(errorData.error || t('attendance.attendanceUpdateFailed', 'Failed to update attendance'));
+        // Revert the local state change on error
+        setStudents(prevStudents =>
+          prevStudents.map(student =>
+            student.id === studentId
+              ? {
+                  ...student,
+                  attendance: {
+                    id: student.attendance?.id || '',
+                    status: student.attendance?.status || 'PRESENT',
+                    remarks: student.attendance?.remarks || '',
+                  },
+                }
+              : student
+          )
+        );
+      } else {
+        showSuccessSnackbar(t('attendance.attendanceUpdated', 'Attendance updated successfully'));
+      }
+    } catch (error) {
+      showErrorSnackbar(t('attendance.attendanceUpdateFailed', 'Failed to update attendance'));
+      // Revert the local state change on error
+      setStudents(prevStudents =>
+        prevStudents.map(student =>
+          student.id === studentId
+            ? {
+                ...student,
+                attendance: {
+                  id: student.attendance?.id || '',
+                  status: student.attendance?.status || 'PRESENT',
+                  remarks: student.attendance?.remarks || '',
+                },
+              }
+            : student
+        )
+      );
+    }
   };
 
   const handleRemarksChange = (studentId: string, remarks: string) => {
@@ -247,49 +348,6 @@ export default function TeacherAttendance() {
           : student
       )
     );
-  };
-
-  const saveAttendance = async () => {
-    if (!selectedClassroom || !selectedSubject || !selectedDate) {
-      setError('Please select grade, classroom, subject, and date');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError('');
-      setSuccess('');
-
-      const attendanceRecords = students.map(student => ({
-        studentId: student.id,
-        status: student.attendance?.status || 'PRESENT',
-        remarks: student.attendance?.remarks || '',
-      }));
-
-      const response = await fetch('/api/attendance/students', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          classroomId: selectedClassroom,
-          subjectId: selectedSubject,
-          date: selectedDate.format('YYYY-MM-DD'),
-          attendanceRecords,
-        }),
-      });
-
-      if (response.ok) {
-        setSuccess('Attendance saved successfully');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to save attendance');
-      }
-    } catch (error) {
-      setError('Failed to save attendance');
-    } finally {
-      setSaving(false);
-    }
   };
 
   const getStatusColor = (status: string) => {
@@ -310,96 +368,75 @@ export default function TeacherAttendance() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'PRESENT':
-        return 'Present';
+        return t('attendance.present', 'Present');
       case 'ABSENT':
-        return 'Absent';
+        return t('attendance.absent', 'Absent');
       case 'LATE':
-        return 'Late';
+        return t('attendance.late', 'Late');
       case 'EXCUSED':
-        return 'Excused';
+        return t('attendance.excused', 'Excused');
       default:
-        return 'Not Marked';
+        return t('attendance.notMarked', 'Not Marked');
     }
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box >
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
-
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
               <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Grade</InputLabel>
+                <InputLabel>{t('attendance.selectGrade', 'Grade')}</InputLabel>
                 <Select
                   value={selectedGrade}
-                  label="Grade"
+                  label={t('attendance.selectGrade', 'Grade')}
                   onChange={(e) => setSelectedGrade(e.target.value)}
                 >
                   {grades.map((grade) => (
                     <MenuItem key={grade.id} value={grade.id}>
-                      {grade.name} ({grade.nameAr})
+                      {getLocalizedName(grade)}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
 
               <FormControl sx={{ minWidth: 200 }} disabled={!selectedGrade}>
-                <InputLabel>Classroom</InputLabel>
+                <InputLabel>{t('attendance.selectClassroom', 'Classroom')}</InputLabel>
                 <Select
                   value={selectedClassroom}
-                  label="Classroom"
+                  label={t('attendance.selectClassroom', 'Classroom')}
                   onChange={(e) => setSelectedClassroom(e.target.value)}
                 >
                   {classrooms.map((classroom) => (
                     <MenuItem key={classroom.id} value={classroom.id}>
-                      {classroom.name} ({classroom._count.students} students)
+                      {getLocalizedName(classroom)} ({classroom._count.students} students)
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
 
               <FormControl sx={{ minWidth: 200 }} disabled={!selectedClassroom}>
-                <InputLabel>Subject</InputLabel>
+                <InputLabel>{t('attendance.selectSubject', 'Subject')}</InputLabel>
                 <Select
                   value={selectedSubject}
-                  label="Subject"
+                  label={t('attendance.selectSubject', 'Subject')}
                   onChange={(e) => setSelectedSubject(e.target.value)}
                 >
                   {subjects.map((subject) => (
                     <MenuItem key={subject.id} value={subject.id}>
-                      {subject.name} ({subject.nameAr})
+                      {getLocalizedName(subject)}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
 
               <DatePicker
-                label="Date"
+                label={t('attendance.selectDate', 'Date')}
                 value={selectedDate}
                 onChange={(newValue) => setSelectedDate(newValue)}
                 slotProps={{ textField: { sx: { minWidth: 200 } } }}
               />
-
-              <Button
-                variant="contained"
-                onClick={saveAttendance}
-                disabled={saving || !selectedClassroom || !selectedSubject || !selectedDate}
-                sx={{ minWidth: 120 }}
-              >
-                {saving ? <CircularProgress size={20} /> : 'Save Attendance'}
-              </Button>
             </Box>
           </CardContent>
         </Card>
@@ -414,17 +451,17 @@ export default function TeacherAttendance() {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Student Attendance
+                {t('attendance.studentAttendance', 'Student Attendance')}
               </Typography>
               <TableContainer component={Paper}>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Roll No.</TableCell>
-                      <TableCell>Student Name</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Remarks</TableCell>
-                      <TableCell>Actions</TableCell>
+                      <TableCell>{t('attendance.rollNo', 'Roll No.')}</TableCell>
+                      <TableCell>{t('attendance.studentName', 'Student Name')}</TableCell>
+                      <TableCell>{t('attendance.status', 'Status')}</TableCell>
+                      <TableCell>{t('attendance.remarks', 'Remarks')}</TableCell>
+                      <TableCell>{t('attendance.actions', 'Actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -448,10 +485,10 @@ export default function TeacherAttendance() {
                             value={student.attendance?.status || 'PRESENT'}
                             onChange={(e) => handleAttendanceChange(student.id, e.target.value as any)}
                           >
-                            <FormControlLabel value="PRESENT" control={<Radio />} label="Present" />
-                            <FormControlLabel value="ABSENT" control={<Radio />} label="Absent" />
-                            <FormControlLabel value="LATE" control={<Radio />} label="Late" />
-                            <FormControlLabel value="EXCUSED" control={<Radio />} label="Excused" />
+                            <FormControlLabel value="PRESENT" control={<Radio />} label={t('attendance.present', 'Present')} />
+                            <FormControlLabel value="ABSENT" control={<Radio />} label={t('attendance.absent', 'Absent')} />
+                            <FormControlLabel value="LATE" control={<Radio />} label={t('attendance.late', 'Late')} />
+                            <FormControlLabel value="EXCUSED" control={<Radio />} label={t('attendance.excused', 'Excused')} />
                           </RadioGroup>
                         </TableCell>
                       </TableRow>
@@ -465,9 +502,24 @@ export default function TeacherAttendance() {
 
         {students.length === 0 && !loading && selectedClassroom && selectedSubject && selectedDate && (
           <Alert severity="info">
-            No students found in this classroom.
+            {t('attendance.noStudentsFound', 'No students found in this classroom.')}
           </Alert>
         )}
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <MuiAlert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </MuiAlert>
+        </Snackbar>
       </Box>
     </LocalizationProvider>
   );

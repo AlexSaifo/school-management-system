@@ -29,6 +29,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Child {
   id: string;
@@ -99,6 +100,7 @@ interface AttendanceData {
 
 export default function ParentAttendance() {
   const { t } = useTranslation();
+  const { language } = useLanguage();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
@@ -108,6 +110,11 @@ export default function ParentAttendance() {
   const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+
+  // Helper function to get the appropriate name based on current language
+  const getLocalizedName = (item: { name: string; nameAr: string }) => {
+    return language === 'ar' ? item.nameAr : item.name;
+  };
 
   // Load children on component mount
   useEffect(() => {
@@ -242,7 +249,7 @@ export default function ParentAttendance() {
                 >
                   {children.map((child) => (
                     <MenuItem key={child.id} value={child.id}>
-                      {child.firstName} {child.lastName} - {child.classRoom?.name || 'No Class'}
+                      {child.firstName} {child.lastName} - {child.classRoom ? getLocalizedName(child.classRoom) : 'No Class'}
                     </MenuItem>
                   ))}
                 </Select>
@@ -260,7 +267,7 @@ export default function ParentAttendance() {
                   </MenuItem>
                   {getUniqueSubjects().map((subject) => (
                     <MenuItem key={subject?.id} value={subject?.id}>
-                      {subject?.name} ({subject?.nameAr})
+                      {subject ? getLocalizedName(subject) : 'Unknown'}
                     </MenuItem>
                   ))}
                 </Select>
@@ -311,11 +318,11 @@ export default function ParentAttendance() {
                           Student ID: {attendanceData.student.studentId}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Class: {attendanceData.student.classRoom?.name || 'Not Assigned'}
+                          Class: {attendanceData.student.classRoom ? getLocalizedName(attendanceData.student.classRoom) : 'Not Assigned'}
                         </Typography>
                         {attendanceData.student.classRoom?.gradeLevel && (
                           <Typography variant="body2" color="text.secondary">
-                            Grade: {attendanceData.student.classRoom.gradeLevel.name}
+                            Grade: {getLocalizedName(attendanceData.student.classRoom.gradeLevel)}
                           </Typography>
                         )}
                       </Box>
@@ -393,7 +400,7 @@ export default function ParentAttendance() {
                               {dayjs(record.date).format('MMM DD, YYYY')}
                             </TableCell>
                             <TableCell>
-                              {record.subject ? `${record.subject.name} (${record.subject.code})` : 'N/A'}
+                              {record.subject ? `${getLocalizedName(record.subject)} (${record.subject.code})` : 'N/A'}
                             </TableCell>
                             <TableCell>
                               {record.timeSlot ? `${record.timeSlot.startTime} - ${record.timeSlot.endTime}` : 'N/A'}
