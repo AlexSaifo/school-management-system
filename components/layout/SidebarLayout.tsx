@@ -297,7 +297,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
           </Avatar>
           <Box sx={{ textAlign: isRTL ? "right" : "left" }}>
             <Typography variant="h6" noWrap component="div" fontWeight="bold">
-              EduManage
+              {t("dashboard.appName")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {t("dashboard.welcomeMessage")}
@@ -483,7 +483,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
             sx={{ flexGrow: 1 }}
             suppressHydrationWarning
           >
-            {t("navigation.dashboard")} {user?.role}
+            {t("dashboard.dashboardHeader")}
           </Typography>
 
           <Box display="flex" alignItems="center" gap={1}>

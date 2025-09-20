@@ -1,7 +1,16 @@
 'use client';
 
 import React from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, useTheme, IconButton } from '@mui/material';
+import { 
+  BarChart, Bar, PieChart, Pie, LineChart, Line, XAxis, YAxis, 
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
+  Cell, Area, AreaChart
+} from 'recharts';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 
 interface ChartData {
   label: string;
@@ -12,143 +21,217 @@ interface ChartData {
 interface ReportChartProps {
   title: string;
   data: ChartData[];
-  type: 'bar' | 'pie' | 'line';
+  type: 'bar' | 'pie' | 'line' | 'area';
   height?: number;
+  subTitle?: string;
+  showDownload?: boolean;
+  onDownload?: () => void;
+  showLegend?: boolean;
+  trendDirection?: 'up' | 'down' | 'neutral';
+  xAxisLabel?: string;
+  yAxisLabel?: string;
 }
 
-export default function ReportChart({ title, data, type, height = 300 }: ReportChartProps) {
-  const maxValue = Math.max(...data.map(d => d.value));
+export default function ReportChart({ 
+  title, 
+  data, 
+  type, 
+  height = 300, 
+  subTitle,
+  showDownload = false,
+  onDownload,
+  showLegend = true,
+  trendDirection,
+  xAxisLabel,
+  yAxisLabel
+}: ReportChartProps) {
+  const theme = useTheme();
+  
+  const getColorScheme = () => {
+    return [
+      theme.palette.primary.main,
+      theme.palette.secondary.main,
+      theme.palette.success.main,
+      theme.palette.warning.main,
+      theme.palette.error.main,
+      theme.palette.info.main,
+      '#8884d8',
+      '#82ca9d',
+      '#ffc658',
+      '#d0ed57'
+    ];
+  };
 
-  const getBarColor = (index: number) => {
-    const colors = ['#1976d2', '#dc004e', '#388e3c', '#f57c00', '#7b1fa2', '#0097a7', '#c21807'];
-    return colors[index % colors.length];
+  const formatData = () => {
+    return data.map(item => ({
+      name: item.label,
+      value: item.value,
+      color: item.color
+    }));
   };
 
   const renderBarChart = () => (
-    <Box sx={{ display: 'flex', alignItems: 'end', gap: 2, height: height - 60 }}>
-      {data.map((item, index) => {
-        const percentage = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-        return (
-          <Box
-            key={index}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              flex: 1,
-              gap: 1
-            }}
-          >
-            <Typography variant="caption" sx={{ fontSize: '0.7rem', textAlign: 'center' }}>
-              {item.value}
-            </Typography>
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: '40px',
-                height: `${percentage}%`,
-                backgroundColor: item.color || getBarColor(index),
-                borderRadius: '4px 4px 0 0',
-                minHeight: '4px',
-                transition: 'all 0.3s ease'
-              }}
+    <ResponsiveContainer width="100%" height={height - 60}>
+      <BarChart
+        data={formatData()}
+        margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis 
+          dataKey="name" 
+          label={xAxisLabel ? { value: xAxisLabel, position: 'insideBottom', offset: -10 } : undefined}
+          tick={{ fontSize: 12 }}
+        />
+        <YAxis 
+          label={yAxisLabel ? { value: yAxisLabel, angle: -90, position: 'insideLeft' } : undefined}
+          tick={{ fontSize: 12 }}
+        />
+        <Tooltip 
+          formatter={(value: number) => [value, 'Value']}
+          labelFormatter={(label) => `${label}`}
+        />
+        {showLegend && <Legend verticalAlign="top" height={36} />}
+        <Bar 
+          dataKey="value" 
+          name="Value" 
+          radius={[5, 5, 0, 0]}
+        >
+          {formatData().map((entry, index) => (
+            <Cell 
+              key={`cell-${index}`} 
+              fill={entry.color || getColorScheme()[index % getColorScheme().length]} 
             />
-            <Typography
-              variant="caption"
-              sx={{
-                fontSize: '0.6rem',
-                textAlign: 'center',
-                transform: 'rotate(-45deg)',
-                transformOrigin: 'center',
-                whiteSpace: 'nowrap',
-                maxWidth: '60px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              {item.label}
-            </Typography>
-          </Box>
-        );
-      })}
-    </Box>
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
   );
 
-  const renderPieChart = () => {
-    const total = data.reduce((sum, item) => sum + item.value, 0);
-    let currentAngle = 0;
-
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: height - 60 }}>
-        <svg width="200" height="200" viewBox="0 0 200 200">
-          {data.map((item, index) => {
-            const percentage = total > 0 ? (item.value / total) * 100 : 0;
-            const angle = (percentage / 100) * 360;
-            const startAngle = currentAngle;
-            const endAngle = currentAngle + angle;
-
-            // Convert angles to radians
-            const startAngleRad = (startAngle * Math.PI) / 180;
-            const endAngleRad = (endAngle * Math.PI) / 180;
-
-            // Calculate path
-            const x1 = 100 + 80 * Math.cos(startAngleRad);
-            const y1 = 100 + 80 * Math.sin(startAngleRad);
-            const x2 = 100 + 80 * Math.cos(endAngleRad);
-            const y2 = 100 + 80 * Math.sin(endAngleRad);
-
-            const largeArcFlag = angle > 180 ? 1 : 0;
-
-            const pathData = [
-              `M 100 100`,
-              `L ${x1} ${y1}`,
-              `A 80 80 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-              'Z'
-            ].join(' ');
-
-            currentAngle = endAngle;
-
-            return (
-              <path
-                key={index}
-                d={pathData}
-                fill={item.color || getBarColor(index)}
-                stroke="#fff"
-                strokeWidth="2"
-              />
-            );
-          })}
-        </svg>
-        <Box sx={{ ml: 3 }}>
-          {data.map((item, index) => (
-            <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  backgroundColor: item.color || getBarColor(index),
-                  mr: 1,
-                  borderRadius: '2px'
-                }}
-              />
-              <Typography variant="body2">
-                {item.label}: {item.value} ({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)
-              </Typography>
-            </Box>
+  const renderPieChart = () => (
+    <ResponsiveContainer width="100%" height={height - 60}>
+      <PieChart>
+        <Pie
+          data={formatData()}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          outerRadius={80}
+          innerRadius={30}
+          dataKey="value"
+          label={({name, value, percent}) => `${name}: ${(percent * 100).toFixed(1)}%`}
+        >
+          {formatData().map((entry, index) => (
+            <Cell 
+              key={`cell-${index}`} 
+              fill={entry.color || getColorScheme()[index % getColorScheme().length]} 
+            />
           ))}
-        </Box>
-      </Box>
-    );
+        </Pie>
+        <Tooltip formatter={(value: number) => [value, 'Value']} />
+        {showLegend && <Legend verticalAlign="bottom" height={36} />}
+      </PieChart>
+    </ResponsiveContainer>
+  );
+  
+  const renderLineChart = () => (
+    <ResponsiveContainer width="100%" height={height - 60}>
+      <LineChart
+        data={formatData()}
+        margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis 
+          dataKey="name" 
+          label={xAxisLabel ? { value: xAxisLabel, position: 'insideBottom', offset: -10 } : undefined}
+          tick={{ fontSize: 12 }}
+        />
+        <YAxis 
+          label={yAxisLabel ? { value: yAxisLabel, angle: -90, position: 'insideLeft' } : undefined}
+          tick={{ fontSize: 12 }}
+        />
+        <Tooltip />
+        {showLegend && <Legend verticalAlign="top" height={36} />}
+        <Line 
+          type="monotone" 
+          dataKey="value" 
+          name="Value"
+          stroke={theme.palette.primary.main}
+          strokeWidth={2}
+          dot={{ r: 4 }}
+          activeDot={{ r: 6 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+  
+  const renderAreaChart = () => (
+    <ResponsiveContainer width="100%" height={height - 60}>
+      <AreaChart
+        data={formatData()}
+        margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis 
+          dataKey="name" 
+          label={xAxisLabel ? { value: xAxisLabel, position: 'insideBottom', offset: -10 } : undefined}
+          tick={{ fontSize: 12 }}
+        />
+        <YAxis 
+          label={yAxisLabel ? { value: yAxisLabel, angle: -90, position: 'insideLeft' } : undefined}
+          tick={{ fontSize: 12 }}
+        />
+        <Tooltip />
+        {showLegend && <Legend verticalAlign="top" height={36} />}
+        <Area 
+          type="monotone" 
+          dataKey="value" 
+          name="Value"
+          stroke={theme.palette.primary.main}
+          fill={theme.palette.primary.light}
+          fillOpacity={0.3}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+  
+  const getTrendIcon = () => {
+    switch (trendDirection) {
+      case 'up':
+        return <TrendingUpIcon sx={{ color: theme.palette.success.main }} />;
+      case 'down':
+        return <TrendingDownIcon sx={{ color: theme.palette.error.main }} />;
+      case 'neutral':
+        return <TrendingFlatIcon sx={{ color: theme.palette.info.main }} />;
+      default:
+        return null;
+    }
   };
-
+  
   return (
-    <Paper sx={{ p: 2, height: height }}>
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
+    <Paper sx={{ p: 2, height }}>
+      <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {title}
+            {trendDirection && getTrendIcon()}
+          </Typography>
+          {subTitle && (
+            <Typography variant="body2" color="text.secondary">
+              {subTitle}
+            </Typography>
+          )}
+        </Box>
+        {showDownload && (
+          <IconButton onClick={onDownload} size="small" title="Download data">
+            <FileDownloadIcon />
+          </IconButton>
+        )}
+      </Box>
+
       {type === 'bar' && renderBarChart()}
       {type === 'pie' && renderPieChart()}
-      {type === 'line' && renderBarChart()} {/* Placeholder for line chart */}
+      {type === 'line' && renderLineChart()}
+      {type === 'area' && renderAreaChart()}
     </Paper>
   );
 }

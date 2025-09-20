@@ -1183,40 +1183,65 @@ async function main() {
 
     // 18. Create Grades
     console.log('🎓 Creating grades...');
-    await Promise.all([
-      prisma.grade.create({
-        data: {
-          studentId: students[0].id,
-          subjectId: subjects[0].id,
-          marks: 85.0,
-          totalMarks: 100.0,
-          examType: 'Midterm',
-          examDate: new Date('2024-10-15')
+    const gradeRecords = [];
+    
+    // Create grades for all students in different subjects
+    for (const student of students.slice(0, 3)) { // Limit to first 3 students for demo
+      for (const subject of subjects.slice(0, 3)) { // Limit to first 3 subjects
+        // Create 2-3 grades per student per subject
+        const numGrades = Math.floor(Math.random() * 2) + 2;
+        for (let i = 0; i < numGrades; i++) {
+          const marks = Math.floor(Math.random() * 40) + 60; // 60-100 range
+          gradeRecords.push({
+            studentId: student.id,
+            subjectId: subject.id,
+            marks: marks,
+            totalMarks: 100,
+            examType: i === 0 ? 'Midterm' : 'Quiz',
+            examDate: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000) // Random date in last 90 days
+          });
         }
-      }),
-      prisma.grade.create({
-        data: {
-          studentId: students[1].id,
-          subjectId: subjects[0].id,
-          marks: 78.0,
-          totalMarks: 100.0,
-          examType: 'Midterm',
-          examDate: new Date('2024-10-15')
-        }
-      }),
-      prisma.grade.create({
-        data: {
-          studentId: students[0].id,
-          subjectId: subjects[1].id,
-          marks: 92.0,
-          totalMarks: 100.0,
-          examType: 'Quiz',
-          examDate: new Date('2024-10-20')
-        }
-      })
-    ]);
+      }
+    }
+    
+    await prisma.grade.createMany({
+      data: gradeRecords
+    });
 
-    // 19. Create Events
+    // 19. Create Attendance Records
+    console.log('📊 Creating attendance records...');
+    const attendanceRecords = [];
+    
+    // Create attendance for the last 30 days for all students
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      
+      // Skip weekends
+      if (date.getDay() === 0 || date.getDay() === 6) continue;
+      
+      for (const student of students) {
+        // Random attendance status with 90% present rate
+        const isPresent = Math.random() < 0.9;
+        const status = isPresent ? 'PRESENT' : (Math.random() < 0.7 ? 'ABSENT' : Math.random() < 0.5 ? 'LATE' : 'EXCUSED');
+        
+        attendanceRecords.push({
+          studentId: student.id,
+          teacherId: teachers[0]?.id || teachers[0].userId, // Use first teacher
+          classRoomId: student.classRoomId || classrooms[0].id,
+          date: date,
+          status: status as 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED', // Cast to AttendanceStatus
+          remarks: status === 'LATE' ? 'Arrived 15 minutes late' : status === 'EXCUSED' ? 'Medical appointment' : null
+        });
+      }
+    }
+    
+    await prisma.attendance.createMany({
+      data: attendanceRecords
+    });
+
+    // 20. Create Events
     console.log('📅 Creating events...');
     const currentDate = new Date();
     await Promise.all([

@@ -34,11 +34,11 @@ export async function GET(request: NextRequest) {
       case 'student-attendance':
         return await getStudentAttendanceReport(studentId!, dateFilter);
       case 'class-attendance':
-        return await getClassAttendanceReport(classRoomId!, dateFilter);
+        return await getClassAttendanceReport(classRoomId, dateFilter);
       case 'student-grades':
         return await getStudentGradesReport(studentId!, dateFilter);
       case 'class-grades':
-        return await getClassGradesReport(classRoomId!, subjectId, dateFilter);
+        return await getClassGradesReport(classRoomId, subjectId, dateFilter);
       case 'teacher-performance':
         return await getTeacherPerformanceReport(teacherId!, dateFilter);
       case 'school-overview':
@@ -96,12 +96,14 @@ async function getStudentAttendanceReport(studentId: string, dateFilter?: any) {
   });
 }
 
-async function getClassAttendanceReport(classRoomId: string, dateFilter?: any) {
+async function getClassAttendanceReport(classRoomId: string | null, dateFilter?: any) {
+  const whereClause: any = {
+    ...(classRoomId && { classRoomId }),
+    ...(dateFilter && { date: dateFilter })
+  };
+
   const attendances = await prisma.attendance.findMany({
-    where: {
-      classRoomId,
-      ...(dateFilter && { date: dateFilter })
-    },
+    where: whereClause,
     include: {
       student: {
         include: {
@@ -117,8 +119,12 @@ async function getClassAttendanceReport(classRoomId: string, dateFilter?: any) {
     orderBy: { date: 'desc' }
   });
 
-  const students = await prisma.student.findMany({
+  const students = classRoomId ? await prisma.student.findMany({
     where: { classRoomId },
+    include: {
+      user: true
+    }
+  }) : await prisma.student.findMany({
     include: {
       user: true
     }
@@ -143,12 +149,37 @@ async function getClassAttendanceReport(classRoomId: string, dateFilter?: any) {
   const classPresent = attendances.filter(a => a.status === 'PRESENT').length;
   const classRate = classTotal > 0 ? (classPresent / classTotal) * 100 : 0;
 
+  // Group attendances by month for trend data
+  const monthlyTrend = attendances.reduce((acc: any[], attendance) => {
+    const date = new Date(attendance.date);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const monthName = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+    
+    const existingMonth = acc.find(m => m.month === monthName);
+    if (existingMonth) {
+      existingMonth.total += 1;
+      if (attendance.status === 'PRESENT') existingMonth.present += 1;
+    } else {
+      acc.push({
+        month: monthName,
+        total: 1,
+        present: attendance.status === 'PRESENT' ? 1 : 0
+      });
+    }
+    return acc;
+  }, []).map(month => ({
+    month: month.month,
+    attendance: month.total > 0 ? Math.round((month.present / month.total) * 100 * 100) / 100 : 0
+  }));
+
   return NextResponse.json({
-    classSummary: {
+    summary: {
       totalRecords: classTotal,
       presentRecords: classPresent,
       attendanceRate: Math.round(classRate * 100) / 100
     },
+    details: attendances,
+    monthlyTrend,
     studentStats
   });
 }
@@ -189,18 +220,26 @@ async function getStudentGradesReport(studentId: string, dateFilter?: any) {
     ? grades.reduce((sum, g) => sum + Number(g.marks), 0) / grades.length
     : 0;
 
+  const subjects = Object.values(subjectStats).map((subject: any) => ({
+    name: subject.subjectName,
+    average: subject.average
+  }));
+
   return NextResponse.json({
     overallAverage: Math.round(overallAverage * 100) / 100,
+    subjects,
     subjectStats,
     grades
   });
 }
 
-async function getClassGradesReport(classRoomId: string, subjectId?: string | null, dateFilter?: any) {
+async function getClassGradesReport(classRoomId: string | null, subjectId?: string | null, dateFilter?: any) {
   const whereClause: any = {
-    student: {
-      classRoomId
-    },
+    ...(classRoomId && {
+      student: {
+        classRoomId
+      }
+    }),
     ...(subjectId && { subjectId }),
     ...(dateFilter && { examDate: dateFilter })
   };
@@ -218,7 +257,7 @@ async function getClassGradesReport(classRoomId: string, subjectId?: string | nu
     orderBy: { examDate: 'desc' }
   });
 
-  const gradeDistribution = {
+  const gradeDistributionObj = {
     '90-100': grades.filter(g => Number(g.marks) >= 90).length,
     '80-89': grades.filter(g => Number(g.marks) >= 80 && Number(g.marks) < 90).length,
     '70-79': grades.filter(g => Number(g.marks) >= 70 && Number(g.marks) < 80).length,
@@ -226,14 +265,47 @@ async function getClassGradesReport(classRoomId: string, subjectId?: string | nu
     '0-59': grades.filter(g => Number(g.marks) < 60).length
   };
 
+  // Transform to array format expected by frontend
+  const totalGrades = grades.length;
+  const gradeDistribution = Object.entries(gradeDistributionObj).map(([gradeRange, count]) => ({
+    gradeRange,
+    count,
+    percentage: totalGrades > 0 ? Math.round((count / totalGrades) * 100 * 100) / 100 : 0
+  }));
+
   const averageGrade = grades.length > 0
     ? grades.reduce((sum, g) => sum + Number(g.marks), 0) / grades.length
     : 0;
+
+  // Calculate subject performance
+  const subjectMap = new Map();
+  grades.forEach(grade => {
+    const subjectId = grade.subjectId;
+    const subjectName = grade.subject.name;
+    if (!subjectMap.has(subjectId)) {
+      subjectMap.set(subjectId, {
+        subject: subjectName,
+        grades: []
+      });
+    }
+    subjectMap.get(subjectId).grades.push(grade);
+  });
+
+  const subjectPerformance = Array.from(subjectMap.entries()).map(([subjectId, data]) => {
+    const average = data.grades.length > 0
+      ? data.grades.reduce((sum: number, g: any) => sum + Number(g.marks), 0) / data.grades.length
+      : 0;
+    return {
+      subject: data.subject,
+      average: Math.round(average * 100) / 100
+    };
+  });
 
   return NextResponse.json({
     totalGrades: grades.length,
     averageGrade: Math.round(averageGrade * 100) / 100,
     gradeDistribution,
+    subjectPerformance,
     grades
   });
 }
@@ -287,9 +359,8 @@ async function getTeacherPerformanceReport(teacherId: string, dateFilter?: any) 
       : 0;
 
     return {
-      subjectName: ts.subject.name,
-      totalStudents: subjectGrades.length,
-      averageGrade: Math.round(average * 100) / 100
+      subject: ts.subject.name,
+      average: Math.round(average * 100) / 100
     };
   });
 

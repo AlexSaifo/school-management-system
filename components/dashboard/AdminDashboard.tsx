@@ -34,6 +34,7 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
+  Avatar,
 } from "@mui/material";
 import {
   Add,
@@ -46,8 +47,29 @@ import {
   TrendingUp,
   Settings,
   Assessment,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
+import SchoolIcon from "@mui/icons-material/School";
+import PeopleIcon from "@mui/icons-material/People";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import EventNoteIcon from "@mui/icons-material/EventNote";
+import dayjs from "dayjs";
+
 import { useAuth } from "@/contexts/AuthContext";
+import StatisticsSummary from "@/components/reports/StatisticsSummary";
+import DashboardCard from "@/components/reports/DashboardCard";
+import ReportChart from "@/components/reports/ReportChart";
+import { downloadCSV } from "@/lib/export-utils";
+import {
+  generateMockStudents,
+  generateMockClasses,
+  generateMockTeachers,
+  generateMockSubjects,
+  generateAttendanceData,
+  generateGradeDistribution,
+  generateMonthlyAttendance,
+  generateSubjectPerformance,
+} from "@/lib/mock-report-data";
 import { useTranslation } from "react-i18next";
 import AdminAttendance from "@/components/attendance/AdminAttendance";
 
@@ -95,8 +117,18 @@ export default function AdminDashboard() {
     presentToday: 0,
     attendanceRate: 0,
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // States for dashboard charts
+  const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [gradeDistribution, setGradeDistribution] = useState<any[]>([]);
+  const [monthlyAttendance, setMonthlyAttendance] = useState<any[]>([]);
+  const [subjectPerformance, setSubjectPerformance] = useState<any[]>([]);
 
   // Dialog states
   const [userDialog, setUserDialog] = useState(false);
@@ -145,6 +177,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchAttendanceStats();
   }, [token]);
+  
+  // Load mock data for dashboard charts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStudents(generateMockStudents(50));
+      setClasses(generateMockClasses());
+      setTeachers(generateMockTeachers());
+      setSubjects(generateMockSubjects());
+      setAttendanceData(generateAttendanceData());
+      setGradeDistribution(generateGradeDistribution());
+      setMonthlyAttendance(generateMonthlyAttendance());
+      setSubjectPerformance(generateSubjectPerformance());
+      setLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const fetchUsers = async () => {
     if (!token) return;
@@ -158,7 +207,7 @@ export default function AdminDashboard() {
         setUsers(data.users);
       }
     } catch (error) {
-      setError("Failed to fetch users");
+      setError(t("dashboard.errorFetchUsers"));
     } finally {
       setLoading(false);
     }
@@ -176,7 +225,7 @@ export default function AdminDashboard() {
         setEvents(data.events);
       }
     } catch (error) {
-      setError("Failed to fetch events");
+      setError(t("dashboard.errorFetchEvents"));
     } finally {
       setLoading(false);
     }
@@ -194,7 +243,7 @@ export default function AdminDashboard() {
         setAnnouncements(data.data.announcements);
       }
     } catch (error) {
-      setError("Failed to fetch announcements");
+      setError(t("dashboard.errorFetchAnnouncements"));
     } finally {
       setLoading(false);
     }
@@ -251,10 +300,10 @@ export default function AdminDashboard() {
         });
         fetchUsers();
       } else {
-        setError("Failed to create user");
+        setError(t("dashboard.errorCreateUser"));
       }
     } catch (error) {
-      setError("Failed to create user");
+      setError(t("dashboard.errorCreateUser"));
     }
   };
 
@@ -283,10 +332,10 @@ export default function AdminDashboard() {
         });
         fetchEvents();
       } else {
-        setError("Failed to create event");
+        setError(t("dashboard.errorCreateEvent"));
       }
     } catch (error) {
-      setError("Failed to create event");
+      setError(t("dashboard.errorCreateEvent"));
     }
   };
 
@@ -313,10 +362,10 @@ export default function AdminDashboard() {
         });
         fetchAnnouncements();
       } else {
-        setError("Failed to create announcement");
+        setError(t("dashboard.errorCreateAnnouncement"));
       }
     } catch (error) {
-      setError("Failed to create announcement");
+      setError(t("dashboard.errorCreateAnnouncement"));
     }
   };
 
@@ -338,10 +387,10 @@ export default function AdminDashboard() {
       if (response.ok) {
         fetchUsers();
       } else {
-        setError("Failed to delete user");
+        setError(t("dashboard.errorDeleteUser"));
       }
     } catch (error) {
-      setError("Failed to delete user");
+      setError(t("dashboard.errorDeleteUser"));
     }
   };
 
@@ -434,7 +483,7 @@ export default function AdminDashboard() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title={t("announcements")}
+            title={t("dashboard.announcements")}
             value={announcements.filter((a) => a.isActive).length}
             icon={<Announcement fontSize="large" />}
             color="error"
@@ -442,7 +491,7 @@ export default function AdminDashboard() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title={t("todayAttendance")}
+            title={t("dashboard.todayAttendance")}
             value={`${attendanceStats.attendanceRate}%`}
             subtitle={`${attendanceStats.presentToday}/${
               attendanceStats.totalStudents
@@ -452,6 +501,161 @@ export default function AdminDashboard() {
           />
         </Grid>
       </Grid>
+      
+      {/* Dashboard Analytics Section - Moved from reports page */}
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h5" sx={{ mb: 3 }}>
+          {t("dashboard.analytics")}
+        </Typography>
+        
+        {/* Key Statistics */}
+        <StatisticsSummary
+          stats={[
+            {
+              title: t("dashboard.totalStudents"),
+              value: '1,247',
+              description: t("dashboard.newThisMonth", { count: 32 }),
+              icon: <SchoolIcon />,
+              trend: 'up',
+              trendValue: '+2.6%',
+              color: 'primary'
+            },
+            {
+              title: t("dashboard.attendanceRate"),
+              value: '91.5%',
+              description: t("dashboard.last30Days"),
+              icon: <EventNoteIcon />,
+              trend: 'down',
+              trendValue: '-1.2%',
+              color: 'warning'
+            },
+            {
+              title: t("dashboard.averageGrade"),
+              value: '76.8%',
+              description: t("dashboard.termAverage"),
+              icon: <AssessmentIcon />,
+              trend: 'up',
+              trendValue: '+0.8%',
+              color: 'success'
+            },
+            {
+              title: t("dashboard.faculty"),
+              value: '78',
+              description: t("dashboard.departments", { count: 12 }),
+              icon: <PeopleIcon />,
+              trend: 'neutral',
+              trendValue: '0%',
+              color: 'info'
+            }
+          ]}
+          loading={loading}
+        />
+
+        {/* Chart Cards */}
+        <Grid container spacing={3} sx={{ mb: 3, mt: 2 }}>
+          <Grid item xs={12} md={8}>
+            <ReportChart
+              title={t("dashboard.attendanceTrend")}
+              subTitle={t("dashboard.monthlyAttendance")}
+              data={generateMonthlyAttendance().map(item => ({
+                label: item.month,
+                value: item.attendance
+              }))}
+              type="line"
+              height={350}
+              showDownload={true}
+              onDownload={() => downloadCSV(
+                generateAttendanceData(), 
+                [
+                  { key: 'date', label: 'Date' },
+                  { key: 'present', label: 'Present' },
+                  { key: 'absent', label: 'Absent' },
+                  { key: 'late', label: 'Late' },
+                  { key: 'excused', label: 'Excused' },
+                  { key: 'total', label: 'Total' }
+                ],
+                'attendance_report'
+              )}
+              showLegend={false}
+              trendDirection="down"
+              yAxisLabel={t("dashboard.attendancePercentage")}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <ReportChart
+              title={t("dashboard.gradeDistribution")}
+              subTitle={t("dashboard.currentTermGrades")}
+              data={generateGradeDistribution().map(item => ({
+                label: item.gradeRange.split(' ')[0],
+                value: item.percentage
+              }))}
+              type="pie"
+              height={350}
+              showLegend={true}
+            />
+          </Grid>
+        </Grid>
+
+        {/* Dashboard Cards */}
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <DashboardCard
+              title={t("dashboard.subjectPerformance")}
+              subheader={t("dashboard.averageGradesBySubject")}
+              chart="bar"
+              chartData={generateSubjectPerformance().map(item => ({ 
+                name: item.subject, 
+                value: item.average 
+              }))}
+              loading={loading}
+              showDownload={true}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <DashboardCard
+              title={t("dashboard.topPerformingStudents")}
+              subheader={t("dashboard.basedOnOverallGrades")}
+              loading={loading}
+              content={
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t("student")}</TableCell>
+                        <TableCell>{t("grade")}</TableCell>
+                        <TableCell align="right">{t("score")}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {generateMockStudents(5).sort((a, b) => b.averageGrade - a.averageGrade).map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Avatar sx={{ width: 24, height: 24, mr: 1 }}>
+                                {student.name.charAt(0)}
+                              </Avatar>
+                              <Typography variant="body2">{student.name}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{student.grade}</TableCell>
+                          <TableCell align="right">{student.averageGrade}%</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              }
+              footer={
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button size="small" color="primary">
+                    {t("dashboard.viewAllStudents")}
+                  </Button>
+                </Box>
+              }
+            />
+          </Grid>
+        </Grid>
+      </Box>
 
       {/* User Dialog */}
       <Dialog
