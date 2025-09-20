@@ -9,6 +9,8 @@ const createAdminSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Valid email is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().optional(),
   phoneNumber: z.string().optional().default(''),
   address: z.string().optional().default(''),
   permissions: z.object({
@@ -23,6 +25,9 @@ const createAdminSchema = z.object({
     canManageClasses: false,
   }),
   isActive: z.boolean().default(true),
+}).refine((data) => !data.confirmPassword || data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 // Validation schema for bulk operations
@@ -150,9 +155,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    // Hash the provided password
+    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
     // Create user and admin in a transaction
     const result = await prisma.$transaction(async (tx: any) => {
@@ -176,7 +180,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      return { user, admin, tempPassword };
+      return { user, admin };
     });
 
     return NextResponse.json({
@@ -184,7 +188,6 @@ export async function POST(request: NextRequest) {
       message: 'Admin created successfully',
       data: {
         id: result.user.id,
-        tempPassword: result.tempPassword,
       },
     });
 

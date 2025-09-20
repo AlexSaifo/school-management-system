@@ -477,6 +477,10 @@
     "email": "Email",
     "phoneNumber": "Phone Number",
     "address": "Address",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "passwordHelper": "Password must be at least 6 characters long",
+    "passwordMismatch": "Passwords do not match",
     "status": "Status",
     "active": "Active",
     "inactive": "Inactive",
@@ -596,7 +600,112 @@
     "experience": "Experience",
     "joiningDate": "Joining Date",
     "salary": "Salary",
-    "department": "Department"
+    "department": "Department",
+    "page": {
+      "title": "Teacher Management",
+      "addNew": "Add New Teacher",
+      "edit": "Edit Teacher",
+      "viewDetails": "View Details",
+      "manageSubjects": "Manage Subjects",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "searchPlaceholder": "Search teachers...",
+      "exportCsv": "Export CSV",
+      "noTeachersFound": "No teachers found",
+      "noSubjectsAssigned": "No subjects assigned",
+      "years": "years",
+      "notProvided": "Not provided"
+    },
+    "table": {
+      "headers": {
+        "teacher": "Teacher",
+        "employeeId": "Employee ID",
+        "department": "Department",
+        "subjects": "Subjects",
+        "experience": "Experience",
+        "status": "Status",
+        "joined": "Joined"
+      }
+    },
+    "filters": {
+      "status": "Status",
+      "allStatus": "All Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "department": "Department",
+      "allDepartments": "All Departments"
+    },
+    "departments": {
+      "mathematics": "Mathematics",
+      "science": "Science",
+      "english": "English",
+      "history": "History",
+      "geography": "Geography",
+      "physics": "Physics",
+      "chemistry": "Chemistry",
+      "biology": "Biology",
+      "computerScience": "Computer Science",
+      "physicalEducation": "Physical Education",
+      "art": "Art",
+      "music": "Music"
+    },
+    "form": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "address": "Address",
+      "employeeId": "Employee ID",
+      "department": "Department",
+      "qualification": "Qualification",
+      "experienceYears": "Experience (Years)",
+      "salary": "Salary",
+      "joinDate": "Join Date",
+      "required": "Required",
+      "cancel": "Cancel",
+      "create": "Create",
+      "update": "Update"
+    },
+    "dialogs": {
+      "addTeacher": "Add New Teacher",
+      "editTeacher": "Edit Teacher",
+      "teacherDetails": "Teacher Details",
+      "basicInformation": "Basic Information",
+      "professionalInformation": "Professional Information",
+      "contactInformation": "Contact Information",
+      "close": "Close"
+    },
+    "actions": {
+      "view": "View Details",
+      "edit": "Edit Teacher",
+      "manageSubjects": "Manage Subjects",
+      "toggleStatus": "Toggle Status",
+      "delete": "Delete"
+    },
+    "bulkActions": {
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete"
+    },
+    "confirmations": {
+      "deleteSingle": "Are you sure you want to delete this teacher?",
+      "deleteBulk": "Are you sure you want to delete {{count}} teachers?",
+      "activate": "Are you sure you want to activate {{count}} teachers?",
+      "deactivate": "Are you sure you want to deactivate {{count}} teachers?"
+    },
+    "errors": {
+      "noPermission": "You don't have permission to access this page.",
+      "fetchFailed": "Failed to fetch teachers",
+      "saveFailed": "Failed to save teacher",
+      "deleteFailed": "Failed to delete teacher"
+    },
+    "success": {
+      "teacherCreated": "Teacher created successfully",
+      "teacherUpdated": "Teacher updated successfully",
+      "teacherDeleted": "Teacher deleted successfully",
+      "statusUpdated": "Teacher status updated successfully"
+    }
   },
   "assignments": {
     "title": "Title",

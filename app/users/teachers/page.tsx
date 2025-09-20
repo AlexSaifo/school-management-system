@@ -83,6 +83,7 @@ interface Teacher {
 export default function TeachersPage() {
   const { user, token } = useAuth();
   const { isRTL, language } = useLanguage();
+  const { t } = useTranslation();
   const locale = isRTL ? 'ar' : 'en-US'; // Use 'ar' instead of 'ar-SA' to avoid Hijri calendar as default
   // Define date format options to force Gregorian calendar
   const dateFormatOptions: Intl.DateTimeFormatOptions = {
@@ -125,18 +126,18 @@ export default function TeachersPage() {
   });
 
   const departments = [
-    'Mathematics',
-    'Science',
-    'English',
-    'History',
-    'Geography',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'Computer Science',
-    'Physical Education',
-    'Art',
-    'Music',
+    { value: 'Mathematics', label: t('teachers.departments.mathematics') },
+    { value: 'Science', label: t('teachers.departments.science') },
+    { value: 'English', label: t('teachers.departments.english') },
+    { value: 'History', label: t('teachers.departments.history') },
+    { value: 'Geography', label: t('teachers.departments.geography') },
+    { value: 'Physics', label: t('teachers.departments.physics') },
+    { value: 'Chemistry', label: t('teachers.departments.chemistry') },
+    { value: 'Biology', label: t('teachers.departments.biology') },
+    { value: 'Computer Science', label: t('teachers.departments.computerScience') },
+    { value: 'Physical Education', label: t('teachers.departments.physicalEducation') },
+    { value: 'Art', label: t('teachers.departments.art') },
+    { value: 'Music', label: t('teachers.departments.music') },
   ];
 
   useEffect(() => {
@@ -250,7 +251,7 @@ export default function TeachersPage() {
   };
 
   const handleDelete = async (teacherId: string) => {
-    if (window.confirm('Are you sure you want to delete this teacher?')) {
+    if (window.confirm(t('teachers.confirmations.deleteSingle'))) {
       try {
         const response = await fetch(`/api/users/teachers/${teacherId}`, {
           method: 'DELETE',
@@ -320,9 +321,11 @@ export default function TeachersPage() {
   const handleBulkAction = async (action: 'activate' | 'deactivate' | 'delete') => {
     if (selectedIds.length === 0) return;
     
-    const confirmMessage = action === 'delete' 
-      ? `Are you sure you want to delete ${selectedIds.length} teacher(s)?`
-      : `Are you sure you want to ${action} ${selectedIds.length} teacher(s)?`;
+    const confirmMessage = action === 'delete'
+      ? t('teachers.confirmations.deleteBulk', { count: selectedIds.length })
+      : action === 'activate'
+      ? t('teachers.confirmations.activate', { count: selectedIds.length })
+      : t('teachers.confirmations.deactivate', { count: selectedIds.length });
       
     if (!window.confirm(confirmMessage)) return;
 
@@ -388,16 +391,26 @@ export default function TeachersPage() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Email', 'Phone', 'Employee ID', 'Department', 'Subjects', 'Experience', 'Status', 'Joined'];
+    const headers = [
+      t('teachers.table.headers.teacher'),
+      t('teachers.form.email'),
+      t('teachers.form.phoneNumber'),
+      t('teachers.table.headers.employeeId'),
+      t('teachers.table.headers.department'),
+      t('teachers.table.headers.subjects'),
+      t('teachers.table.headers.experience'),
+      t('teachers.table.headers.status'),
+      t('teachers.table.headers.joined')
+    ];
     const rows = teachers.map(teacher => [
       `${teacher.user.firstName} ${teacher.user.lastName}`,
       teacher.user.email,
-      teacher.user.phoneNumber || 'N/A',
+      teacher.user.phoneNumber || t('teachers.page.notProvided'),
       teacher.employeeId,
       teacher.department,
-      teacher.subjects.map(s => s.name).join(', ') || 'No subjects assigned',
-      `${teacher.experience} years`,
-      teacher.user.status === 'ACTIVE' ? 'Active' : 'Inactive',
+      teacher.subjects.map(s => s.name).join(', ') || t('teachers.page.noSubjectsAssigned'),
+      `${teacher.experience} ${t('teachers.page.years')}`,
+      teacher.user.status === 'ACTIVE' ? t('teachers.filters.active') : t('teachers.filters.inactive'),
       new Date(teacher.user.createdAt).toLocaleDateString(locale, dateFormatOptions),
     ]);
 
@@ -419,7 +432,7 @@ export default function TeachersPage() {
     return (
       <SidebarLayout>
         <Alert severity="error">
-          You don't have permission to access this page.
+          {t('teachers.errors.noPermission')}
         </Alert>
       </SidebarLayout>
     );
@@ -429,23 +442,23 @@ export default function TeachersPage() {
   const columns: Column[] = [
     {
       key: 'user.firstName',
-      label: 'Teacher',
+      label: t('teachers.table.headers.teacher'),
       render: (value, row) => `${row.user.firstName} ${row.user.lastName}`,
     },
     {
       key: 'employeeId',
-      label: 'Employee ID',
+      label: t('teachers.table.headers.employeeId'),
     },
     {
       key: 'department',
-      label: 'Department',
+      label: t('teachers.table.headers.department'),
     },
     {
       key: 'subjects',
-      label: 'Subjects',
+      label: t('teachers.table.headers.subjects'),
       render: (value, row) => {
         if (!row.subjects || row.subjects.length === 0) {
-          return 'No subjects assigned';
+          return t('teachers.page.noSubjectsAssigned');
         }
         if (row.subjects.length === 1) {
           return row.subjects[0].name;
@@ -455,16 +468,16 @@ export default function TeachersPage() {
     },
     {
       key: 'experience',
-      label: 'Experience',
-      render: (value) => `${value} years`,
+      label: t('teachers.table.headers.experience'),
+      render: (value) => `${value} ${t('teachers.page.years')}`,
     },
     {
       key: 'user.status',
-      label: 'Status',
+      label: t('teachers.table.headers.status'),
     },
     {
       key: 'user.createdAt',
-      label: 'Joined',
+      label: t('teachers.table.headers.joined'),
       render: (value) => new Date(value).toLocaleDateString(locale, dateFormatOptions),
     },
   ];
@@ -473,32 +486,32 @@ export default function TeachersPage() {
   const actions: Action[] = [
     {
       key: 'view',
-      label: 'View Details',
+      label: t('teachers.actions.view'),
       icon: <Visibility />,
       onClick: (row) => handleViewTeacher(row),
     },
     {
       key: 'edit',
-      label: 'Edit Teacher',
+      label: t('teachers.actions.edit'),
       icon: <Edit />,
       onClick: (row) => handleOpenDialog(row),
     },
     {
       key: 'manageSubjects',
-      label: 'Manage Subjects',
+      label: t('teachers.actions.manageSubjects'),
       icon: <Assignment />,
       onClick: (row) => handleOpenSubjectManager(row),
     },
     {
       key: 'toggleStatus',
-      label: row => row.user.status === 'ACTIVE' ? 'Deactivate' : 'Activate',
+      label: row => row.user.status === 'ACTIVE' ? t('teachers.page.deactivate') : t('teachers.page.activate'),
       icon: row => row.user.status === 'ACTIVE' ? <Block /> : <CheckCircle />,
       onClick: (row) => toggleTeacherStatus(row.id, row.user.status),
       color: row => row.user.status === 'ACTIVE' ? 'warning' : 'success',
     },
     {
       key: 'delete',
-      label: 'Delete',
+      label: t('teachers.actions.delete'),
       icon: <Delete />,
       onClick: (row) => handleDelete(row.id),
       color: 'error',
@@ -509,27 +522,27 @@ export default function TeachersPage() {
   const filters: Filter[] = [
     {
       key: 'status',
-      label: 'Status',
+      label: t('teachers.filters.status'),
       type: 'select',
       value: statusFilter,
       onChange: setStatusFilter,
       options: [
-        { value: 'all', label: 'All Status' },
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' },
+        { value: 'all', label: t('teachers.filters.allStatus') },
+        { value: 'active', label: t('teachers.filters.active') },
+        { value: 'inactive', label: t('teachers.filters.inactive') },
       ],
     },
     {
       key: 'department',
-      label: 'Department',
+      label: t('teachers.filters.department'),
       type: 'select',
       value: departmentFilter,
       onChange: setDepartmentFilter,
       options: [
-        { value: 'all', label: 'All Departments' },
+        { value: 'all', label: t('teachers.filters.allDepartments') },
         ...departments.map((dept) => ({
-          value: dept,
-          label: dept,
+          value: dept.value,
+          label: dept.label,
         })),
       ],
     },
@@ -539,21 +552,21 @@ export default function TeachersPage() {
   const bulkActions: BulkAction[] = [
     {
       key: 'activate',
-      label: 'Activate',
+      label: t('teachers.bulkActions.activate'),
       icon: <CheckCircle />,
       onClick: () => handleBulkAction('activate'),
       color: 'success',
     },
     {
       key: 'deactivate',
-      label: 'Deactivate',
+      label: t('teachers.bulkActions.deactivate'),
       icon: <Block />,
       onClick: () => handleBulkAction('deactivate'),
       color: 'warning',
     },
     {
       key: 'delete',
-      label: 'Delete',
+      label: t('teachers.bulkActions.delete'),
       icon: <Delete />,
       onClick: () => handleBulkAction('delete'),
       color: 'error',
@@ -564,8 +577,8 @@ export default function TeachersPage() {
     <SidebarLayout>
       <Box>
         <PageHeader
-          title="Teacher Management"
-          actionLabel="Add New Teacher"
+          title={t('teachers.page.title')}
+          actionLabel={t('teachers.page.addNew')}
           actionIcon={<PersonAdd />}
           onAction={() => handleOpenDialog()}
         />
@@ -573,11 +586,11 @@ export default function TeachersPage() {
         <FilterPanel
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          searchPlaceholder="Search teachers..."
+          searchPlaceholder={t('teachers.page.searchPlaceholder')}
           filters={filters}
           onSearch={() => fetchTeachers(1)}
           onExport={exportToCSV}
-          exportLabel="Export CSV"
+          exportLabel={t('teachers.page.exportCsv')}
           bulkActions={bulkActions}
           selectedCount={selectedIds.length}
         />
@@ -587,7 +600,7 @@ export default function TeachersPage() {
           data={teachers}
           actions={actions}
           loading={loading}
-          emptyMessage="No teachers found"
+          emptyMessage={t('teachers.page.noTeachersFound')}
           selectable={true}
           selectedIds={selectedIds}
           onSelectAll={handleSelectAll}
@@ -614,20 +627,20 @@ export default function TeachersPage() {
         {/* Add/Edit Teacher Dialog */}
         <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
           <DialogTitle>
-            {selectedTeacher ? 'Edit Teacher' : 'Add New Teacher'}
+            {selectedTeacher ? t('teachers.dialogs.editTeacher') : t('teachers.dialogs.addTeacher')}
           </DialogTitle>
           <DialogContent>
             <Box display="flex" flexDirection="column" gap={2} mt={1}>
               <Box display="flex" gap={2}>
                 <TextField
-                  label="First Name"
+                  label={t('teachers.form.firstName')}
                   value={formData.firstName}
                   onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                   fullWidth
                   required
                 />
                 <TextField
-                  label="Last Name"
+                  label={t('teachers.form.lastName')}
                   value={formData.lastName}
                   onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                   fullWidth
@@ -635,7 +648,7 @@ export default function TeachersPage() {
                 />
               </Box>
               <TextField
-                label="Email"
+                label={t('teachers.form.email')}
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -644,13 +657,13 @@ export default function TeachersPage() {
               />
               <Box display="flex" gap={2}>
                 <TextField
-                  label="Phone Number"
+                  label={t('teachers.form.phoneNumber')}
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                   fullWidth
                 />
                 <TextField
-                  label="Employee ID"
+                  label={t('teachers.form.employeeId')}
                   value={formData.employeeId}
                   onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
                   fullWidth
@@ -658,7 +671,7 @@ export default function TeachersPage() {
                 />
               </Box>
               <TextField
-                label="Address"
+                label={t('teachers.form.address')}
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
                 fullWidth
@@ -666,7 +679,7 @@ export default function TeachersPage() {
                 rows={2}
               />
               <TextField
-                label="Department"
+                label={t('teachers.form.department')}
                 select
                 value={formData.department}
                 onChange={(e) => setFormData({...formData, department: e.target.value})}
@@ -674,21 +687,21 @@ export default function TeachersPage() {
                 required
               >
                 {departments.map((dept) => (
-                  <MenuItem key={dept} value={dept}>
-                    {dept}
+                  <MenuItem key={dept.value} value={dept.value}>
+                    {dept.label}
                   </MenuItem>
                 ))}
               </TextField>
               <Box display="flex" gap={2}>
                 <TextField
-                  label="Qualification"
+                  label={t('teachers.form.qualification')}
                   value={formData.qualification}
                   onChange={(e) => setFormData({...formData, qualification: e.target.value})}
                   fullWidth
                   required
                 />
                 <TextField
-                  label="Experience (Years)"
+                  label={t('teachers.form.experienceYears')}
                   type="number"
                   value={formData.experience}
                   onChange={(e) => setFormData({...formData, experience: parseInt(e.target.value) || 0})}
@@ -698,14 +711,14 @@ export default function TeachersPage() {
               </Box>
               <Box display="flex" gap={2}>
                 <TextField
-                  label="Salary"
+                  label={t('teachers.form.salary')}
                   type="number"
                   value={formData.salary}
                   onChange={(e) => setFormData({...formData, salary: parseInt(e.target.value) || 0})}
                   fullWidth
                 />
                 <TextField
-                  label="Join Date"
+                  label={t('teachers.form.joinDate')}
                   type="date"
                   value={formData.joinDate}
                   onChange={(e) => setFormData({...formData, joinDate: e.target.value})}
@@ -719,9 +732,9 @@ export default function TeachersPage() {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button onClick={handleCloseDialog}>{t('teachers.form.cancel')}</Button>
             <Button onClick={handleSubmit} variant="contained">
-              {selectedTeacher ? 'Update' : 'Create'}
+              {selectedTeacher ? t('teachers.form.update') : t('teachers.form.create')}
             </Button>
           </DialogActions>
         </Dialog>
@@ -738,7 +751,7 @@ export default function TeachersPage() {
               <Avatar>
                 <School />
               </Avatar>
-              Teacher Details
+              {t('teachers.dialogs.teacherDetails')}
             </Box>
           </DialogTitle>
           <DialogContent>
@@ -747,12 +760,12 @@ export default function TeachersPage() {
                 {/* Basic Information */}
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom color="primary">
-                    Basic Information
+                    {t('teachers.dialogs.basicInformation')}
                   </Typography>
                   <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        First Name
+                        {t('teachers.form.firstName')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewTeacher.user.firstName}
@@ -760,7 +773,7 @@ export default function TeachersPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Last Name
+                        {t('teachers.form.lastName')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewTeacher.user.lastName}
@@ -768,7 +781,7 @@ export default function TeachersPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Email Address
+                        {t('teachers.form.email')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewTeacher.user.email}
@@ -776,10 +789,10 @@ export default function TeachersPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Status
+                        {t('teachers.table.headers.status')}
                       </Typography>
                       <Chip
-                        label={viewTeacher.user.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                        label={viewTeacher.user.status === 'ACTIVE' ? t('teachers.filters.active') : t('teachers.filters.inactive')}
                         color={viewTeacher.user.status === 'ACTIVE' ? 'success' : 'error'}
                         size="small"
                       />
@@ -790,12 +803,12 @@ export default function TeachersPage() {
                 {/* Professional Information */}
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom color="primary">
-                    Professional Information
+                    {t('teachers.dialogs.professionalInformation')}
                   </Typography>
                   <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Employee ID
+                        {t('teachers.table.headers.employeeId')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewTeacher.employeeId}
@@ -803,7 +816,7 @@ export default function TeachersPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Department
+                        {t('teachers.table.headers.department')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewTeacher.department}
@@ -811,26 +824,26 @@ export default function TeachersPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Subjects
+                        {t('teachers.table.headers.subjects')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewTeacher.subjects.length > 0 
                           ? viewTeacher.subjects.map(s => s.name).join(', ')
-                          : 'No subjects assigned'
+                          : t('teachers.page.noSubjectsAssigned')
                         }
                       </Typography>
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Experience
+                        {t('teachers.table.headers.experience')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {viewTeacher.experience} years
+                        {viewTeacher.experience} {t('teachers.page.years')}
                       </Typography>
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Qualification
+                        {t('teachers.form.qualification')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewTeacher.qualification}
@@ -838,7 +851,7 @@ export default function TeachersPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Join Date
+                        {t('teachers.table.headers.joined')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {new Date(viewTeacher.joinDate).toLocaleDateString(locale, dateFormatOptions)}
@@ -850,23 +863,23 @@ export default function TeachersPage() {
                 {/* Contact Information */}
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom color="primary">
-                    Contact Information
+                    {t('teachers.dialogs.contactInformation')}
                   </Typography>
                   <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Phone Number
+                        {t('teachers.form.phoneNumber')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {viewTeacher.user.phoneNumber || 'Not provided'}
+                        {viewTeacher.user.phoneNumber || t('teachers.page.notProvided')}
                       </Typography>
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Address
+                        {t('teachers.form.address')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {viewTeacher.user.address || 'Not provided'}
+                        {viewTeacher.user.address || t('teachers.page.notProvided')}
                       </Typography>
                     </Box>
                   </Box>
@@ -875,7 +888,7 @@ export default function TeachersPage() {
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseViewDialog}>Close</Button>
+            <Button onClick={handleCloseViewDialog}>{t('teachers.dialogs.close')}</Button>
             <Button 
               onClick={() => {
                 handleCloseViewDialog();
@@ -884,7 +897,7 @@ export default function TeachersPage() {
               variant="contained"
               startIcon={<Edit />}
             >
-              Edit Teacher
+              {t('teachers.page.edit')}
             </Button>
           </DialogActions>
         </Dialog>

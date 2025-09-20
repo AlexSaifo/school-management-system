@@ -600,6 +600,10 @@
       "firstName": "الاسم الأول",
       "lastName": "اسم العائلة",
       "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "passwordHelper": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+      "passwordMismatch": "كلمة المرور غير متطابقة",
       "phoneNumber": "رقم الهاتف",
       "address": "العنوان",
       "permissions": "الصلاحيات"
@@ -702,7 +706,112 @@
     "experience": "الخبرة",
     "joiningDate": "تاريخ الانضمام",
     "salary": "الراتب",
-    "department": "القسم"
+    "department": "القسم",
+    "page": {
+      "title": "إدارة المعلمين",
+      "addNew": "إضافة معلم جديد",
+      "edit": "تعديل المعلم",
+      "viewDetails": "عرض التفاصيل",
+      "manageSubjects": "إدارة المواد",
+      "activate": "تفعيل",
+      "deactivate": "إلغاء التفعيل",
+      "delete": "حذف",
+      "searchPlaceholder": "البحث عن المعلمين...",
+      "exportCsv": "تصدير CSV",
+      "noTeachersFound": "لم يتم العثور على معلمين",
+      "noSubjectsAssigned": "لا توجد مواد مُسندة",
+      "years": "سنوات",
+      "notProvided": "غير متوفر"
+    },
+    "table": {
+      "headers": {
+        "teacher": "المعلم",
+        "employeeId": "رقم الموظف",
+        "department": "القسم",
+        "subjects": "المواد",
+        "experience": "الخبرة",
+        "status": "الحالة",
+        "joined": "تاريخ الانضمام"
+      }
+    },
+    "filters": {
+      "status": "الحالة",
+      "allStatus": "جميع الحالات",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "department": "القسم",
+      "allDepartments": "جميع الأقسام"
+    },
+    "departments": {
+      "mathematics": "الرياضيات",
+      "science": "العلوم",
+      "english": "الإنجليزية",
+      "history": "التاريخ",
+      "geography": "الجغرافيا",
+      "physics": "الفيزياء",
+      "chemistry": "الكيمياء",
+      "biology": "الأحياء",
+      "computerScience": "علوم الحاسوب",
+      "physicalEducation": "التربية البدنية",
+      "art": "الفنون",
+      "music": "الموسيقى"
+    },
+    "form": {
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "phoneNumber": "رقم الهاتف",
+      "address": "العنوان",
+      "employeeId": "رقم الموظف",
+      "department": "القسم",
+      "qualification": "المؤهل",
+      "experienceYears": "الخبرة (سنوات)",
+      "salary": "الراتب",
+      "joinDate": "تاريخ الانضمام",
+      "required": "مطلوب",
+      "cancel": "إلغاء",
+      "create": "إنشاء",
+      "update": "تحديث"
+    },
+    "dialogs": {
+      "addTeacher": "إضافة معلم جديد",
+      "editTeacher": "تعديل المعلم",
+      "teacherDetails": "تفاصيل المعلم",
+      "basicInformation": "المعلومات الأساسية",
+      "professionalInformation": "المعلومات المهنية",
+      "contactInformation": "معلومات الاتصال",
+      "close": "إغلاق"
+    },
+    "actions": {
+      "view": "عرض التفاصيل",
+      "edit": "تعديل المعلم",
+      "manageSubjects": "إدارة المواد",
+      "toggleStatus": "تبديل الحالة",
+      "delete": "حذف"
+    },
+    "bulkActions": {
+      "activate": "تفعيل",
+      "deactivate": "إلغاء التفعيل",
+      "delete": "حذف"
+    },
+    "confirmations": {
+      "deleteSingle": "هل أنت متأكد من حذف هذا المعلم؟",
+      "deleteBulk": "هل أنت متأكد من حذف {{count}} معلمين؟",
+      "activate": "هل أنت متأكد من تفعيل {{count}} معلمين؟",
+      "deactivate": "هل أنت متأكد من إلغاء تفعيل {{count}} معلمين؟"
+    },
+    "errors": {
+      "noPermission": "ليس لديك صلاحية للوصول إلى هذه الصفحة.",
+      "fetchFailed": "فشل في جلب المعلمين",
+      "saveFailed": "فشل في حفظ المعلم",
+      "deleteFailed": "فشل في حذف المعلم"
+    },
+    "success": {
+      "teacherCreated": "تم إنشاء المعلم بنجاح",
+      "teacherUpdated": "تم تحديث المعلم بنجاح",
+      "teacherDeleted": "تم حذف المعلم بنجاح",
+      "statusUpdated": "تم تحديث حالة المعلم بنجاح"
+    }
   },
   "assignments": {
     "title": "العنوان",

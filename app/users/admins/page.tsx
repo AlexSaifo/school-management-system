@@ -109,6 +109,8 @@ export default function AdminsPage() {
     firstName: '',
     lastName: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     phoneNumber: '',
     address: '',
     permissions: {
@@ -176,6 +178,8 @@ export default function AdminsPage() {
         firstName: admin.user.firstName,
         lastName: admin.user.lastName,
         email: admin.user.email,
+        password: '', // Don't show existing password for security
+        confirmPassword: '',
         phoneNumber: admin.user.phoneNumber || '',
         address: admin.user.address || '',
         permissions: admin.permissions || {
@@ -191,6 +195,8 @@ export default function AdminsPage() {
         firstName: '',
         lastName: '',
         email: '',
+        password: '',
+        confirmPassword: '',
         phoneNumber: '',
         address: '',
         permissions: {
@@ -210,6 +216,22 @@ export default function AdminsPage() {
   };
 
   const handleSubmit = async () => {
+    // Validate passwords for new admin creation
+    if (!selectedAdmin) {
+      if (!formData.password) {
+        alert(t('admins.form.password') + ' is required');
+        return;
+      }
+      if (formData.password.length < 6) {
+        alert(t('admins.form.passwordHelper'));
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        alert(t('admins.form.passwordMismatch'));
+        return;
+      }
+    }
+
     try {
       const url = selectedAdmin 
         ? `/api/users/admins/${selectedAdmin.id}` 
@@ -217,13 +239,17 @@ export default function AdminsPage() {
       
       const method = selectedAdmin ? 'PUT' : 'POST';
 
+      // Prepare data to send (exclude confirmPassword for API)
+      const dataToSend = { ...formData };
+      delete dataToSend.confirmPassword;
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSend),
       });
 
       if (response.ok) {
@@ -828,6 +854,29 @@ export default function AdminsPage() {
                 fullWidth
                 required
               />
+              {!selectedAdmin && (
+                <>
+                  <TextField
+                    label={t('admins.form.password')}
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    fullWidth
+                    required
+                    helperText={t('admins.form.passwordHelper')}
+                  />
+                  <TextField
+                    label={t('admins.form.confirmPassword')}
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                    fullWidth
+                    required
+                    error={formData.password !== formData.confirmPassword && formData.confirmPassword !== ''}
+                    helperText={formData.password !== formData.confirmPassword && formData.confirmPassword !== '' ? t('admins.form.passwordMismatch') : ''}
+                  />
+                </>
+              )}
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('admins.form.phoneNumber')}
