@@ -69,13 +69,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'auth_token') {
-        console.log('AuthContext: Storage change detected for auth_token');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('AuthContext: Storage change detected for auth_token');
+        }
         if (e.newValue) {
-          console.log('AuthContext: New token detected, fetching profile');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('AuthContext: New token detected, fetching profile');
+          }
           setToken(e.newValue);
           fetchUserProfile(e.newValue);
         } else {
-          console.log('AuthContext: Token removed, clearing auth state');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('AuthContext: Token removed, clearing auth state');
+          }
           setUser(null);
           setToken(null);
           setLoading(false);
@@ -89,7 +95,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (authToken: string) => {
     try {
-      console.log('AuthContext: Fetching user profile with token');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('AuthContext: Fetching user profile with token');
+      }
       
       // Set both auth methods - cookie and header
       document.cookie = `auth_token=${authToken}; path=/; max-age=86400; samesite=strict`;
@@ -105,7 +113,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('AuthContext: Profile fetched successfully:', data.user.email);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('AuthContext: Profile fetched successfully:', data.user.email);
+        }
         setUser(data.user);
       } else {
         console.error('AuthContext: Failed to fetch profile, status:', response.status);

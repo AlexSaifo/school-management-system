@@ -188,6 +188,9 @@ export async function GET(
 }
 
 // POST /api/timetable/[classId] - Create or update timetable entry
+// Let's make roomId accessible in the catch block
+let globalRoomId: string | null = null;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { classId: string } }
@@ -215,13 +218,24 @@ export async function POST(
 
     const { classId } = params;
     const body = await request.json();
-    const { timeSlotId, dayOfWeek, subjectId, teacherId, roomId, slotType, notes } = body;
+    let { timeSlotId, dayOfWeek, subjectId, teacherId, roomId, slotType, notes } = body;
+    
+    // Store roomId in the global variable for error handling
+    globalRoomId = roomId;
 
     if (!timeSlotId || dayOfWeek === undefined) {
       return NextResponse.json(
         { success: false, error: 'Time slot and day of week are required' },
         { status: 400 }
       );
+    }
+    
+    // If roomId is the same as the classId, it means we're using the default classroom
+    // In that case, set roomId to null to avoid foreign key issues
+    if (roomId === classId) {
+      roomId = null;
+      globalRoomId = null;
+      body.roomId = null;
     }
 
     // Check for teacher conflicts if teacher is assigned
@@ -243,6 +257,65 @@ export async function POST(
         );
       }
     }
+    
+    // If roomId is provided, check if it's a valid special location ID
+    if (roomId) {
+      try {
+        console.log('Validating roomId:', roomId);
+        
+        // First check if it's a special location
+        const specialLocation = await prisma.specialLocation.findUnique({
+          where: { id: roomId }
+        });
+
+        if (specialLocation) {
+          console.log('Found special location:', specialLocation.name);
+          // It's a valid special location, keep roomId as is
+        } else {
+          console.log('Not a special location, checking if it\'s a classroom');
+          
+          // If not a special location, check if it's a regular classroom
+          const classroom = await prisma.classRoom.findUnique({
+            where: { id: roomId }
+          });
+
+          if (classroom) {
+            console.log('Found classroom:', classroom.name);
+            console.log('Setting roomId to null since it\'s a classroom, not a special location');
+            // If it's a classroom, set roomId to null since it's not a special location
+            // The classRoomId is already handled by the route parameter (classId)
+            roomId = null;
+            globalRoomId = null;
+          } else {
+            console.log('Room not found with ID:', roomId);
+            return NextResponse.json(
+              { success: false, error: 'Room not found with the provided ID' },
+              { status: 400 }
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Error validating room ID:', error);
+        return NextResponse.json(
+          { success: false, error: 'Error validating room ID' },
+          { status: 500 }
+        );
+      }
+    } else {
+      console.log('No roomId provided, will use null for specialLocationId');
+    }
+
+    // Log what values we're using for the update
+    console.log('Timetable entry data:', {
+      classId,
+      timeSlotId,
+      dayOfWeek,
+      subjectId,
+      teacherId,
+      roomId,
+      slotType,
+      notes
+    });
 
     // Create or update timetable entry
     const timetableEntry = await prisma.timetable.upsert({
@@ -256,7 +329,8 @@ export async function POST(
       update: {
         subjectId: subjectId || null,
         teacherId: teacherId || null,
-        specialLocationId: roomId || null,
+        // specialLocationId can only be a valid special location ID or null
+        specialLocationId: roomId, // Will be null if it's not a special location
         slotType: slotType || 'LESSON',
         notes: notes || null
       },
@@ -266,7 +340,8 @@ export async function POST(
         dayOfWeek: dayOfWeek,
         subjectId: subjectId || null,
         teacherId: teacherId || null,
-        specialLocationId: roomId || null,
+        // specialLocationId can only be a valid special location ID or null
+        specialLocationId: roomId, // Will be null if it's not a special location
         slotType: slotType || 'LESSON',
         notes: notes || null,
         isActive: true
@@ -292,8 +367,29 @@ export async function POST(
       success: true,
       data: timetableEntry
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating/updating timetable entry:', error);
+    
+    // Provide more specific error message for foreign key violations
+    if (error?.code === 'P2003' && error?.meta?.field_name?.includes('specialLocationId')) {
+      console.error('Foreign key constraint violation for specialLocationId');
+      console.error('This means the roomId provided is not a valid special location ID');
+      console.error('roomId value:', globalRoomId);
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Invalid special location ID. The room ID provided is not a valid special location.',
+          details: {
+            code: error.code,
+            meta: error.meta,
+            roomId: globalRoomId
+          }
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { success: false, error: 'Failed to create/update timetable entry' },
       { status: 500 }

@@ -309,7 +309,7 @@ export default function EventsPage() {
     try {
       const url = selectedEvent
         ? `/api/events/${selectedEvent.id}`
-        : '/api/events';
+        : '/api/events/notify';
 
       const method = selectedEvent ? 'PUT' : 'POST';
 

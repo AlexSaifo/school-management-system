@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function LanguageSwitcher() {
   const { language, setLanguage, isRTL } = useLanguage();
-  const { t } = useTranslation();
+  const { t, ready } = useTranslation();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -42,7 +42,7 @@ export default function LanguageSwitcher() {
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
           }
         }}
-        aria-label={t('language.switchLanguage')}
+        aria-label={ready ? t('language.switchLanguage') : 'Switch Language'}
       >
         <LanguageIcon />
       </IconButton>

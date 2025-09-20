@@ -298,7 +298,7 @@ export default function AnnouncementsPage() {
     try {
       const url = selectedAnnouncement
         ? `/api/announcements/${selectedAnnouncement.id}`
-        : '/api/announcements';
+        : '/api/announcements/notify';
 
       const method = selectedAnnouncement ? 'PUT' : 'POST';
 

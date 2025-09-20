@@ -12,7 +12,6 @@ const createTeacherSchema = z.object({
   address: z.string().min(1, 'Address is required'),
   employeeId: z.string().min(1, 'Employee ID is required'),
   department: z.string().min(1, 'Department is required'),
-  subject: z.string().min(1, 'Subject is required'),
   qualification: z.string().min(1, 'Qualification is required'),
   experience: z.number().min(0, 'Experience must be positive'),
   salary: z.number().min(0, 'Salary must be positive').optional(),
@@ -38,7 +37,6 @@ export async function GET(request: NextRequest) {
     // Search parameters
     const search = searchParams.get('search') || '';
     const department = searchParams.get('department') || '';
-    const subject = searchParams.get('subject') || '';
     const status = searchParams.get('status') || '';
     
     // Build where clause
@@ -62,14 +60,6 @@ export async function GET(request: NextRequest) {
       };
     }
     
-    // Add subject filter
-    if (subject) {
-      where.teacher = {
-        ...where.teacher,
-        subject: { contains: subject, mode: 'insensitive' },
-      };
-    }
-    
     // Add status filter
     if (status) {
       where.status = status === 'active' ? 'ACTIVE' : 'INACTIVE';
@@ -84,7 +74,22 @@ export async function GET(request: NextRequest) {
       skip,
       take: limit,
       include: {
-        teacher: true,
+        teacher: {
+          include: {
+            teacherSubjects: {
+              include: {
+                subject: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nameAr: true,
+                    code: true
+                  }
+                }
+              }
+            }
+          }
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -107,7 +112,12 @@ export async function GET(request: NextRequest) {
       },
       employeeId: teacher.teacher?.employeeId || '',
       department: teacher.teacher?.department || '',
-      subject: teacher.teacher?.subject || '',
+      subjects: teacher.teacher?.teacherSubjects?.map((ts: any) => ({
+        id: ts.subject.id,
+        name: ts.subject.name,
+        nameAr: ts.subject.nameAr,
+        code: ts.subject.code
+      })) || [],
       qualification: teacher.teacher?.qualification || '',
       experience: teacher.teacher?.experience || 0,
       salary: teacher.teacher?.salary ? Number(teacher.teacher.salary) : 0,
@@ -193,7 +203,6 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           employeeId: validatedData.employeeId,
           department: validatedData.department,
-          subject: validatedData.subject,
           qualification: validatedData.qualification,
           experience: validatedData.experience,
           salary: validatedData.salary,

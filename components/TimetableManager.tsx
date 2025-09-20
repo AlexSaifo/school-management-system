@@ -156,6 +156,17 @@ const TimetableManager: React.FC = () => {
     slotType: 'LESSON',
     notes: ''
   });
+  
+  // Current conflicts for the dialog
+  const [currentConflicts, setCurrentConflicts] = useState<{
+    teacherConflicts: any[];
+    roomConflicts: any[];
+    hasConflicts: boolean;
+  }>({
+    teacherConflicts: [],
+    roomConflicts: [],
+    hasConflicts: false
+  });
 
   // Time slot form states
   const [timeSlotFormData, setTimeSlotFormData] = useState({
@@ -189,15 +200,72 @@ const TimetableManager: React.FC = () => {
       fetchTimetable(selectedClass);
     }
   }, [selectedClass]);
+  
+  // Check for conflicts when form data changes in the dialog - with debounce
+  useEffect(() => {
+    const checkConflictsOnChange = async () => {
+      if (selectedSlot && selectedClass && editDialogOpen && (formData.teacherId || formData.roomId)) {
+        // Only validate if we have the necessary data and the dialog is open
+        try {
+          await validateTimetableEntry({
+            teacherId: formData.teacherId || '', // Ensure empty string if null/undefined
+            roomId: formData.roomId || '', // Ensure empty string if null/undefined
+            dayOfWeek: selectedSlot.dayOfWeek,
+            timeSlotId: selectedSlot.timeSlotId,
+            classId: selectedClass
+          });
+        } catch (error) {
+          console.error("Error validating timetable entry:", error);
+          // Clear conflicts if validation fails
+          setCurrentConflicts({
+            teacherConflicts: [],
+            roomConflicts: [],
+            hasConflicts: false
+          });
+        }
+      }
+    };
+    
+    // Set a timeout to debounce the API call
+    const debounceTimeout = setTimeout(() => {
+      checkConflictsOnChange();
+    }, 300); // 300ms debounce
+    
+    // Cleanup function to clear timeout if component unmounts or dependencies change
+    return () => {
+      clearTimeout(debounceTimeout);
+    };
+  }, [formData.teacherId, formData.roomId, editDialogOpen, selectedSlot, selectedClass]);
 
   const fetchClasses = async () => {
     try {
       const response = await fetch('/api/academic/classes');
       const data = await response.json();
       if (data.success) {
-        setClasses(data.data);
+        // API returns data.classRooms, but fallback to data.data if structure changes
+        const classRooms = data.classRooms || data.data || [];
+        
+        // Add validation to ensure each classroom has the expected structure
+        const validatedClasses = classRooms.map((cls: any) => {
+          // Ensure each class has a valid gradeLevel object
+          if (!cls.gradeLevel) {
+            cls.gradeLevel = {
+              id: 'unknown',
+              name: 'Unknown Grade',
+              nameAr: 'صف غير معروف',
+              level: 0
+            };
+          }
+          
+          return cls;
+        });
+        
+        setClasses(validatedClasses);
+      } else {
+        setError(t('timetable.failedToFetchClasses'));
       }
     } catch (error) {
+      console.error("Error fetching classes:", error);
       setError(t('timetable.failedToFetchClasses'));
     }
   };
@@ -376,70 +444,195 @@ const TimetableManager: React.FC = () => {
     timeSlotId: string;
     classId: string;
   }) => {
-    const [teacherConflicts, roomConflicts] = await Promise.all([
-      checkTeacherConflicts(entry.teacherId, entry.dayOfWeek, entry.timeSlotId, entry.classId),
-      checkRoomConflicts(entry.roomId, entry.dayOfWeek, entry.timeSlotId, entry.classId)
-    ]);
+    // Only make API calls if we have valid IDs
+    const promises = [];
+    let teacherConflicts: any[] = [];
+    let roomConflicts: any[] = [];
+    
+    if (entry.teacherId && entry.teacherId.trim() !== '') {
+      promises.push(
+        checkTeacherConflicts(entry.teacherId, entry.dayOfWeek, entry.timeSlotId, entry.classId)
+          .then(conflicts => {
+            teacherConflicts = conflicts;
+          })
+      );
+    }
+    
+    if (entry.roomId && entry.roomId.trim() !== '') {
+      promises.push(
+        checkRoomConflicts(entry.roomId, entry.dayOfWeek, entry.timeSlotId, entry.classId)
+          .then(conflicts => {
+            roomConflicts = conflicts;
+          })
+      );
+    }
+    
+    // Wait for all promises to resolve
+    if (promises.length > 0) {
+      await Promise.all(promises);
+    }
 
     const conflicts = [];
     
     if (teacherConflicts.length > 0) {
-      const conflictDetails = teacherConflicts.map((conflict: any) => 
-        `${conflict.class.gradeLevel[language === 'ar' ? 'nameAr' : 'name']} - ${conflict.class[language === 'ar' ? 'nameAr' : 'name']} (${conflict.class.section})`
-      ).join(', ');
+      const conflictDetails = teacherConflicts.map((conflict: any) => {
+        // Extract data from the complex conflict structure
+        const classRoom = conflict?.classRoom || {};
+        const gradeLevel = classRoom?.gradeLevel || {};
+        const gradeName = gradeLevel ? (language === 'ar' ? gradeLevel.nameAr : gradeLevel.name) : 'Unknown Grade';
+        const className = language === 'ar' ? classRoom.nameAr : classRoom.name;
+        const section = classRoom.section || '';
+        
+        return `${gradeName} - ${className || 'Unknown Class'} (${section})`;
+      }).join(', ');
       conflicts.push(`${t('timetable.teacherBusy')}: ${conflictDetails}`);
     }
 
     if (roomConflicts.length > 0) {
-      const conflictDetails = roomConflicts.map((conflict: any) => 
-        `${conflict.class.gradeLevel[language === 'ar' ? 'nameAr' : 'name']} - ${conflict.class[language === 'ar' ? 'nameAr' : 'name']} (${conflict.class.section})`
-      ).join(', ');
+      const conflictDetails = roomConflicts.map((conflict: any) => {
+        // Extract data from the complex conflict structure
+        const classRoom = conflict?.classRoom || {};
+        const gradeLevel = classRoom?.gradeLevel || {};
+        const gradeName = gradeLevel ? (language === 'ar' ? gradeLevel.nameAr : gradeLevel.name) : 'Unknown Grade';
+        const className = language === 'ar' ? classRoom.nameAr : classRoom.name;
+        const section = classRoom.section || '';
+        
+        return `${gradeName} - ${className || 'Unknown Class'} (${section})`;
+      }).join(', ');
       conflicts.push(`${t('timetable.roomBooked')}: ${conflictDetails}`);
     }
+
+    // Save the conflict data for display in the dialog
+    setCurrentConflicts({
+      teacherConflicts,
+      roomConflicts,
+      hasConflicts: teacherConflicts.length > 0 || roomConflicts.length > 0
+    });
 
     return conflicts;
   };
 
-  // Check conflicts for current timetable display
+  // Check conflicts for current timetable display - optimized to reduce API calls
   const checkCurrentTimetableConflicts = async () => {
     if (!selectedClass || !timetable.length) return;
 
     const conflictMap: {[key: string]: any[]} = {};
-
+    
+    // Batch API calls for teacher conflicts
+    const teacherConflictPromises: Promise<any>[] = [];
+    const teacherConflictKeys: string[] = [];
+    
+    // Batch API calls for room conflicts
+    const roomConflictPromises: Promise<any>[] = [];
+    const roomConflictKeys: string[] = [];
+    
+    // First, collect all the API calls needed
     for (const day of timetable) {
       for (const slot of day.slots) {
         if (slot.entry?.teacher?.id) {
           const conflictKey = `${day.day}-${slot.timeSlot.id}`;
-          const teacherConflicts = await checkTeacherConflicts(
+          
+          // Add teacher conflict check to batch
+          teacherConflictPromises.push(checkTeacherConflicts(
             slot.entry.teacher.id,
             day.day,
             slot.timeSlot.id,
             selectedClass
-          );
-          const roomConflicts = await checkRoomConflicts(
-            slot.entry.room?.id || '',
-            day.day,
-            slot.timeSlot.id,
-            selectedClass
-          );
+          ));
+          teacherConflictKeys.push(conflictKey);
           
-          conflictMap[conflictKey] = [...teacherConflicts, ...roomConflicts];
+          // Only check room conflicts if a special room is assigned
+          if (slot.entry.room?.id) {
+            roomConflictPromises.push(checkRoomConflicts(
+              slot.entry.room.id,
+              day.day,
+              slot.timeSlot.id,
+              selectedClass
+            ));
+            roomConflictKeys.push(conflictKey);
+          }
         }
       }
     }
+    
+    // Execute all API calls in parallel
+    const teacherConflictsResults = await Promise.all(teacherConflictPromises);
+    const roomConflictsResults = await Promise.all(roomConflictPromises);
+    
+    // Process teacher conflicts
+    teacherConflictsResults.forEach((teacherConflicts, index) => {
+      const conflictKey = teacherConflictKeys[index];
+      if (teacherConflicts.length > 0) {
+        const processedTeacherConflicts = teacherConflicts.map((conflict: any) => {
+          return {
+            ...conflict,
+            conflictType: 'teacher',
+            class: conflict.classRoom ? undefined : {
+              gradeLevel: conflict.classRoom?.gradeLevel || {},
+              name: conflict.classRoom?.name || 'Unknown Class',
+              nameAr: conflict.classRoom?.nameAr || 'صف غير معروف',
+              section: conflict.classRoom?.section || ''
+            }
+          };
+        });
+        
+        if (!conflictMap[conflictKey]) {
+          conflictMap[conflictKey] = [];
+        }
+        
+        conflictMap[conflictKey] = [...conflictMap[conflictKey], ...processedTeacherConflicts];
+      }
+    });
+    
+    // Process room conflicts
+    roomConflictsResults.forEach((roomConflicts, index) => {
+      const conflictKey = roomConflictKeys[index];
+      if (roomConflicts.length > 0) {
+        const processedRoomConflicts = roomConflicts.map((conflict: any) => {
+          return {
+            ...conflict,
+            conflictType: 'room',
+            class: conflict.classRoom ? undefined : {
+              gradeLevel: conflict.classRoom?.gradeLevel || {},
+              name: conflict.classRoom?.name || 'Unknown Class',
+              nameAr: conflict.classRoom?.nameAr || 'صف غير معروف',
+              section: conflict.classRoom?.section || ''
+            }
+          };
+        });
+        
+        if (!conflictMap[conflictKey]) {
+          conflictMap[conflictKey] = [];
+        }
+        
+        conflictMap[conflictKey] = [...conflictMap[conflictKey], ...processedRoomConflicts];
+      }
+    });
+    
+    // Update the conflicts state with the new conflict map
+    setConflicts(conflictMap);
 
     setConflicts(conflictMap);
   };
 
-  // Check conflicts whenever timetable changes
+  // Check conflicts whenever timetable changes - with debounce
   useEffect(() => {
-    checkCurrentTimetableConflicts();
+    // Only run if we have both timetable data and a selected class
+    if (timetable.length > 0 && selectedClass) {
+      const debounceTimeout = setTimeout(() => {
+        checkCurrentTimetableConflicts();
+      }, 500); // 500ms debounce
+      
+      return () => {
+        clearTimeout(debounceTimeout);
+      };
+    }
   }, [timetable, selectedClass]);
 
   const handleClassChange = (classId: string) => {
     setSelectedClass(classId);
     const selectedClassData = classes.find(c => c.id === classId);
-    if (selectedClassData) {
+    if (selectedClassData && selectedClassData.gradeLevel && selectedClassData.gradeLevel.level !== undefined) {
       setSelectedGrade(selectedClassData.gradeLevel.level.toString());
     }
   };
@@ -463,24 +656,26 @@ const TimetableManager: React.FC = () => {
         notes: ''
       });
     }
+    
+    // Reset any existing conflicts when opening the dialog
+    setCurrentConflicts({
+      teacherConflicts: [],
+      roomConflicts: [],
+      hasConflicts: false
+    });
+    
     setEditDialogOpen(true);
   };
 
   const handleSaveSlot = async () => {
     if (!selectedSlot || !selectedClass) return;
 
-    // Validate conflicts before saving
-    if (formData.teacherId || formData.roomId) {
-      const conflicts = await validateTimetableEntry({
-        teacherId: formData.teacherId,
-        roomId: formData.roomId,
-        dayOfWeek: selectedSlot.dayOfWeek,
-        timeSlotId: selectedSlot.timeSlotId,
-        classId: selectedClass
-      });
-
-      if (conflicts.length > 0) {
-        setError(`تعارض في الجدول:\n${conflicts.join('\n')}`);
+    // Use the currentConflicts state that is already calculated by the useEffect
+    // instead of making redundant API calls
+    if (currentConflicts.hasConflicts) {
+      // Allow the user to see the conflicts clearly in the modal
+      // Don't block saving if there are conflicts, just warn the user
+      if (!window.confirm(t('timetable.confirmConflictSave'))) {
         return;
       }
     }
@@ -578,7 +773,7 @@ const TimetableManager: React.FC = () => {
   };
 
   const renderTimetableGrid = () => {
-    if (!timetable.length) {
+    if (!timetable || !timetable.length) {
       return (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <ScheduleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -595,7 +790,7 @@ const TimetableManager: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 'bold', minWidth: 120 }}>Time</TableCell>
-              {timetable.map(day => (
+              {timetable && timetable.map(day => (
                 <TableCell key={day.day} sx={{ fontWeight: 'bold', textAlign: 'center', minWidth: 150 }}>
                   <Box>
                     <Typography variant="body2">{day.dayName}</Typography>
@@ -608,7 +803,7 @@ const TimetableManager: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {timeSlots.map(slot => (
+            {timeSlots && timeSlots.map(slot => (
               <TableRow key={slot.id}>
                 <TableCell>
                   <Box>
@@ -623,7 +818,7 @@ const TimetableManager: React.FC = () => {
                     </Typography>
                   </Box>
                 </TableCell>
-                {timetable.map(day => {
+                {timetable && timetable.map(day => {
                   const slotData = day.slots.find(s => s.timeSlot.id === slot.id);
                   const entry = slotData?.entry;
                   const conflictKey = `${day.day}-${slot.id}`;
@@ -652,7 +847,19 @@ const TimetableManager: React.FC = () => {
                           }}
                         >
                           {hasConflicts && (
-                            <Tooltip title={`${t('timetable.conflict')}: ${conflicts[conflictKey]?.map(c => `${c.class.gradeLevel[language === 'ar' ? 'nameAr' : 'name']} - ${c.class[language === 'ar' ? 'nameAr' : 'name']}`).join(', ')}`}>
+                            <Tooltip title={`${t('timetable.conflict')}: ${conflicts[conflictKey]?.map(c => {
+                              // Handle both old and new conflict data structures
+                              const classRoom = c?.classRoom || {};
+                              const classData = c?.class || {}; // Old structure support
+                              const gradeLevel = classRoom?.gradeLevel || classData?.gradeLevel || {};
+                              const gradeName = gradeLevel ? (language === 'ar' ? gradeLevel.nameAr : gradeLevel.name) : 'Unknown Grade';
+                              // Try to get class name from both structures
+                              const className = language === 'ar' 
+                                ? (classRoom.nameAr || classData.nameAr || 'Unknown Class')
+                                : (classRoom.name || classData.name || 'Unknown Class');
+                              
+                              return `${gradeName} - ${className}`;
+                            }).join(', ')}`}>
                               <WarningIcon 
                                 sx={{ 
                                   position: 'absolute', 
@@ -807,7 +1014,7 @@ const TimetableManager: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <WarningIcon sx={{ color: '#f44336', mr: 1 }} />
             <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#f44336' }}>
-              تعارضات في الجدول
+              {language === 'ar' ? 'تعارضات في الجدول الزمني' : 'Timetable Conflicts'}
             </Typography>
           </Box>
           <Grid container spacing={2}>
@@ -820,17 +1027,114 @@ const TimetableManager: React.FC = () => {
                 const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
                 
                 return (
-                  <Grid item xs={12} md={6} key={conflictKey}>
+                  <Grid item xs={12} key={conflictKey}>
                     <Alert severity="error" sx={{ mb: 1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
                         {dayNames[day]} - {timeSlot?.[language === 'ar' ? 'nameAr' : 'name']} ({timeSlot?.startTime} - {timeSlot?.endTime})
                       </Typography>
-                      {conflictList.map((conflict, index) => (
-                        <Typography key={index} variant="body2" sx={{ mt: 0.5 }}>
-                          • {t('timetable.conflictWith')}: {conflict.class.gradeLevel[language === 'ar' ? 'nameAr' : 'name']} - {conflict.class[language === 'ar' ? 'nameAr' : 'name']} ({conflict.class.section})
-                          {conflict.teacher && ` - ${t('timetable.teacher')}: ${conflict.teacher.user.firstName} ${conflict.teacher.user.lastName}`}
-                        </Typography>
-                      ))}
+                      
+                      {conflictList.map((conflict, index) => {
+                        // Extract all available data from the conflict object
+                        const classRoom = conflict.classRoom || {};
+                        const gradeLevel = classRoom.gradeLevel || {};
+                        const subject = conflict.subject || {};
+                        const teacher = conflict.teacher || {};
+                        const user = teacher?.user || {};
+                        const specialLocation = conflict.specialLocation || null;
+                        const conflictTimeSlot = conflict.timeSlot || {};
+                        const conflictType = conflict.conflictType || 'general';
+                        
+                        return (
+                          <Box 
+                            key={index} 
+                            sx={{ 
+                              mt: 1, 
+                              p: 2, 
+                              borderRadius: 1, 
+                              bgcolor: 'rgba(255,255,255,0.7)',
+                              border: '1px solid #ffcdd2',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                            }}
+                          >
+                            {/* Conflict type header */}
+                            <Box sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                              <Chip 
+                                label={conflictType === 'teacher' ? 'Teacher Conflict' : 'Room Conflict'} 
+                                size="small" 
+                                color="error" 
+                                sx={{ mr: 1 }}
+                              />
+                              <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#d32f2f', flex: 1 }}>
+                                {conflictType === 'teacher' 
+                                  ? t('timetable.teacherBusy') || 'Teacher is busy at this time'
+                                  : t('timetable.roomBooked') || 'Room is booked at this time'}
+                              </Typography>
+                            </Box>
+                            
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#d32f2f' }}>
+                                  {t('timetable.class') || 'Class'}:
+                                </Typography>
+                                <Typography variant="body2">
+                                  {/* Handle both old and new conflict data structures */}
+                                  {gradeLevel ? (language === 'ar' ? gradeLevel.nameAr : gradeLevel.name) : 'Unknown Grade'} - {
+                                    (language === 'ar' ? 
+                                      (classRoom.nameAr || conflict.class?.nameAr || 'Unknown Class') : 
+                                      (classRoom.name || conflict.class?.name || 'Unknown Class'))
+                                  }
+                                  {(classRoom.section || conflict.class?.section) && ` (${classRoom.section || conflict.class?.section})`}
+                                </Typography>
+                              </Grid>
+                              
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#d32f2f' }}>
+                                  {t('timetable.subject') || 'Subject'}:
+                                </Typography>
+                                <Typography variant="body2">
+                                  {language === 'ar' ? subject.nameAr : subject.name || 'Unknown Subject'}
+                                  {subject.code && ` (${subject.code})`}
+                                </Typography>
+                              </Grid>
+                              
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#d32f2f' }}>
+                                  {t('timetable.teacher') || 'Teacher'}:
+                                </Typography>
+                                <Typography variant="body2">
+                                  {user ? `${user.firstName || ''} ${user.lastName || ''}` : 'Unknown Teacher'}
+                                </Typography>
+                              </Grid>
+                              
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#d32f2f' }}>
+                                  {t('timetable.room') || 'Room'}:
+                                </Typography>
+                                <Typography variant="body2">
+                                  {specialLocation 
+                                    ? (language === 'ar' ? specialLocation.nameAr : specialLocation.name)
+                                    : (classRoom.roomNumber ? `Room ${classRoom.roomNumber}` : 'Default Classroom')}
+                                </Typography>
+                              </Grid>
+                              
+                              <Grid item xs={12}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                                  <Chip 
+                                    label={conflict.slotType || 'LESSON'} 
+                                    size="small" 
+                                    color="error" 
+                                    variant="outlined"
+                                  />
+                                  
+                                  <Typography variant="caption" color="error">
+                                    ID: {conflict.id}
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            </Grid>
+                          </Box>
+                        );
+                      })}
                     </Alert>
                   </Grid>
                 );
@@ -850,11 +1154,11 @@ const TimetableManager: React.FC = () => {
                 onChange={(e) => handleClassChange(e.target.value)}
                 label={t('timetable.selectClass')}
               >
-                {classes.map(cls => (
+                {classes && classes.length > 0 ? classes.map(cls => (
                   <MenuItem key={cls.id} value={cls.id}>
                     {cls.gradeLevel[language === 'ar' ? 'nameAr' : 'name']} - {cls[language === 'ar' ? 'nameAr' : 'name']} ({cls.section}) - {cls.studentCount} {t('common.students')}
                   </MenuItem>
-                ))}
+                )) : <MenuItem disabled>{t('timetable.noClassesAvailable', 'No classes available')}</MenuItem>}
               </Select>
             </FormControl>
           </Grid>
@@ -1009,6 +1313,63 @@ const TimetableManager: React.FC = () => {
               />
             </Grid>
           </Grid>
+          
+          {/* Conflict display in dialog */}
+          {currentConflicts.hasConflicts && (
+            <Box sx={{ mt: 3, p: 2, bgcolor: '#ffebee', borderRadius: 1 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, color: '#d32f2f', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                <WarningIcon sx={{ mr: 1 }} /> {t('timetable.conflictsDetected')}
+              </Typography>
+              
+              {currentConflicts.teacherConflicts.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ color: '#d32f2f', mb: 1 }}>
+                    {t('timetable.teacherBusy') || 'Teacher is busy at this time:'}
+                  </Typography>
+                  {currentConflicts.teacherConflicts.map((conflict, index) => {
+                    // Extract data from the complex conflict structure
+                    const classRoom = conflict?.classRoom || {};
+                    const gradeLevel = classRoom?.gradeLevel || {};
+                    const gradeName = gradeLevel ? (language === 'ar' ? gradeLevel.nameAr : gradeLevel.name) : 'Unknown Grade';
+                    const className = language === 'ar' ? classRoom.nameAr : classRoom.name;
+                    const section = classRoom.section || '';
+                    
+                    return (
+                      <Box key={index} sx={{ ml: 2, mb: 1, p: 1, bgcolor: 'rgba(255, 255, 255, 0.5)', borderRadius: 1 }}>
+                        <Typography variant="body2">
+                          {gradeName} - {className || 'Unknown Class'} {section ? `(${section})` : ''}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+              
+              {currentConflicts.roomConflicts.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: '#d32f2f', mb: 1 }}>
+                    {t('timetable.roomBooked') || 'Room is booked at this time:'}
+                  </Typography>
+                  {currentConflicts.roomConflicts.map((conflict, index) => {
+                    // Extract data from the complex conflict structure
+                    const classRoom = conflict?.classRoom || {};
+                    const gradeLevel = classRoom?.gradeLevel || {};
+                    const gradeName = gradeLevel ? (language === 'ar' ? gradeLevel.nameAr : gradeLevel.name) : 'Unknown Grade';
+                    const className = language === 'ar' ? classRoom.nameAr : classRoom.name;
+                    const section = classRoom.section || '';
+                    
+                    return (
+                      <Box key={index} sx={{ ml: 2, mb: 1, p: 1, bgcolor: 'rgba(255, 255, 255, 0.5)', borderRadius: 1 }}>
+                        <Typography variant="body2">
+                          {gradeName} - {className || 'Unknown Class'} {section ? `(${section})` : ''}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>

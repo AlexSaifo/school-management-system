@@ -37,6 +37,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user has a password
+    if (!user.password) {
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
     // Verify password
     const isValidPassword = await verifyPassword(password, user.password);
     if (!isValidPassword) {

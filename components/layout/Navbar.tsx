@@ -19,6 +19,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -90,6 +91,9 @@ export default function Navbar() {
                 '& .MuiChip-label': { px: 2 }
               }}
             />
+            
+            {/* Notification Bell */}
+            <NotificationBell />
             
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>

@@ -10,13 +10,23 @@ export async function GET(request: NextRequest) {
     const timeSlotId = searchParams.get('timeSlotId');
     const excludeClassId = searchParams.get('excludeClassId');
 
-    if (!roomId || !dayOfWeek || !timeSlotId) {
+    // Validate required parameters
+    if (!dayOfWeek || !timeSlotId) {
       return NextResponse.json(
-        { success: false, error: 'Missing required parameters' },
+        { success: false, error: 'Missing required parameters: dayOfWeek or timeSlotId' },
         { status: 400 }
       );
     }
 
+    // If no roomId is provided, return empty conflicts (no conflicts for default classroom)
+    if (!roomId || roomId === '') {
+      return NextResponse.json({
+        success: true,
+        conflicts: [],
+        hasConflicts: false
+      });
+    }
+    
     // Find conflicting timetable entries for the room
     const conflicts = await prisma.timetable.findMany({
       where: {

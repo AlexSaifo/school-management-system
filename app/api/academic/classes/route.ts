@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyTokenEdge } from '@/lib/auth-edge';
+import { handleApiAuth } from '@/lib/api-auth';
 
 // GET /api/academic/classes - Get all classrooms with grade levels
 export async function GET(request: NextRequest) {
   try {
-    // Get token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.substring(7);
-    const auth = await verifyTokenEdge(token);
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Use unified auth handler that checks both cookie and Authorization header
+    const authResult = await handleApiAuth(request);
+    if (!authResult.success) {
+      return authResult.response!;
     }
 
     const { searchParams } = new URL(request.url);
@@ -61,6 +55,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       classRooms: classRooms.map((cls: any) => ({
+        id: cls.id,
+        name: cls.name,
+        nameAr: cls.nameAr,
+        section: cls.section,
+        sectionNumber: cls.sectionNumber,
+        roomNumber: cls.roomNumber,
+        floor: cls.floor,
+        capacity: cls.capacity,
+        facilities: cls.facilities,
+        isActive: cls.isActive,
+        academicYear: cls.academicYear,
+        gradeLevel: cls.gradeLevel,
+        studentCount: cls._count.students
+      })),
+      // Also provide data field for consistency with other API endpoints
+      data: classRooms.map((cls: any) => ({
         id: cls.id,
         name: cls.name,
         nameAr: cls.nameAr,

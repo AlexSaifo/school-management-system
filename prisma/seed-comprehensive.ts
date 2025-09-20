@@ -247,6 +247,22 @@ async function main() {
           avatar: '/avatars/teacher3.jpg'
         }
       }),
+      // Template Teacher Account
+      prisma.user.upsert({
+        where: { email: 'teacher@school.com' },
+        update: {},
+        create: {
+          email: 'teacher@school.com',
+          password: hashedPassword,
+          role: 'TEACHER',
+          status: 'ACTIVE',
+          firstName: 'John',
+          lastName: 'Doe',
+          phone: '+1234567890',
+          address: '456 Education Street, City, Country',
+          avatar: '/avatars/teacher.jpg'
+        }
+      }),
       // Students
       prisma.user.upsert({
         where: { email: 'student1@school.com' },
@@ -308,6 +324,22 @@ async function main() {
           avatar: '/avatars/student4.jpg'
         }
       }),
+      // Template Student Account
+      prisma.user.upsert({
+        where: { email: 'student@school.com' },
+        update: {},
+        create: {
+          email: 'student@school.com',
+          password: hashedPassword,
+          role: 'STUDENT',
+          status: 'ACTIVE',
+          firstName: 'Jane',
+          lastName: 'Smith',
+          phone: '+1234567890',
+          address: '123 Learning Street, City, Country',
+          avatar: '/avatars/student.jpg'
+        }
+      }),
       // Parents
       prisma.user.upsert({
         where: { email: 'parent1@school.com' },
@@ -337,6 +369,22 @@ async function main() {
           phone: '+1234567899',
           address: '222 Parent Street, City, Country',
           avatar: '/avatars/parent2.jpg'
+        }
+      }),
+      // Template Parent Account
+      prisma.user.upsert({
+        where: { email: 'parent@school.com' },
+        update: {},
+        create: {
+          email: 'parent@school.com',
+          password: hashedPassword,
+          role: 'PARENT',
+          status: 'ACTIVE',
+          firstName: 'Michael',
+          lastName: 'Brown',
+          phone: '+1234567890',
+          address: '456 Family Avenue, City, Country',
+          avatar: '/avatars/parent.jpg'
         }
       })
     ]);
@@ -401,6 +449,20 @@ async function main() {
           salary: 38000.00,
           joinDate: new Date('2022-09-01')
         }
+      }),
+      // Template Teacher Account
+      prisma.teacher.upsert({
+        where: { userId: users[4].id },
+        update: {},
+        create: {
+          userId: users[4].id,
+          employeeId: 'T004',
+          department: 'General Education',
+          qualification: 'Bachelor of Education',
+          experience: 3,
+          salary: 35000.00,
+          joinDate: new Date('2023-09-01')
+        }
       })
     ]);
 
@@ -457,25 +519,48 @@ async function main() {
           emergencyContact: '+1234567893',
           admissionDate: new Date('2023-09-01')
         }
+      }),
+      // Template Student Account
+      prisma.student.upsert({
+        where: { userId: users[9].id },
+        update: {},
+        create: {
+          userId: users[9].id,
+          studentId: 'STU005',
+          rollNumber: '005',
+          dateOfBirth: new Date('2015-09-15'),
+          bloodGroup: 'A-',
+          emergencyContact: '+1234567890',
+          admissionDate: new Date('2023-09-01')
+        }
       })
     ]);
 
     // Parent records
     const parents = await Promise.all([
       prisma.parent.upsert({
-        where: { userId: users[8].id },
+        where: { userId: users[10].id },
         update: {},
         create: {
-          userId: users[8].id,
+          userId: users[10].id,
           occupation: 'Software Engineer'
         }
       }),
       prisma.parent.upsert({
-        where: { userId: users[9].id },
+        where: { userId: users[11].id },
         update: {},
         create: {
-          userId: users[9].id,
+          userId: users[11].id,
           occupation: 'Teacher'
+        }
+      }),
+      // Template Parent Account
+      prisma.parent.upsert({
+        where: { userId: users[12].id },
+        update: {},
+        create: {
+          userId: users[12].id,
+          occupation: 'Business Owner'
         }
       })
     ]);
@@ -622,6 +707,11 @@ async function main() {
       prisma.student.update({
         where: { id: students[3].id },
         data: { classRoomId: classrooms[2].id }
+      }),
+      // Assign template student to a classroom
+      prisma.student.update({
+        where: { id: students[4].id },
+        data: { classRoomId: classrooms[0].id }
       })
     ]);
 
@@ -941,61 +1031,7 @@ async function main() {
     ]);
 
     // 13. Create Attendance Records
-    console.log('📊 Creating attendance records...');
-    const today = new Date();
-    await Promise.all([
-      prisma.attendance.upsert({
-        where: {
-          studentId_date: {
-            studentId: students[0].id,
-            date: today
-          }
-        },
-        update: {},
-        create: {
-          studentId: students[0].id,
-          teacherId: teachers[0].id,
-          classRoomId: classrooms[0].id,
-          date: today,
-          status: 'PRESENT',
-          remarks: 'Present and attentive'
-        }
-      }),
-      prisma.attendance.upsert({
-        where: {
-          studentId_date: {
-            studentId: students[1].id,
-            date: today
-          }
-        },
-        update: {},
-        create: {
-          studentId: students[1].id,
-          teacherId: teachers[0].id,
-          classRoomId: classrooms[0].id,
-          date: today,
-          status: 'PRESENT',
-          remarks: 'Present'
-        }
-      }),
-      prisma.attendance.upsert({
-        where: {
-          studentId_date: {
-            studentId: students[2].id,
-            date: today
-          }
-        },
-        update: {},
-        create: {
-          studentId: students[2].id,
-          teacherId: teachers[1].id,
-          classRoomId: classrooms[1].id,
-          date: today,
-          status: 'ABSENT',
-          remarks: 'Sick leave'
-        }
-      })
-    ]);
+    console.log('📊 Skipping attendance records creation (temporarily disabled due to schema issues)...');
 
     // 14. Create Assignments
     console.log('📝 Creating assignments...');
@@ -1303,7 +1339,7 @@ async function main() {
         data: {
           title: 'إشعار إجازة المدرسة',
           content: 'سيتم إغلاق المدرسة لإجازة الشتاء من 20 ديسمبر إلى 5 يناير. ستستأنف الدراسة في 6 يناير.',
-          targetRoles: ['ADMIN', 'TEACHER', 'STUDENT', 'PARENT'],
+          targetRoles: ['ALL'],
           priority: 'HIGH',
           isActive: true,
           expiresAt: new Date('2025-12-20'),
@@ -1314,7 +1350,7 @@ async function main() {
         data: {
           title: 'كتب جديدة متاحة في المكتبة',
           content: 'تم إضافة مجموعة جديدة من الكتب إلى مكتبة المدرسة. يشجع الطلاب على زيارة المكتبة واستعارة الكتب.',
-          targetRoles: ['STUDENT', 'TEACHER'],
+          targetRoles: ['STUDENTS', 'TEACHERS'],
           priority: 'NORMAL',
           isActive: true,
           expiresAt: new Date('2025-11-30'),
@@ -1325,7 +1361,7 @@ async function main() {
         data: {
           title: 'تجارب الرياضة',
           content: 'سيتم إجراء تجارب كرة القدم وكرة السلة الأسبوع المقبل. يجب على الطلاب المهتمين التوجه إلى الصالة الرياضية.',
-          targetRoles: ['STUDENT'],
+          targetRoles: ['STUDENTS'],
           priority: 'NORMAL',
           isActive: true,
           expiresAt: new Date('2025-11-15'),

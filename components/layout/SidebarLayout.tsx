@@ -17,7 +17,6 @@ import {
   Avatar,
   Menu,
   MenuItem,
-  Badge,
   Tooltip,
   Collapse,
 } from "@mui/material";
@@ -30,7 +29,6 @@ import {
   Assignment,
   CalendarMonth,
   Assessment,
-  Notifications,
   Settings,
   Logout,
   ExpandLess,
@@ -47,12 +45,14 @@ import {
   AccountCircle,
   Room,
   LocationOn as LocationIcon,
+  Chat,
 } from "@mui/icons-material";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const drawerWidth = 280;
 
@@ -74,6 +74,12 @@ const navigationItems: NavigationItem[] = [
     titleKey: "navigation.dashboard",
     icon: <Dashboard />,
     path: "/dashboard",
+    roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"],
+  },
+  {
+    titleKey: "navigation.chat",
+    icon: <Chat />,
+    path: "/chat",
     roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"],
   },
   {
@@ -244,13 +250,6 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-
-  console.log(
-    "SidebarLayout: Rendering with user:",
-    user?.email,
-    "pathname:",
-    pathname
-  );
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -490,13 +489,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
           <Box display="flex" alignItems="center" gap={1}>
             <LanguageSwitcher />
 
-            <Tooltip title={t("navigation.notifications")}>
-              <IconButton color="inherit">
-                <Badge badgeContent={4} color="error">
-                  <Notifications />
-                </Badge>
-              </IconButton>
-            </Tooltip>
+            <NotificationBell />
 
             <Tooltip title={t("navigation.profile")}>
               <IconButton

@@ -11,7 +11,6 @@ const updateTeacherSchema = z.object({
   address: z.string().optional(),
   employeeId: z.string().optional(),
   department: z.string().optional(),
-  subject: z.string().optional(),
   qualification: z.string().optional(),
   experience: z.number().int().min(0).optional(),
   salary: z.number().optional(),
@@ -67,7 +66,12 @@ export async function GET(
       },
       employeeId: teacher.teacher?.employeeId || '',
       department: teacher.teacher?.department || '',
-      subject: teacher.teacher?.teacherSubjects?.[0]?.subject?.name || '',
+      subjects: teacher.teacher?.teacherSubjects?.map((ts: any) => ({
+        id: ts.subject.id,
+        name: ts.subject.name,
+        nameAr: ts.subject.nameAr,
+        code: ts.subject.code
+      })) || [],
       qualification: teacher.teacher?.qualification || '',
       experience: teacher.teacher?.experience || 0,
       salary: teacher.teacher?.salary || 0,
@@ -166,7 +170,6 @@ export async function PATCH(
       const teacherData: any = {};
       if (validatedData.employeeId !== undefined) teacherData.employeeId = validatedData.employeeId;
       if (validatedData.department !== undefined) teacherData.department = validatedData.department;
-      if (validatedData.subject !== undefined) teacherData.subject = validatedData.subject;
       if (validatedData.qualification !== undefined) teacherData.qualification = validatedData.qualification;
       if (validatedData.experience !== undefined) teacherData.experience = validatedData.experience;
       if (validatedData.salary !== undefined) teacherData.salary = validatedData.salary;

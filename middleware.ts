@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
 
       // Teacher and Student routes
       if (pathname.startsWith('/assignments')) {
-        if (userRole !== 'TEACHER' && userRole !== 'STUDENT') {
+        if (userRole !== 'TEACHER' && userRole !== 'STUDENT' && userRole !== 'ADMIN') {
           return NextResponse.redirect(new URL('/dashboard', request.url));
         }
       }

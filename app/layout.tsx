@@ -3,6 +3,7 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { SocketProvider } from '@/contexts/SocketContext';
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
 import { useEffect, useMemo } from 'react';
 import '@/lib/i18n';
@@ -157,7 +158,9 @@ function ThemedApp({ children }: { children: React.ReactNode }) {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        {children}
+        <SocketProvider>
+          {children}
+        </SocketProvider>
       </AuthProvider>
     </ThemeProvider>
   );

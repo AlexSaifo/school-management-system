@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
       ]
     });
 
-    return NextResponse.json({ specialLocations });
+    return NextResponse.json({ 
+      success: true,
+      data: specialLocations 
+    });
   } catch (error) {
     console.error('Error fetching special locations:', error);
     return NextResponse.json(

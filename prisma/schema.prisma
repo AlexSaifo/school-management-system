@@ -55,11 +55,17 @@ model User {
   events        Event[]
   announcements Announcement[]
 
+  // Chat relationships
+  createdChats        Chat[]               @relation("ChatCreator")
+  chatParticipants    ChatParticipant[]    @relation("ChatParticipants")
+  sentMessages        Message[]            @relation("MessageSender")
+  messageReadReceipts MessageReadReceipt[] @relation("MessageReadReceipts")
+
   @@map("users")
 }
 
 model Event {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   title         String
   titleAr       String?
   description   String?
@@ -68,12 +74,12 @@ model Event {
   eventTime     String?
   location      String?
   locationAr    String?
-  type          EventType   @default(GENERAL)
+  type          EventType    @default(GENERAL)
   targetRoles   TargetRole[] @default([ALL])
   createdById   String
-  creator       User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  creator       User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@map("events")
 }
@@ -298,9 +304,9 @@ model Attendance {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  classRoom ClassRoom @relation(fields: [classRoomId], references: [id], onDelete: Cascade)
+  student   Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher   Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classRoom ClassRoom  @relation(fields: [classRoomId], references: [id], onDelete: Cascade)
   timetable Timetable? @relation(fields: [timetableId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, timetableId, date]) // One attendance per student per subject per day
@@ -372,17 +378,17 @@ model VerificationToken {
 }
 
 model Announcement {
-  id          String      @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   content     String
   targetRoles TargetRole[] @default([ALL])
-  priority    Priority    @default(NORMAL)
-  isActive    Boolean     @default(true)
+  priority    Priority     @default(NORMAL)
+  isActive    Boolean      @default(true)
   expiresAt   DateTime?
   createdById String
-  creator     User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  creator     User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@map("announcements")
 }
@@ -568,4 +574,96 @@ enum Priority {
   NORMAL
   HIGH
   URGENT
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  VOICE_NOTE
+}
+
+model Chat {
+  id            String    @id @default(cuid())
+  name          String? // For group chats
+  isGroup       Boolean   @default(false)
+  createdBy     String
+  creator       User      @relation("ChatCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastMessage   String? // Cache for quick display
+  lastMessageAt DateTime?
+
+  // Relationships
+  participants ChatParticipant[]
+  messages     Message[]
+
+  @@map("chats")
+}
+
+model ChatParticipant {
+  id         String   @id @default(cuid())
+  chatId     String
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation("ChatParticipants", fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt   DateTime @default(now())
+  lastReadAt DateTime @default(now())
+  isActive   Boolean  @default(true)
+
+  @@unique([chatId, userId])
+  @@map("chat_participants")
+}
+
+model Message {
+  id          String      @id @default(cuid())
+  chatId      String
+  chat        Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  content     String? // Text content
+  messageType MessageType @default(TEXT)
+  isEdited    Boolean     @default(false)
+  editedAt    DateTime?
+  replyToId   String? // For reply functionality
+  replyTo     Message?    @relation("MessageReply", fields: [replyToId], references: [id])
+  replies     Message[]   @relation("MessageReply")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relationships
+  attachments  MessageAttachment[]
+  readReceipts MessageReadReceipt[]
+
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id           String   @id @default(cuid())
+  messageId    String
+  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileName     String
+  originalName String
+  fileSize     Int
+  mimeType     String
+  fileUrl      String
+  thumbnailUrl String? // For images/videos
+  duration     Int? // For audio/video files in seconds
+  createdAt    DateTime @default(now())
+
+  @@map("message_attachments")
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("MessageReadReceipts", fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@map("message_read_receipts")
 }

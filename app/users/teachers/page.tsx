@@ -41,6 +41,7 @@ import {
   GetApp,
   Block,
   CheckCircle,
+  Assignment,
 } from '@mui/icons-material';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,6 +49,7 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import DataTable, { Column, Action } from '@/components/DataTable';
 import FilterPanel, { Filter, FilterOption, BulkAction } from '@/components/FilterPanel';
+import TeacherSubjectManager from '@/components/TeacherSubjectManager';
 import PageHeader from '@/components/PageHeader';
 import PaginationControls from '@/components/PaginationControls';
 
@@ -66,7 +68,12 @@ interface Teacher {
   };
   employeeId: string;
   department: string;
-  subject: string;
+  subjects: Array<{
+    id: string;
+    name: string;
+    nameAr: string;
+    code: string;
+  }>;
   qualification: string;
   experience: number;
   salary?: number;
@@ -94,6 +101,8 @@ export default function TeachersPage() {
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewTeacher, setViewTeacher] = useState<Teacher | null>(null);
+  const [subjectManagerOpen, setSubjectManagerOpen] = useState(false);
+  const [subjectManagerTeacher, setSubjectManagerTeacher] = useState<Teacher | null>(null);
   const [pagination, setPagination] = useState({
     current: 1,
     total: 0,
@@ -109,7 +118,6 @@ export default function TeachersPage() {
     address: '',
     employeeId: '',
     department: '',
-    subject: '',
     qualification: '',
     experience: 0,
     salary: 0,
@@ -184,7 +192,6 @@ export default function TeachersPage() {
         address: teacher.user.address || '',
         employeeId: teacher.employeeId,
         department: teacher.department,
-        subject: teacher.subject,
         qualification: teacher.qualification,
         experience: teacher.experience,
         salary: teacher.salary || 0,
@@ -200,7 +207,6 @@ export default function TeachersPage() {
         address: '',
         employeeId: '',
         department: '',
-        subject: '',
         qualification: '',
         experience: 0,
         salary: 0,
@@ -262,6 +268,21 @@ export default function TeachersPage() {
         console.error('Error deleting teacher:', error);
       }
     }
+  };
+
+  const handleOpenSubjectManager = (teacher: Teacher) => {
+    setSubjectManagerTeacher(teacher);
+    setSubjectManagerOpen(true);
+  };
+
+  const handleCloseSubjectManager = () => {
+    setSubjectManagerOpen(false);
+    setSubjectManagerTeacher(null);
+  };
+
+  const handleSubjectManagerUpdate = () => {
+    // Refresh the teachers list to show updated subjects
+    fetchTeachers(pagination.current);
   };
 
   const toggleTeacherStatus = async (teacherId: string, currentStatus: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | boolean) => {
@@ -367,14 +388,14 @@ export default function TeachersPage() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Email', 'Phone', 'Employee ID', 'Department', 'Subject', 'Experience', 'Status', 'Joined'];
+    const headers = ['Name', 'Email', 'Phone', 'Employee ID', 'Department', 'Subjects', 'Experience', 'Status', 'Joined'];
     const rows = teachers.map(teacher => [
       `${teacher.user.firstName} ${teacher.user.lastName}`,
       teacher.user.email,
       teacher.user.phoneNumber || 'N/A',
       teacher.employeeId,
       teacher.department,
-      teacher.subject,
+      teacher.subjects.map(s => s.name).join(', ') || 'No subjects assigned',
       `${teacher.experience} years`,
       teacher.user.status === 'ACTIVE' ? 'Active' : 'Inactive',
       new Date(teacher.user.createdAt).toLocaleDateString(locale, dateFormatOptions),
@@ -420,8 +441,17 @@ export default function TeachersPage() {
       label: 'Department',
     },
     {
-      key: 'subject',
-      label: 'Subject',
+      key: 'subjects',
+      label: 'Subjects',
+      render: (value, row) => {
+        if (!row.subjects || row.subjects.length === 0) {
+          return 'No subjects assigned';
+        }
+        if (row.subjects.length === 1) {
+          return row.subjects[0].name;
+        }
+        return `${row.subjects[0].name} (+${row.subjects.length - 1} more)`;
+      },
     },
     {
       key: 'experience',
@@ -452,6 +482,12 @@ export default function TeachersPage() {
       label: 'Edit Teacher',
       icon: <Edit />,
       onClick: (row) => handleOpenDialog(row),
+    },
+    {
+      key: 'manageSubjects',
+      label: 'Manage Subjects',
+      icon: <Assignment />,
+      onClick: (row) => handleOpenSubjectManager(row),
     },
     {
       key: 'toggleStatus',
@@ -629,29 +665,20 @@ export default function TeachersPage() {
                 multiline
                 rows={2}
               />
-              <Box display="flex" gap={2}>
-                <TextField
-                  label="Department"
-                  select
-                  value={formData.department}
-                  onChange={(e) => setFormData({...formData, department: e.target.value})}
-                  fullWidth
-                  required
-                >
-                  {departments.map((dept) => (
-                    <MenuItem key={dept} value={dept}>
-                      {dept}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  label="Subject"
-                  value={formData.subject}
-                  onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                  fullWidth
-                  required
-                />
-              </Box>
+              <TextField
+                label="Department"
+                select
+                value={formData.department}
+                onChange={(e) => setFormData({...formData, department: e.target.value})}
+                fullWidth
+                required
+              >
+                {departments.map((dept) => (
+                  <MenuItem key={dept} value={dept}>
+                    {dept}
+                  </MenuItem>
+                ))}
+              </TextField>
               <Box display="flex" gap={2}>
                 <TextField
                   label="Qualification"
@@ -784,10 +811,13 @@ export default function TeachersPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Subject
+                        Subjects
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {viewTeacher.subject}
+                        {viewTeacher.subjects.length > 0 
+                          ? viewTeacher.subjects.map(s => s.name).join(', ')
+                          : 'No subjects assigned'
+                        }
                       </Typography>
                     </Box>
                     <Box>
@@ -859,6 +889,18 @@ export default function TeachersPage() {
           </DialogActions>
         </Dialog>
       </Box>
+
+      {/* Subject Manager Dialog */}
+      {subjectManagerTeacher && (
+        <TeacherSubjectManager
+          open={subjectManagerOpen}
+          onClose={handleCloseSubjectManager}
+          teacherId={subjectManagerTeacher.id}
+          teacherName={`${subjectManagerTeacher.user.firstName} ${subjectManagerTeacher.user.lastName}`}
+          currentSubjects={subjectManagerTeacher.subjects}
+          onUpdate={handleSubjectManagerUpdate}
+        />
+      )}
     </SidebarLayout>
   );
 }
