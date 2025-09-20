@@ -99,7 +99,6 @@ export default function DataTable({
     const value = column.key.includes('.') ? getNestedValue(row, column.key) : row[column.key];
 
     if (column.render) {
-      console.log('DataTable renderCell: calling custom render for', column.key, 'with value:', value);
       return column.render(value, row);
     }
 

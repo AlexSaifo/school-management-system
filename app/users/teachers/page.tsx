@@ -475,16 +475,27 @@ export default function TeachersPage() {
       key: 'user.status',
       label: t('teachers.table.headers.status'),
       render: (value, row) => {
-        console.log('Status render called with value:', value, 'row:', row);
-        return <span>{value || 'No Status'}</span>;
+        const statusValue = value || row?.user?.status;
+        return (
+          <Chip
+            label={statusValue === 'ACTIVE' ? t('teachers.filters.active') : t('teachers.filters.inactive')}
+            color={statusValue === 'ACTIVE' ? 'success' : 'error'}
+            size="small"
+          />
+        );
       },
     },
     {
       key: 'joinDate',
       label: t('teachers.table.headers.joined'),
       render: (value) => {
-        console.log('Date render called with value:', value);
-        return <span>{value || 'No Date'}</span>;
+        if (!value) return t('teachers.page.notProvided');
+        const date = new Date(value);
+        return date.toLocaleDateString(isRTL ? 'ar' : 'en-US', {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        });
       },
     },
   ];
