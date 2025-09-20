@@ -68,7 +68,6 @@ interface Teacher {
     updatedAt: string;
   };
   employeeId: string;
-  department: string;
   subjects: Array<{
     id: string;
     name: string;
@@ -101,7 +100,6 @@ export default function TeachersPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewTeacher, setViewTeacher] = useState<Teacher | null>(null);
   const [subjectManagerOpen, setSubjectManagerOpen] = useState(false);
@@ -120,7 +118,6 @@ export default function TeachersPage() {
     phoneNumber: '',
     address: '',
     employeeId: '',
-    department: '',
     qualification: '',
     experience: 0,
     salary: 0,
@@ -133,34 +130,18 @@ export default function TeachersPage() {
     phoneNumber: '',
     address: '',
     employeeId: '',
-    department: '',
     qualification: '',
     experience: '',
     salary: '',
     joinDate: '',
   });
 
-  const departments = [
-    { value: 'Mathematics', label: t('teachers.departments.mathematics') },
-    { value: 'Science', label: t('teachers.departments.science') },
-    { value: 'English', label: t('teachers.departments.english') },
-    { value: 'History', label: t('teachers.departments.history') },
-    { value: 'Geography', label: t('teachers.departments.geography') },
-    { value: 'Physics', label: t('teachers.departments.physics') },
-    { value: 'Chemistry', label: t('teachers.departments.chemistry') },
-    { value: 'Biology', label: t('teachers.departments.biology') },
-    { value: 'Computer Science', label: t('teachers.departments.computerScience') },
-    { value: 'Physical Education', label: t('teachers.departments.physicalEducation') },
-    { value: 'Art', label: t('teachers.departments.art') },
-    { value: 'Music', label: t('teachers.departments.music') },
-  ];
-
   useEffect(() => {
     if (token) {
       fetchTeachers(1);
       setPagination(prev => ({ ...prev, current: 1 }));
     }
-  }, [token, searchTerm, statusFilter, departmentFilter, pageSize]);
+  }, [token, searchTerm, statusFilter, pageSize]);
 
   const fetchTeachers = async (page = pagination.current) => {
     try {
@@ -168,7 +149,6 @@ export default function TeachersPage() {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (departmentFilter !== 'all') params.append('department', departmentFilter);
       params.append('page', page.toString());
       params.append('limit', pageSize.toString());
       
@@ -206,7 +186,6 @@ export default function TeachersPage() {
       phoneNumber: '',
       address: '',
       employeeId: '',
-      department: '',
       qualification: '',
       experience: '',
       salary: '',
@@ -247,11 +226,6 @@ export default function TeachersPage() {
       errors.employeeId = t('teachers.errors.employeeIdRequired');
     }
 
-    // Department validation
-    if (!formData.department) {
-      errors.department = t('teachers.errors.departmentRequired');
-    }
-
     // Qualification validation
     if (!formData.qualification.trim()) {
       errors.qualification = t('teachers.errors.qualificationRequired');
@@ -282,7 +256,6 @@ export default function TeachersPage() {
       phoneNumber: '',
       address: '',
       employeeId: '',
-      department: '',
       qualification: '',
       experience: '',
       salary: '',
@@ -298,7 +271,6 @@ export default function TeachersPage() {
         phoneNumber: teacher.user.phoneNumber || '',
         address: teacher.user.address || '',
         employeeId: teacher.employeeId,
-        department: teacher.department,
         qualification: teacher.qualification,
         experience: teacher.experience,
         salary: teacher.salary || 0,
@@ -313,7 +285,6 @@ export default function TeachersPage() {
         phoneNumber: '',
         address: '',
         employeeId: '',
-        department: '',
         qualification: '',
         experience: 0,
         salary: 0,
@@ -527,7 +498,6 @@ export default function TeachersPage() {
       t('teachers.form.email'),
       t('teachers.form.phoneNumber'),
       t('teachers.table.headers.employeeId'),
-      t('teachers.table.headers.department'),
       t('teachers.table.headers.subjects'),
       t('teachers.table.headers.experience'),
       t('teachers.table.headers.status'),
@@ -538,8 +508,7 @@ export default function TeachersPage() {
       teacher.user.email,
       teacher.user.phoneNumber || t('teachers.page.notProvided'),
       teacher.employeeId,
-      teacher.department,
-      teacher.subjects.map(s => s.name).join(', ') || t('teachers.page.noSubjectsAssigned'),
+      teacher.subjects.map(s => isRTL ? s.nameAr : s.name).join(', ') || t('teachers.page.noSubjectsAssigned'),
       `${teacher.experience} ${t('teachers.page.years')}`,
       teacher.user.status === 'ACTIVE' ? t('teachers.filters.active') : t('teachers.filters.inactive'),
       teacher.joinDate ? new Date(teacher.joinDate).toLocaleDateString(locale, dateFormatOptions) : t('teachers.page.notProvided'),
@@ -581,10 +550,6 @@ export default function TeachersPage() {
       label: t('teachers.table.headers.employeeId'),
     },
     {
-      key: 'department',
-      label: t('teachers.table.headers.department'),
-    },
-    {
       key: 'subjects',
       label: t('teachers.table.headers.subjects'),
       render: (value, row) => {
@@ -592,9 +557,9 @@ export default function TeachersPage() {
           return t('teachers.page.noSubjectsAssigned');
         }
         if (row.subjects.length === 1) {
-          return row.subjects[0].name;
+          return isRTL ? row.subjects[0].nameAr : row.subjects[0].name;
         }
-        return `${row.subjects[0].name} (+${row.subjects.length - 1} more)`;
+        return `${isRTL ? row.subjects[0].nameAr : row.subjects[0].name} (+${row.subjects.length - 1} more)`;
       },
     },
     {
@@ -679,20 +644,6 @@ export default function TeachersPage() {
         { value: 'all', label: t('teachers.filters.allStatus') },
         { value: 'active', label: t('teachers.filters.active') },
         { value: 'inactive', label: t('teachers.filters.inactive') },
-      ],
-    },
-    {
-      key: 'department',
-      label: t('teachers.filters.department'),
-      type: 'select',
-      value: departmentFilter,
-      onChange: setDepartmentFilter,
-      options: [
-        { value: 'all', label: t('teachers.filters.allDepartments') },
-        ...departments.map((dept) => ({
-          value: dept.value,
-          label: dept.label,
-        })),
       ],
     },
   ];
@@ -840,22 +791,6 @@ export default function TeachersPage() {
                 error={!!formErrors.address}
                 helperText={formErrors.address}
               />
-              <TextField
-                label={t('teachers.form.department')}
-                select
-                value={formData.department}
-                onChange={(e) => setFormData({...formData, department: e.target.value})}
-                fullWidth
-                required
-                error={!!formErrors.department}
-                helperText={formErrors.department}
-              >
-                {departments.map((dept) => (
-                  <MenuItem key={dept.value} value={dept.value}>
-                    {dept.label}
-                  </MenuItem>
-                ))}
-              </TextField>
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('teachers.form.qualification')}
@@ -988,19 +923,11 @@ export default function TeachersPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        {t('teachers.table.headers.department')}
-                      </Typography>
-                      <Typography variant="body1" fontWeight="medium">
-                        {viewTeacher.department}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
                         {t('teachers.table.headers.subjects')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewTeacher.subjects.length > 0 
-                          ? viewTeacher.subjects.map(s => s.name).join(', ')
+                          ? viewTeacher.subjects.map(s => isRTL ? s.nameAr : s.name).join(', ')
                           : t('teachers.page.noSubjectsAssigned')
                         }
                       </Typography>

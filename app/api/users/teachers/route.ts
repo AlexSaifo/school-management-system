@@ -11,7 +11,7 @@ const createTeacherSchema = z.object({
   phoneNumber: z.string().min(10, 'Valid phone number required'),
   address: z.string().min(1, 'Address is required'),
   employeeId: z.string().min(1, 'Employee ID is required'),
-  department: z.string().min(1, 'Department is required'),
+  department: z.string().optional(),
   qualification: z.string().min(1, 'Qualification is required'),
   experience: z.number().min(0, 'Experience must be positive'),
   salary: z.number().min(0, 'Salary must be positive').optional(),
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           employeeId: validatedData.employeeId,
-          department: validatedData.department,
+          department: validatedData.department || '',
           qualification: validatedData.qualification,
           experience: validatedData.experience,
           salary: validatedData.salary,
