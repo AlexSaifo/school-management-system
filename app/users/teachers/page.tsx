@@ -411,7 +411,7 @@ export default function TeachersPage() {
       teacher.subjects.map(s => s.name).join(', ') || t('teachers.page.noSubjectsAssigned'),
       `${teacher.experience} ${t('teachers.page.years')}`,
       teacher.user.status === 'ACTIVE' ? t('teachers.filters.active') : t('teachers.filters.inactive'),
-      new Date(teacher.user.createdAt).toLocaleDateString(locale, dateFormatOptions),
+      teacher.joinDate ? new Date(teacher.joinDate).toLocaleDateString(locale, dateFormatOptions) : t('teachers.page.notProvided'),
     ]);
 
     const csvContent = [
@@ -474,11 +474,18 @@ export default function TeachersPage() {
     {
       key: 'user.status',
       label: t('teachers.table.headers.status'),
+      render: (value) => (
+        <Chip
+          label={value === 'ACTIVE' ? t('teachers.filters.active') : t('teachers.filters.inactive')}
+          color={value === 'ACTIVE' ? 'success' : 'error'}
+          size="small"
+        />
+      ),
     },
     {
-      key: 'user.createdAt',
+      key: 'joinDate',
       label: t('teachers.table.headers.joined'),
-      render: (value) => new Date(value).toLocaleDateString(locale, dateFormatOptions),
+      render: (value) => value ? new Date(value).toLocaleDateString(locale, dateFormatOptions) : t('teachers.page.notProvided'),
     },
   ];
 

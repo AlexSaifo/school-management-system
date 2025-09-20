@@ -91,11 +91,16 @@ export default function DataTable({
   };
 
   const renderCell = (column: Column, row: any) => {
-    if (column.render) {
-      return column.render(row[column.key], row);
-    }
+    // Handle nested fields like "user.firstName"
+    const getNestedValue = (obj: any, path: string) => {
+      return path.split('.').reduce((current, key) => current?.[key], obj);
+    };
 
-    const value = row[column.key];
+    const value = column.key.includes('.') ? getNestedValue(row, column.key) : row[column.key];
+
+    if (column.render) {
+      return column.render(value, row);
+    }
 
     // Special handling for status fields
     if (column.key === 'status' || column.key === 'user.status') {
