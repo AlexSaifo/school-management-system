@@ -698,13 +698,28 @@
       "noPermission": "You don't have permission to access this page.",
       "fetchFailed": "Failed to fetch teachers",
       "saveFailed": "Failed to save teacher",
-      "deleteFailed": "Failed to delete teacher"
+      "deleteFailed": "Failed to delete teacher",
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "phoneNumberTooShort": "Phone number must be at least 10 characters",
+      "phoneNumberRequired": "Phone number is required",
+      "addressRequired": "Address is required",
+      "employeeIdRequired": "Employee ID is required",
+      "departmentRequired": "Department is required",
+      "qualificationRequired": "Qualification is required",
+      "experienceInvalid": "Experience must be a positive number",
+      "joinDateRequired": "Join date is required"
     },
     "success": {
       "teacherCreated": "Teacher created successfully",
       "teacherUpdated": "Teacher updated successfully",
       "teacherDeleted": "Teacher deleted successfully",
-      "statusUpdated": "Teacher status updated successfully"
+      "statusUpdated": "Teacher status updated successfully",
+      "bulkDeleted": "Teachers deleted successfully",
+      "bulkActivated": "Teachers activated successfully",
+      "bulkDeactivated": "Teachers deactivated successfully"
     }
   },
   "assignments": {

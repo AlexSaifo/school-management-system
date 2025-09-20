@@ -32,6 +32,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 // Type for parent data
 interface ParentData {
@@ -88,6 +89,7 @@ const ParentStudentRelationManager: React.FC<ParentStudentRelationProps> = ({
   const { t } = useTranslation();
   const { isRTL, language } = useLanguage();
   const { token } = useAuth();
+  const { showSnackbar } = useSnackbar();
   
   // Local state
   const [searchTerm, setSearchTerm] = useState('');
@@ -144,6 +146,7 @@ const ParentStudentRelationManager: React.FC<ParentStudentRelationProps> = ({
         setSelectedRelationDetails(data.data || []);
       } else {
         console.error('Failed to fetch relation details');
+        showSnackbar('Failed to load relation details');
       }
     } catch (error) {
       console.error('Error fetching relation details:', error);
@@ -224,8 +227,11 @@ const ParentStudentRelationManager: React.FC<ParentStudentRelationProps> = ({
                 occupation: item.occupation
               };
             }
+          } else {
+            console.error('Failed to fetch detail for relation');
+            showSnackbar('Failed to load relation details');
+            return null;
           }
-          return null;
         });
         
         const newDetails = await Promise.all(newDetailsPromises);
@@ -292,8 +298,11 @@ const ParentStudentRelationManager: React.FC<ParentStudentRelationProps> = ({
               occupation: item.occupation
             };
           }
+        } else {
+          console.error('Failed to fetch relation detail');
+          showSnackbar('Failed to load relation details');
+          return null;
         }
-        return null;
       });
       
       const details = await Promise.all(detailsPromises);
@@ -334,6 +343,7 @@ const ParentStudentRelationManager: React.FC<ParentStudentRelationProps> = ({
         setSearchResults(filteredResults);
       } else {
         console.error('Search failed');
+        showSnackbar('Search failed. Please try again.');
       }
     } catch (error) {
       console.error('Error during search:', error);

@@ -47,6 +47,7 @@ import SidebarLayout from '@/components/layout/SidebarLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import DataTable, { Column, Action } from '@/components/DataTable';
 import FilterPanel, { Filter, FilterOption, BulkAction } from '@/components/FilterPanel';
 import TeacherSubjectManager from '@/components/TeacherSubjectManager';
@@ -84,6 +85,7 @@ export default function TeachersPage() {
   const { user, token } = useAuth();
   const { isRTL, language } = useLanguage();
   const { t } = useTranslation();
+  const { showSnackbar } = useSnackbar();
   const locale = isRTL ? 'ar' : 'en-US'; // Use 'ar' instead of 'ar-SA' to avoid Hijri calendar as default
   // Define date format options to force Gregorian calendar
   const dateFormatOptions: Intl.DateTimeFormatOptions = {
@@ -122,6 +124,19 @@ export default function TeachersPage() {
     qualification: '',
     experience: 0,
     salary: 0,
+    joinDate: '',
+  });
+  const [formErrors, setFormErrors] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    address: '',
+    employeeId: '',
+    department: '',
+    qualification: '',
+    experience: '',
+    salary: '',
     joinDate: '',
   });
 
@@ -174,6 +189,7 @@ export default function TeachersPage() {
         });
       } else {
         console.error('Failed to fetch teachers');
+        showSnackbar(t('teachers.errors.fetchFailed'));
       }
     } catch (error) {
       console.error('Error fetching teachers:', error);
@@ -182,7 +198,97 @@ export default function TeachersPage() {
     }
   };
 
+  const validateForm = () => {
+    const errors = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phoneNumber: '',
+      address: '',
+      employeeId: '',
+      department: '',
+      qualification: '',
+      experience: '',
+      salary: '',
+      joinDate: '',
+    };
+
+    // First name validation
+    if (!formData.firstName.trim()) {
+      errors.firstName = t('teachers.errors.firstNameRequired');
+    }
+
+    // Last name validation
+    if (!formData.lastName.trim()) {
+      errors.lastName = t('teachers.errors.lastNameRequired');
+    }
+
+    // Email validation
+    if (!formData.email.trim()) {
+      errors.email = t('teachers.errors.emailRequired');
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = t('teachers.errors.emailInvalid');
+    }
+
+    // Phone number validation
+    if (!formData.phoneNumber.trim()) {
+      errors.phoneNumber = t('teachers.errors.phoneNumberRequired');
+    } else if (formData.phoneNumber.length < 10) {
+      errors.phoneNumber = t('teachers.errors.phoneNumberTooShort');
+    }
+
+    // Address validation
+    if (!formData.address.trim()) {
+      errors.address = t('teachers.errors.addressRequired');
+    }
+
+    // Employee ID validation
+    if (!formData.employeeId.trim()) {
+      errors.employeeId = t('teachers.errors.employeeIdRequired');
+    }
+
+    // Department validation
+    if (!formData.department) {
+      errors.department = t('teachers.errors.departmentRequired');
+    }
+
+    // Qualification validation
+    if (!formData.qualification.trim()) {
+      errors.qualification = t('teachers.errors.qualificationRequired');
+    }
+
+    // Experience validation
+    if (formData.experience < 0) {
+      errors.experience = t('teachers.errors.experienceInvalid');
+    }
+
+    // Join date validation
+    if (!formData.joinDate) {
+      errors.joinDate = t('teachers.errors.joinDateRequired');
+    }
+
+    setFormErrors(errors);
+
+    // Return true if no errors
+    return Object.values(errors).every(error => error === '');
+  };
+
   const handleOpenDialog = (teacher?: Teacher) => {
+    // Clear any previous form errors
+    setFormErrors({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phoneNumber: '',
+      address: '',
+      employeeId: '',
+      department: '',
+      qualification: '',
+      experience: '',
+      salary: '',
+      joinDate: '',
+    });
+
     if (teacher) {
       setSelectedTeacher(teacher);
       setFormData({
@@ -223,6 +329,11 @@ export default function TeachersPage() {
   };
 
   const handleSubmit = async () => {
+    // Validate form before submitting
+    if (!validateForm()) {
+      return; // Stop submission if validation fails
+    }
+
     try {
       const url = selectedTeacher 
         ? `/api/users/teachers/${selectedTeacher.id}` 
@@ -242,8 +353,15 @@ export default function TeachersPage() {
       if (response.ok) {
         fetchTeachers(pagination.current);
         handleCloseDialog();
+        showSnackbar(
+          selectedTeacher 
+            ? t('teachers.success.teacherUpdated') 
+            : t('teachers.success.teacherCreated'),
+          'success'
+        );
       } else {
         console.error('Failed to save teacher');
+        showSnackbar(t('teachers.errors.saveFailed'));
       }
     } catch (error) {
       console.error('Error saving teacher:', error);
@@ -262,8 +380,10 @@ export default function TeachersPage() {
 
         if (response.ok) {
           fetchTeachers(pagination.current);
+          showSnackbar(t('teachers.success.teacherDeleted'), 'success');
         } else {
           console.error('Failed to delete teacher');
+          showSnackbar(t('teachers.errors.deleteFailed'));
         }
       } catch (error) {
         console.error('Error deleting teacher:', error);
@@ -310,8 +430,10 @@ export default function TeachersPage() {
 
       if (response.ok) {
         fetchTeachers(pagination.current);
+        showSnackbar(t('teachers.success.statusUpdated'), 'success');
       } else {
         console.error('Failed to toggle teacher status');
+        showSnackbar(t('teachers.errors.saveFailed'));
       }
     } catch (error) {
       console.error('Error toggling teacher status:', error);
@@ -345,8 +467,17 @@ export default function TeachersPage() {
       if (response.ok) {
         setSelectedIds([]);
         fetchTeachers(pagination.current);
+        showSnackbar(
+          action === 'delete' 
+            ? t('teachers.success.bulkDeleted') 
+            : action === 'activate'
+            ? t('teachers.success.bulkActivated')
+            : t('teachers.success.bulkDeactivated'),
+          'success'
+        );
       } else {
         console.error(`Failed to ${action} teachers`);
+        showSnackbar(t('teachers.errors.saveFailed'));
       }
     } catch (error) {
       console.error(`Error ${action} teachers:`, error);
@@ -656,6 +787,8 @@ export default function TeachersPage() {
                   onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                   fullWidth
                   required
+                  error={!!formErrors.firstName}
+                  helperText={formErrors.firstName}
                 />
                 <TextField
                   label={t('teachers.form.lastName')}
@@ -663,6 +796,8 @@ export default function TeachersPage() {
                   onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                   fullWidth
                   required
+                  error={!!formErrors.lastName}
+                  helperText={formErrors.lastName}
                 />
               </Box>
               <TextField
@@ -672,6 +807,8 @@ export default function TeachersPage() {
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 fullWidth
                 required
+                error={!!formErrors.email}
+                helperText={formErrors.email}
               />
               <Box display="flex" gap={2}>
                 <TextField
@@ -679,6 +816,8 @@ export default function TeachersPage() {
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                   fullWidth
+                  error={!!formErrors.phoneNumber}
+                  helperText={formErrors.phoneNumber}
                 />
                 <TextField
                   label={t('teachers.form.employeeId')}
@@ -686,6 +825,8 @@ export default function TeachersPage() {
                   onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
                   fullWidth
                   required
+                  error={!!formErrors.employeeId}
+                  helperText={formErrors.employeeId}
                 />
               </Box>
               <TextField
@@ -693,8 +834,11 @@ export default function TeachersPage() {
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
                 fullWidth
+                required
                 multiline
                 rows={2}
+                error={!!formErrors.address}
+                helperText={formErrors.address}
               />
               <TextField
                 label={t('teachers.form.department')}
@@ -703,6 +847,8 @@ export default function TeachersPage() {
                 onChange={(e) => setFormData({...formData, department: e.target.value})}
                 fullWidth
                 required
+                error={!!formErrors.department}
+                helperText={formErrors.department}
               >
                 {departments.map((dept) => (
                   <MenuItem key={dept.value} value={dept.value}>
@@ -717,6 +863,8 @@ export default function TeachersPage() {
                   onChange={(e) => setFormData({...formData, qualification: e.target.value})}
                   fullWidth
                   required
+                  error={!!formErrors.qualification}
+                  helperText={formErrors.qualification}
                 />
                 <TextField
                   label={t('teachers.form.experienceYears')}
@@ -725,6 +873,8 @@ export default function TeachersPage() {
                   onChange={(e) => setFormData({...formData, experience: parseInt(e.target.value) || 0})}
                   fullWidth
                   required
+                  error={!!formErrors.experience}
+                  helperText={formErrors.experience}
                 />
               </Box>
               <Box display="flex" gap={2}>
@@ -734,6 +884,8 @@ export default function TeachersPage() {
                   value={formData.salary}
                   onChange={(e) => setFormData({...formData, salary: parseInt(e.target.value) || 0})}
                   fullWidth
+                  error={!!formErrors.salary}
+                  helperText={formErrors.salary}
                 />
                 <TextField
                   label={t('teachers.form.joinDate')}
@@ -745,6 +897,8 @@ export default function TeachersPage() {
                   InputLabelProps={{
                     shrink: true,
                   }}
+                  error={!!formErrors.joinDate}
+                  helperText={formErrors.joinDate}
                 />
               </Box>
             </Box>

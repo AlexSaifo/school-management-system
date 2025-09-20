@@ -804,13 +804,28 @@
       "noPermission": "ليس لديك صلاحية للوصول إلى هذه الصفحة.",
       "fetchFailed": "فشل في جلب المعلمين",
       "saveFailed": "فشل في حفظ المعلم",
-      "deleteFailed": "فشل في حذف المعلم"
+      "deleteFailed": "فشل في حذف المعلم",
+      "firstNameRequired": "الاسم الأول مطلوب",
+      "lastNameRequired": "اسم العائلة مطلوب",
+      "emailRequired": "البريد الإلكتروني مطلوب",
+      "emailInvalid": "يرجى إدخال عنوان بريد إلكتروني صحيح",
+      "phoneNumberTooShort": "رقم الهاتف يجب أن يكون 10 أحرف على الأقل",
+      "phoneNumberRequired": "رقم الهاتف مطلوب",
+      "addressRequired": "العنوان مطلوب",
+      "employeeIdRequired": "رقم الموظف مطلوب",
+      "departmentRequired": "القسم مطلوب",
+      "qualificationRequired": "المؤهل مطلوب",
+      "experienceInvalid": "الخبرة يجب أن تكون رقماً موجباً",
+      "joinDateRequired": "تاريخ الانضمام مطلوب"
     },
     "success": {
       "teacherCreated": "تم إنشاء المعلم بنجاح",
       "teacherUpdated": "تم تحديث المعلم بنجاح",
       "teacherDeleted": "تم حذف المعلم بنجاح",
-      "statusUpdated": "تم تحديث حالة المعلم بنجاح"
+      "statusUpdated": "تم تحديث حالة المعلم بنجاح",
+      "bulkDeleted": "تم حذف المعلمين بنجاح",
+      "bulkActivated": "تم تفعيل المعلمين بنجاح",
+      "bulkDeactivated": "تم إلغاء تفعيل المعلمين بنجاح"
     }
   },
   "assignments": {

@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SocketProvider } from '@/contexts/SocketContext';
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
+import { SnackbarProvider } from '@/contexts/SnackbarContext';
 import { useEffect, useMemo } from 'react';
 import '@/lib/i18n';
 
@@ -159,7 +160,9 @@ function ThemedApp({ children }: { children: React.ReactNode }) {
       <CssBaseline />
       <AuthProvider>
         <SocketProvider>
-          {children}
+          <SnackbarProvider>
+            {children}
+          </SnackbarProvider>
         </SocketProvider>
       </AuthProvider>
     </ThemeProvider>
