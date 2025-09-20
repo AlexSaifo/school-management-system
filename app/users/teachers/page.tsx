@@ -474,18 +474,18 @@ export default function TeachersPage() {
     {
       key: 'user.status',
       label: t('teachers.table.headers.status'),
-      render: (value) => (
-        <Chip
-          label={value === 'ACTIVE' ? t('teachers.filters.active') : t('teachers.filters.inactive')}
-          color={value === 'ACTIVE' ? 'success' : 'error'}
-          size="small"
-        />
-      ),
+      render: (value, row) => {
+        console.log('Status render called with value:', value, 'row:', row);
+        return <span>{value || 'No Status'}</span>;
+      },
     },
     {
       key: 'joinDate',
       label: t('teachers.table.headers.joined'),
-      render: (value) => value ? new Date(value).toLocaleDateString(locale, dateFormatOptions) : t('teachers.page.notProvided'),
+      render: (value) => {
+        console.log('Date render called with value:', value);
+        return <span>{value || 'No Date'}</span>;
+      },
     },
   ];
 

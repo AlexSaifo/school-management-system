@@ -99,24 +99,25 @@ export default function DataTable({
     const value = column.key.includes('.') ? getNestedValue(row, column.key) : row[column.key];
 
     if (column.render) {
+      console.log('DataTable renderCell: calling custom render for', column.key, 'with value:', value);
       return column.render(value, row);
     }
 
-    // Special handling for status fields
-    if (column.key === 'status' || column.key === 'user.status') {
-      return (
-        <Chip
-          label={value === 'ACTIVE' ? t('common.active') : t('common.inactive')}
-          color={value === 'ACTIVE' ? 'success' : 'error'}
-          size="small"
-        />
-      );
-    }
+    // Special handling for status fields - disabled to allow custom render functions
+    // if (column.key === 'status' || column.key === 'user.status') {
+    //   return (
+    //     <Chip
+    //       label={value === 'ACTIVE' ? t('common.active') : t('common.inactive')}
+    //       color={value === 'ACTIVE' ? 'success' : 'error'}
+    //       size="small"
+    //     />
+    //   );
+    // }
 
-    // Special handling for dates
-    if (column.key.includes('Date') || column.key.includes('At')) {
-      return value ? new Date(value).toLocaleDateString() : '';
-    }
+    // Special handling for dates - disabled to allow custom render functions
+    // if (column.key.includes('Date') || column.key.includes('At')) {
+    //   return value ? new Date(value).toLocaleDateString() : '';
+    // }
 
     return value || '';
   };
