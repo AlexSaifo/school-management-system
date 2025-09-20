@@ -50,6 +50,9 @@ import SidebarLayout from "@/components/layout/SidebarLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import DataTable, { Column, Action } from "@/components/DataTable";
 import FilterPanel, { Filter, FilterOption, BulkAction } from "@/components/FilterPanel";
 import PageHeader from "@/components/PageHeader";
@@ -156,6 +159,26 @@ interface Student {
   emergencyContact?: string;
 }
 
+// Zod validation schema matching backend createStudentSchema
+const createStudentFormSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email format'),
+  phoneNumber: z.string().optional(),
+  address: z.string().optional(),
+  studentId: z.string().min(1, 'Student ID is required'),
+  classRoomId: z.string().min(1, 'Classroom is required'),
+  rollNumber: z.string().optional(),
+  dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  admissionDate: z.string().min(1, 'Admission date is required'),
+  bloodGroup: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  guardianName: z.string().optional(),
+  guardianPhone: z.string().optional(),
+});
+
+type CreateStudentFormData = z.infer<typeof createStudentFormSchema>;
+
 export default function StudentsClient() {
   const { user, token } = useAuth();
   const { t } = useTranslation();
@@ -185,6 +208,36 @@ export default function StudentsClient() {
     limit: 10,
   });
   const [pageSize, setPageSize] = useState(10);
+  
+  // React Hook Form setup with Zod validation
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setValue,
+    watch
+  } = useForm<CreateStudentFormData>({
+    resolver: zodResolver(createStudentFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phoneNumber: "",
+      address: "",
+      studentId: "",
+      classRoomId: "",
+      dateOfBirth: "",
+      bloodGroup: "",
+      emergencyContact: "",
+      admissionDate: "",
+      rollNumber: "",
+      guardianName: "",
+      guardianPhone: "",
+    }
+  });
+
+  // Keep formData for backward compatibility with existing logic
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -638,6 +691,24 @@ export default function StudentsClient() {
             guardianName: editingStudent.guardianName || "",
             guardianPhone: editingStudent.guardianPhone || "",
           });
+
+          // Reset react-hook-form with the same data
+          reset({
+            firstName: editingStudent.user.firstName,
+            lastName: editingStudent.user.lastName,
+            email: editingStudent.user.email,
+            phoneNumber: editingStudent.user.phone || "",
+            address: editingStudent.user.address || "",
+            studentId: editingStudent.studentId,
+            classRoomId: directClassroomId,
+            rollNumber: directRollNumber,
+            dateOfBirth: formattedDateOfBirth,
+            bloodGroup: directBloodGroup,
+            emergencyContact: directEmergencyContact,
+            admissionDate: formattedAdmissionDate,
+            guardianName: editingStudent.guardianName || "",
+            guardianPhone: editingStudent.guardianPhone || "",
+          });
           
           // Initialize parent relations from API data
           if (apiData.student.parents && apiData.student.parents.length > 0) {
@@ -684,6 +755,24 @@ export default function StudentsClient() {
             guardianName: editingStudent.guardianName || "",
             guardianPhone: editingStudent.guardianPhone || "",
           });
+
+          // Reset react-hook-form with fallback values
+          reset({
+            firstName: editingStudent.user.firstName,
+            lastName: editingStudent.user.lastName,
+            email: editingStudent.user.email,
+            phoneNumber: editingStudent.user.phone || "",
+            address: editingStudent.user.address || "",
+            studentId: editingStudent.studentId,
+            classRoomId: classRoomIdToUse,
+            rollNumber: rollNumberToUse,
+            dateOfBirth: formattedDateOfBirth,
+            bloodGroup: bloodGroupToUse,
+            emergencyContact: emergencyContactToUse,
+            admissionDate: formattedAdmissionDate,
+            guardianName: editingStudent.guardianName || "",
+            guardianPhone: editingStudent.guardianPhone || "",
+          });
         }
       } catch (error) {
         console.error("Error fetching direct API data for form:", error);
@@ -704,6 +793,24 @@ export default function StudentsClient() {
           studentId: editingStudent.studentId,
           classRoomId: fallbackClassroomId, // Make sure classroom ID is included
           
+          rollNumber: rollNumberToUse,
+          dateOfBirth: formattedDateOfBirth,
+          bloodGroup: bloodGroupToUse,
+          emergencyContact: emergencyContactToUse,
+          admissionDate: formattedAdmissionDate,
+          guardianName: editingStudent.guardianName || "",
+          guardianPhone: editingStudent.guardianPhone || "",
+        });
+
+        // Reset react-hook-form with fallback values
+        reset({
+          firstName: editingStudent.user.firstName,
+          lastName: editingStudent.user.lastName,
+          email: editingStudent.user.email,
+          phoneNumber: editingStudent.user.phone || "",
+          address: editingStudent.user.address || "",
+          studentId: editingStudent.studentId,
+          classRoomId: fallbackClassroomId,
           rollNumber: rollNumberToUse,
           dateOfBirth: formattedDateOfBirth,
           bloodGroup: bloodGroupToUse,
@@ -754,6 +861,23 @@ export default function StudentsClient() {
         guardianName: "",
         guardianPhone: "",
       });
+      // Reset react-hook-form to default values
+      reset({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phoneNumber: "",
+        address: "",
+        studentId: "",
+        classRoomId: "",
+        rollNumber: "",
+        dateOfBirth: "",
+        bloodGroup: "",
+        emergencyContact: "",
+        admissionDate: "",
+        guardianName: "",
+        guardianPhone: "",
+      });
       setParentRelations([]);
     }
     setOpenDialog(true);
@@ -764,9 +888,11 @@ export default function StudentsClient() {
     setSelectedStudent(null);
     setFilteredClassRooms([]);
     setSelectedGradeId("");
+    // Reset react-hook-form
+    reset();
   };
 
-  const handleSubmit = async () => {
+  const handleFormSubmit = async (data: CreateStudentFormData) => {
     try {
       const url = selectedStudent
         ? `/api/users/students/${selectedStudent.id}`
@@ -774,12 +900,17 @@ export default function StudentsClient() {
 
       const method = selectedStudent ? "PATCH" : "POST";  // Changed PUT to PATCH to match the API implementation
 
-      // Include parentRelations in the request data for updates
+      // Prepare request data with validated form data
       const requestData = {
-        ...formData,
+        ...data,
+        // Map phoneNumber to phone for API compatibility
+        phone: data.phoneNumber,
         // Only include parentRelations if we're updating an existing student
         ...(selectedStudent ? { parentRelations: parentRelations } : {})
       };
+
+      // Remove phoneNumber from request data since API expects 'phone'
+      delete (requestData as any).phoneNumber;
 
       const response = await fetch(url, {
         method,
@@ -1485,19 +1616,17 @@ export default function StudentsClient() {
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('students.firstName')}
-                  value={formData.firstName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, firstName: e.target.value })
-                  }
+                  {...register('firstName')}
+                  error={!!errors.firstName}
+                  helperText={errors.firstName?.message}
                   fullWidth
                   required
                 />
                 <TextField
                   label={t('students.lastName')}
-                  value={formData.lastName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lastName: e.target.value })
-                  }
+                  {...register('lastName')}
+                  error={!!errors.lastName}
+                  helperText={errors.lastName?.message}
                   fullWidth
                   required
                 />
@@ -1505,38 +1634,34 @@ export default function StudentsClient() {
               <TextField
                 label={t('students.email')}
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                {...register('email')}
+                error={!!errors.email}
+                helperText={errors.email?.message}
                 fullWidth
                 required
               />
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('students.phone')}
-                  value={formData.phoneNumber}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phoneNumber: e.target.value })
-                  }
+                  {...register('phoneNumber')}
+                  error={!!errors.phoneNumber}
+                  helperText={errors.phoneNumber?.message}
                   fullWidth
                 />
                 <TextField
                   label={t('students.studentId')}
-                  value={formData.studentId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, studentId: e.target.value })
-                  }
+                  {...register('studentId')}
+                  error={!!errors.studentId}
+                  helperText={errors.studentId?.message}
                   fullWidth
                   required
                 />
               </Box>
               <TextField
                 label={t('students.address')}
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
+                {...register('address')}
+                error={!!errors.address}
+                helperText={errors.address?.message}
                 fullWidth
                 multiline
                 rows={2}
@@ -1545,6 +1670,7 @@ export default function StudentsClient() {
                 <TextField
                   label={t('students.gradeLevel')}
                   select
+                  {...register('classRoomId')} // We'll use classRoomId for validation since grade is just a filter
                   value={selectedGradeId || ""}
                   onChange={(e) => handleGradeChange(e.target.value)}
                   fullWidth
@@ -1569,23 +1695,24 @@ export default function StudentsClient() {
                 <TextField
                   label={t('students.classroom')}
                   select
-                  value={formData.classRoomId || ""}
+                  {...register('classRoomId')}
+                  error={!!errors.classRoomId}
+                  helperText={
+                    errors.classRoomId?.message ||
+                    (selectedGradeId && filteredClassRooms && filteredClassRooms.length === 0
+                      ? t('students.noClassrooms')
+                      : selectedStudent && !selectedGradeId
+                      ? t('students.pleaseSelectGrade')
+                      : "")
+                  }
                   onChange={(e) => {
                     console.log("Classroom dropdown changed to:", e.target.value);
+                    setValue('classRoomId', e.target.value);
                     setFormData({ ...formData, classRoomId: e.target.value });
                   }}
                   fullWidth
                   required
                   disabled={!selectedGradeId}
-                  helperText={
-                    selectedGradeId && filteredClassRooms && filteredClassRooms.length === 0
-                      ? t('students.noClassrooms')
-                      : selectedStudent && !selectedGradeId
-                      ? t('students.pleaseSelectGrade')
-                      : formData.classRoomId
-                      ? `Selected: ${formData.classRoomId}`
-                      : ""
-                  }
                   InputProps={{
                     endAdornment: loadingClassrooms && (
                       <InputAdornment position="end">
@@ -1615,19 +1742,17 @@ export default function StudentsClient() {
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('students.rollNumber')}
-                  value={formData.rollNumber}
-                  onChange={(e) =>
-                    setFormData({ ...formData, rollNumber: e.target.value })
-                  }
+                  {...register('rollNumber')}
+                  error={!!errors.rollNumber}
+                  helperText={errors.rollNumber?.message}
                   fullWidth
                 />
                 <TextField
                   label={t('students.bloodGroup')}
                   select
-                  value={formData.bloodGroup}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bloodGroup: e.target.value })
-                  }
+                  {...register('bloodGroup')}
+                  error={!!errors.bloodGroup}
+                  helperText={errors.bloodGroup?.message}
                   fullWidth
                 >
                   <MenuItem value="">{t('common.select')} {t('students.bloodGroup')}</MenuItem>
@@ -1646,19 +1771,17 @@ export default function StudentsClient() {
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('students.parentName')}
-                  value={formData.guardianName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, guardianName: e.target.value })
-                  }
+                  {...register('guardianName')}
+                  error={!!errors.guardianName}
+                  helperText={errors.guardianName?.message}
                   fullWidth
                 />
                 {/* Changed to parent phone for clarity */}
                 <TextField
                   label={t('students.parentPhone')}
-                  value={formData.guardianPhone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, guardianPhone: e.target.value })
-                  }
+                  {...register('guardianPhone')}
+                  error={!!errors.guardianPhone}
+                  helperText={errors.guardianPhone?.message}
                   fullWidth
                 />
               </Box>
@@ -1687,22 +1810,19 @@ export default function StudentsClient() {
                 {/* Clarified emergency contact label */}
                 <TextField
                   label={t('students.emergencyContact')}
-                  value={formData.emergencyContact}
-                  onChange={(e) =>
-                    setFormData({ ...formData, emergencyContact: e.target.value })
-                  }
+                  {...register('emergencyContact')}
+                  error={!!errors.emergencyContact}
+                  helperText={errors.emergencyContact?.message || t('students.emergencyContactHint')}
                   fullWidth
-                  helperText={t('students.emergencyContactHint')}
                 />
               </Box>
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('students.dateOfBirth')}
                   type="date"
-                  value={formData.dateOfBirth}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dateOfBirth: e.target.value })
-                  }
+                  {...register('dateOfBirth')}
+                  error={!!errors.dateOfBirth}
+                  helperText={errors.dateOfBirth?.message}
                   fullWidth
                   required
                   InputLabelProps={{
@@ -1712,10 +1832,9 @@ export default function StudentsClient() {
                 <TextField
                   label={t('students.admissionDate')}
                   type="date"
-                  value={formData.admissionDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, admissionDate: e.target.value })
-                  }
+                  {...register('admissionDate')}
+                  error={!!errors.admissionDate}
+                  helperText={errors.admissionDate?.message}
                   fullWidth
                   required
                   InputLabelProps={{
@@ -1727,7 +1846,7 @@ export default function StudentsClient() {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>{t('common.cancel')}</Button>
-            <Button onClick={handleSubmit} variant="contained">
+            <Button onClick={handleSubmit(handleFormSubmit)} variant="contained">
               {selectedStudent ? t('common.update') : t('common.add')}
             </Button>
           </DialogActions>
