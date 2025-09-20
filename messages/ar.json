@@ -1189,7 +1189,15 @@
     },
     "attendanceAnalytics": {
       "title": "تحليلات الحضور",
-      "description": "مراقبة أنماط واتجاهات حضور الطلاب",
+      "description": "مراقبة أنماط حضور الطلاب، تحديد الاتجاهات، وتتبع التحسينات",
+      "overallAttendance": "الحضور العام",
+      "currentTerm": "الفصل الحالي",
+      "perfectAttendance": "حضور مثالي",
+      "perfectAttendanceDesc": "20.9% من الطلاب",
+      "chronicAbsence": "الغياب المزمن",
+      "chronicAbsenceDesc": "6.9% من الطلاب",
+      "tardinessRate": "معدل التأخر",
+      "averageDailyLate": "متوسط التأخر اليومي",
       "present": "حاضر",
       "absent": "غائب",
       "late": "متأخر",
@@ -1214,15 +1222,30 @@
     },
     "studentReportsSection": {
       "title": "تقارير الطلاب",
+      "description": "تقارير أداء فردية للطلاب مع البيانات الأكاديمية وبيانات الحضور",
       "performanceBySubject": "الأداء حسب المادة",
       "currentTermGradesBySubject": "درجات الفصل الحالي حسب المادة",
       "monthlyPerformanceRatings": "تقييمات الأداء الشهرية"
     },
     "staffReportsSection": {
-      "title": "تقارير الموظفين"
+      "title": "تقارير الموظفين",
+      "description": "أداء هيئة التدريس، توزيع الحمل التدريسي، وتحليلات الأقسام",
+      "totalFaculty": "إجمالي هيئة التدريس",
+      "departmentsCount": "12 قسم",
+      "teacherStudentRatio": "نسبة المعلم للطالب",
+      "schoolAverage": "متوسط المدرسة",
+      "averagePerformance": "متوسط الأداء",
+      "basedOnReviews": "بناءً على التقييمات",
+      "teachingLoad": "الحمل التدريسي",
+      "weeklyAverage": "متوسط أسبوعي"
     },
     "schoolOverviewSection": {
       "title": "نظرة عامة على المدرسة",
+      "description": "تحليلات شاملة وإحصائيات عن المؤسسة بأكملها",
+      "totalStudents": "إجمالي الطلاب",
+      "averageAttendance": "متوسط الحضور",
+      "averageGrade": "متوسط الدرجة",
+      "graduationRate": "معدل التخرج",
       "passingRate": "معدل النجاح"
     }
   },

@@ -819,7 +819,7 @@ export default function ReportsPage() {
     <>
       <ReportHeader
         title={t("reports.attendanceSection.analytics")}
-        description="Monitor student attendance patterns, identify trends, and track improvements"
+        description={t("reports.attendanceAnalytics.description")}
         onFilterToggle={toggleFilters}
         showFilters={showFilters}
         onClearFilters={clearFilters}
@@ -900,33 +900,33 @@ export default function ReportsPage() {
       <StatisticsSummary
         stats={[
           {
-            title: 'Overall Attendance',
+            title: t('reports.attendanceAnalytics.overallAttendance'),
             value: '91.5%',
-            description: selectedPeriod === 'custom' ? 'Custom period' : 'Current term',
+            description: selectedPeriod === 'custom' ? 'Custom period' : t('reports.attendanceAnalytics.currentTerm'),
             trend: 'down',
             trendValue: '-1.2%',
             color: 'primary'
           },
           {
-            title: 'Perfect Attendance',
+            title: t('reports.attendanceAnalytics.perfectAttendance'),
             value: '67',
-            description: '20.9% of students',
+            description: t('reports.attendanceAnalytics.perfectAttendanceDesc'),
             trend: 'down',
             trendValue: '-3',
             color: 'success'
           },
           {
-            title: 'Chronic Absence',
+            title: t('reports.attendanceAnalytics.chronicAbsence'),
             value: '22',
-            description: '6.9% of students',
+            description: t('reports.attendanceAnalytics.chronicAbsenceDesc'),
             trend: 'up',
             trendValue: '+2',
             color: 'error'
           },
           {
-            title: 'Tardiness Rate',
+            title: t('reports.attendanceAnalytics.tardinessRate'),
             value: '2.1%',
-            description: 'Average daily late',
+            description: t('reports.attendanceAnalytics.averageDailyLate'),
             trend: 'neutral',
             trendValue: '0%',
             color: 'warning'
@@ -1020,7 +1020,7 @@ export default function ReportsPage() {
     <>
       <ReportHeader
         title={t("reports.studentReportsSection.title")}
-        description="Individual student performance reports with academic and attendance data"
+        description={t("reports.studentReportsSection.description")}
         onFilterToggle={toggleFilters}
         showFilters={showFilters}
         onClearFilters={clearFilters}
@@ -1193,7 +1193,7 @@ export default function ReportsPage() {
     <>
       <ReportHeader
         title={t("reports.staffReportsSection.title")}
-        description="Faculty performance, teaching load distribution, and department analytics"
+        description={t("reports.staffReportsSection.description")}
         exportData={{
           data: teachers,
           columns: [
@@ -1210,31 +1210,31 @@ export default function ReportsPage() {
       <StatisticsSummary
         stats={[
           {
-            title: 'Total Faculty',
+            title: t('reports.staffReportsSection.totalFaculty'),
             value: '78',
-            description: '12 departments',
+            description: t('reports.staffReportsSection.departmentsCount'),
             icon: <PersonIcon />,
             color: 'primary'
           },
           {
-            title: 'Teacher:Student Ratio',
+            title: t('reports.staffReportsSection.teacherStudentRatio'),
             value: '1:16',
-            description: 'School average',
+            description: t('reports.staffReportsSection.schoolAverage'),
             icon: <GroupIcon />,
             color: 'info'
           },
           {
-            title: 'Average Performance',
+            title: t('reports.staffReportsSection.averagePerformance'),
             value: '91.2%',
-            description: 'Based on reviews',
+            description: t('reports.staffReportsSection.basedOnReviews'),
             trend: 'up',
             trendValue: '+1.7%',
             color: 'success'
           },
           {
-            title: 'Teaching Load',
+            title: t('reports.staffReportsSection.teachingLoad'),
             value: '24.3h',
-            description: 'Weekly average',
+            description: t('reports.staffReportsSection.weeklyAverage'),
             color: 'warning'
           }
         ]}
@@ -1295,14 +1295,14 @@ export default function ReportsPage() {
     <>
       <ReportHeader
         title={t("reports.schoolOverviewSection.title")}
-        description="Comprehensive analytics and statistics about the entire institution"
+        description={t("reports.schoolOverviewSection.description")}
         exportData={{
           data: [
-            { metric: 'Total Students', value: 1247 },
+            { metric: t('reports.schoolOverviewSection.totalStudents'), value: 1247 },
             { metric: 'Total Staff', value: 78 },
             { metric: 'Student-Teacher Ratio', value: '1:16' },
-            { metric: 'Average Attendance', value: '91.5%' },
-            { metric: 'Average Grade', value: '76.8%' },
+            { metric: t('reports.schoolOverviewSection.averageAttendance'), value: '91.5%' },
+            { metric: t('reports.schoolOverviewSection.averageGrade'), value: '76.8%' },
             { metric: t('reports.schoolOverviewSection.passingRate'), value: '89.2%' },
           ],
           columns: [
@@ -1318,27 +1318,27 @@ export default function ReportsPage() {
         title={t("reports.charts.schoolSummary")}
         stats={[
           {
-            title: 'Total Students',
+            title: t('reports.schoolOverviewSection.totalStudents'),
             value: '1,247',
             icon: <SchoolIcon />,
             color: 'primary'
           },
           {
-            title: 'Average Attendance',
+            title: t('reports.schoolOverviewSection.averageAttendance'),
             value: '91.5%',
             trend: 'down',
             trendValue: '-1.2%',
             color: 'warning'
           },
           {
-            title: 'Average Grade',
+            title: t('reports.schoolOverviewSection.averageGrade'),
             value: '76.8%',
             trend: 'up',
             trendValue: '+0.8%',
             color: 'success'
           },
           {
-            title: 'Graduation Rate',
+            title: t('reports.schoolOverviewSection.graduationRate'),
             value: '94.7%',
             trend: 'up',
             trendValue: '+2.1%',

@@ -1235,7 +1235,15 @@
     },
     "attendanceAnalytics": {
       "title": "Attendance Analytics",
-      "description": "Monitor student attendance patterns and trends",
+      "description": "Monitor student attendance patterns, identify trends, and track improvements",
+      "overallAttendance": "Overall Attendance",
+      "currentTerm": "Current term",
+      "perfectAttendance": "Perfect Attendance",
+      "perfectAttendanceDesc": "20.9% of students",
+      "chronicAbsence": "Chronic Absence",
+      "chronicAbsenceDesc": "6.9% of students",
+      "tardinessRate": "Tardiness Rate",
+      "averageDailyLate": "Average daily late",
       "present": "Present",
       "absent": "Absent",
       "late": "Late",
@@ -1260,15 +1268,30 @@
     },
     "studentReportsSection": {
       "title": "Student Reports",
+      "description": "Individual student performance reports with academic and attendance data",
       "performanceBySubject": "Performance by Subject",
       "currentTermGradesBySubject": "Current term grades by subject",
       "monthlyPerformanceRatings": "Monthly performance ratings"
     },
     "staffReportsSection": {
-      "title": "Staff Reports"
+      "title": "Staff Reports",
+      "description": "Faculty performance, teaching load distribution, and department analytics",
+      "totalFaculty": "Total Faculty",
+      "departmentsCount": "12 departments",
+      "teacherStudentRatio": "Teacher:Student Ratio",
+      "schoolAverage": "School average",
+      "averagePerformance": "Average Performance",
+      "basedOnReviews": "Based on reviews",
+      "teachingLoad": "Teaching Load",
+      "weeklyAverage": "Weekly average"
     },
     "schoolOverviewSection": {
       "title": "School Overview",
+      "description": "Comprehensive analytics and statistics about the entire institution",
+      "totalStudents": "Total Students",
+      "averageAttendance": "Average Attendance",
+      "averageGrade": "Average Grade",
+      "graduationRate": "Graduation Rate",
       "passingRate": "Passing Rate"
     }
   },
