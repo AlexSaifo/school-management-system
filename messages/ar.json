@@ -495,6 +495,137 @@
       "parent": "ولي أمر"
     }
   },
+  "admins": {
+    "title": "إدارة المديرين",
+    "subtitle": "إدارة مديري النظام وصلاحياتهم",
+    "addNew": "إضافة مدير جديد",
+    "editAdmin": "تعديل المدير",
+    "viewDetails": "عرض التفاصيل",
+    "deleteAdmin": "حذف المدير",
+    "adminDetails": "تفاصيل المدير",
+    "adminsList": "قائمة المديرين",
+    "search": {
+      "placeholder": "البحث عن المديرين...",
+      "button": "بحث"
+    },
+    "filters": {
+      "status": "الحالة",
+      "allStatus": "جميع الحالات"
+    },
+    "noAdminsFound": "لم يتم العثور على مديرين",
+    "loading": "جاري التحميل...",
+    "pagination": {
+      "showing": "عرض",
+      "to": "إلى",
+      "of": "من",
+      "admins": "مديرين",
+      "perPage": "لكل صفحة"
+    },
+    "export": {
+      "csv": "تصدير CSV"
+    },
+    "exportCSV": "تصدير CSV",
+    "confirmDelete": "هل أنت متأكد من حذف هذا المدير؟",
+    "confirmBulkAction": "هل أنت متأكد من {{action}} {{count}} مدير/مديرين؟",
+    "noPermission": "ليس لديك صلاحية للوصول إلى هذه الصفحة.",
+    "adminId": "رقم المدير",
+    "firstName": "الاسم الأول",
+    "lastName": "اسم العائلة",
+    "email": "البريد الإلكتروني",
+    "phoneNumber": "رقم الهاتف",
+    "address": "العنوان",
+    "status": "الحالة",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "joined": "انضم",
+    "permissions": "الصلاحيات",
+    "contact": "الاتصال",
+    "noPhone": "لا يوجد هاتف",
+    "noAddress": "لا يوجد عنوان",
+    "table": {
+      "headers": {
+        "admin": "المدير",
+        "contact": "معلومات الاتصال",
+        "permissions": "الصلاحيات",
+        "status": "الحالة",
+        "joined": "تاريخ الانضمام",
+        "actions": "الإجراءات"
+      },
+      "noAdminsFound": "لم يتم العثور على مديرين",
+      "noPhone": "لا يوجد هاتف",
+      "noAddress": "لا يوجد عنوان"
+    },
+    "notProvided": "غير متوفر",
+    "accountCreated": "تاريخ الإنشاء",
+    "lastUpdated": "آخر تحديث",
+    "basicInformation": "المعلومات الأساسية",
+    "contactInformation": "معلومات الاتصال",
+    "accountInformation": "معلومات الحساب",
+    "permissionsAccessRights": "الصلاحيات وحقوق الوصول",
+    "emailAddress": "عنوان البريد الإلكتروني",
+    "phone": "الهاتف",
+    "admin": "المدير",
+    "activate": "تفعيل",
+    "deactivate": "إلغاء التفعيل",
+    "delete": "حذف",
+    "cancel": "إلغاء",
+    "update": "تحديث",
+    "create": "إنشاء",
+    "close": "إغلاق",
+    "edit": "تعديل",
+    "bulkActions": "إجراءات متعددة",
+    "selectAll": "تحديد الكل",
+    "selectedCount": "({{count}})",
+    "toggleStatus": "تبديل الحالة",
+    "manageUsers": "إدارة المستخدمين",
+    "viewReports": "عرض التقارير",
+    "manageSystem": "إدارة النظام",
+    "manageClasses": "إدارة الصفوف",
+    "actions": {
+      "view": "عرض",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "activate": "تفعيل",
+      "deactivate": "إلغاء التفعيل"
+    },
+    "dialog": {
+      "editTitle": "تعديل المدير",
+      "viewTitle": "تفاصيل المدير",
+      "cancel": "إلغاء",
+      "update": "تحديث",
+      "create": "إنشاء",
+      "close": "إغلاق"
+    },
+    "form": {
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "phoneNumber": "رقم الهاتف",
+      "address": "العنوان",
+      "permissions": "الصلاحيات"
+    },
+    "view": {
+      "basicInfo": "المعلومات الأساسية",
+      "contactInfo": "معلومات الاتصال",
+      "permissions": "الصلاحيات وحقوق الوصول",
+      "accountInfo": "معلومات الحساب",
+      "emailAddress": "عنوان البريد الإلكتروني",
+      "accountCreated": "تاريخ الإنشاء",
+      "lastUpdated": "آخر تحديث",
+      "adminId": "رقم المدير",
+      "notProvided": "غير متوفر"
+    },
+    "confirmations": {
+      "deleteSingle": "هل أنت متأكد من حذف هذا المدير؟",
+      "bulkAction": "هل أنت متأكد من {{action}} {{count}} مدير/مديرين؟"
+    },
+    "permissionsList": {
+      "canManageUsers": "إدارة المستخدمين",
+      "canViewReports": "عرض التقارير",
+      "canManageSystem": "إدارة النظام",
+      "canManageClasses": "إدارة الصفوف"
+    }
+  },
   "students": {
     "studentId": "رقم الطالب",
     "class": "الصف",

@@ -55,6 +55,7 @@ import DataTable, { Column, Action } from '@/components/DataTable';
 import FilterPanel, { Filter, FilterOption, BulkAction } from '@/components/FilterPanel';
 import PageHeader from '@/components/PageHeader';
 import PaginationControls from '@/components/PaginationControls';
+import { useTranslation } from 'react-i18next';
 
 interface Admin {
   id: string;
@@ -79,6 +80,7 @@ interface Admin {
 export default function AdminsPage() {
   const { user, token } = useAuth();
   const { isRTL, language } = useLanguage();
+  const { t } = useTranslation();
   const locale = isRTL ? 'ar' : 'en-US'; // Use 'ar' instead of 'ar-SA' to avoid Hijri calendar as default
   // Define date format options to force Gregorian calendar
   const dateFormatOptions: Intl.DateTimeFormatOptions = {
@@ -120,10 +122,10 @@ export default function AdminsPage() {
 
 
   const availablePermissions = [
-    { key: 'canManageUsers', label: 'Manage Users' },
-    { key: 'canViewReports', label: 'View Reports' },
-    { key: 'canManageSystem', label: 'Manage System' },
-    { key: 'canManageClasses', label: 'Manage Classes' },
+    { key: 'canManageUsers', label: t('admins.permissionsList.canManageUsers') },
+    { key: 'canViewReports', label: t('admins.permissionsList.canViewReports') },
+    { key: 'canManageSystem', label: t('admins.permissionsList.canManageSystem') },
+    { key: 'canManageClasses', label: t('admins.permissionsList.canManageClasses') },
   ];
 
   useEffect(() => {
@@ -236,7 +238,7 @@ export default function AdminsPage() {
   };
 
   const handleDelete = async (adminId: string) => {
-    if (window.confirm('Are you sure you want to delete this admin?')) {
+    if (window.confirm(t('admins.confirmations.deleteSingle'))) {
       try {
         const response = await fetch(`/api/users/admins/${adminId}`, {
           method: 'DELETE',
@@ -280,7 +282,7 @@ export default function AdminsPage() {
   const handleBulkAction = async (action: 'activate' | 'deactivate' | 'delete') => {
     if (selectedIds.length === 0) return;
     
-    const confirmMessage = `Are you sure you want to ${action} ${selectedIds.length} admin(s)?`;
+    const confirmMessage = t('admins.confirmations.bulkAction', { action: t(`admins.actions.${action}`), count: selectedIds.length });
     if (!window.confirm(confirmMessage)) return;
 
     try {
@@ -376,7 +378,7 @@ export default function AdminsPage() {
     return (
       <SidebarLayout>
         <Alert severity="error">
-          You don't have permission to access this page.
+          {t('admins.errors.noPermission')}
         </Alert>
       </SidebarLayout>
     );
@@ -386,24 +388,24 @@ export default function AdminsPage() {
   const columns: Column[] = [
     {
       key: 'user.firstName',
-      label: 'Admin',
+      label: t('admins.table.headers.admin'),
       render: (value, row) => `${row.user.firstName} ${row.user.lastName}`,
     },
     {
       key: 'user.phoneNumber',
-      label: 'Contact',
+      label: t('admins.table.headers.contact'),
       render: (value, row) => (
         <Box>
-          <div>{row.user.phoneNumber || 'No phone'}</div>
+          <div>{row.user.phoneNumber || t('admins.table.noPhone')}</div>
           <div style={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-            {row.user.address || 'No address'}
+            {row.user.address || t('admins.table.noAddress')}
           </div>
         </Box>
       ),
     },
     {
       key: 'permissions',
-      label: 'Permissions',
+      label: t('admins.table.headers.permissions'),
       render: (value, row) => {
         const enabledPermissions = row.permissions
           ? Object.entries(row.permissions)
@@ -436,11 +438,11 @@ export default function AdminsPage() {
     },
     {
       key: 'user.isActive',
-      label: 'Status',
+      label: t('admins.table.headers.status'),
     },
     {
       key: 'user.createdAt',
-      label: 'Joined',
+      label: t('admins.table.headers.joined'),
       render: (value) => new Date(value).toLocaleDateString(locale, dateFormatOptions),
     },
   ];
@@ -449,26 +451,26 @@ export default function AdminsPage() {
   const actions: Action[] = [
     {
       key: 'view',
-      label: 'View Details',
+      label: t('admins.actions.view'),
       icon: <Visibility />,
       onClick: (row) => handleViewAdmin(row),
     },
     {
       key: 'edit',
-      label: 'Edit Admin',
+      label: t('admins.actions.edit'),
       icon: <Edit />,
       onClick: (row) => handleOpenDialog(row),
     },
     {
       key: 'toggleStatus',
-      label: row => row.user.isActive ? 'Deactivate' : 'Activate',
+      label: row => row.user.isActive ? t('admins.actions.deactivate') : t('admins.actions.activate'),
       icon: row => row.user.isActive ? <Block /> : <CheckCircle />,
       onClick: (row) => toggleAdminStatus(row.id, row.user.isActive),
       color: row => row.user.isActive ? 'warning' : 'success',
     },
     {
       key: 'delete',
-      label: 'Delete',
+      label: t('admins.actions.delete'),
       icon: <Delete />,
       onClick: (row) => handleDelete(row.id),
       color: 'error',
@@ -521,14 +523,14 @@ export default function AdminsPage() {
       <Box>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h1" gutterBottom>
-            Admin Management
+            {t('admins.title')}
           </Typography>
           <Button
             variant="contained"
             startIcon={<PersonAdd />}
             onClick={() => handleOpenDialog()}
           >
-            Add New Admin
+            {t('admins.addNew')}
           </Button>
         </Box>
 
@@ -536,7 +538,7 @@ export default function AdminsPage() {
         <Paper sx={{ p: 2, mb: 3 }}>
           <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             <TextField
-              placeholder="Search admins..."
+              placeholder={t('admins.search.placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
@@ -551,29 +553,29 @@ export default function AdminsPage() {
             />
             <TextField
               select
-              label="Status"
+              label={t('admins.filters.status')}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               size="small"
               sx={{ minWidth: 120 }}
             >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>
+              <MenuItem value="all">{t('admins.filters.allStatus')}</MenuItem>
+              <MenuItem value="active">{t('admins.status.active')}</MenuItem>
+              <MenuItem value="inactive">{t('admins.status.inactive')}</MenuItem>
             </TextField>
             <Button
               variant="outlined"
               startIcon={<Search />}
               onClick={() => fetchAdmins(1)}
             >
-              Search
+              {t('admins.search.button')}
             </Button>
             <Button
               variant="outlined"
               startIcon={<GetApp />}
               onClick={exportToCSV}
             >
-              Export CSV
+              {t('admins.export.csv')}
             </Button>
             {selectedIds.length > 0 && (
               <>
@@ -583,7 +585,7 @@ export default function AdminsPage() {
                   startIcon={<CheckCircle />}
                   onClick={() => handleBulkAction('activate')}
                 >
-                  Activate ({selectedIds.length})
+                  {t('admins.actions.activate')} ({selectedIds.length})
                 </Button>
                 <Button
                   variant="outlined"
@@ -591,7 +593,7 @@ export default function AdminsPage() {
                   startIcon={<Block />}
                   onClick={() => handleBulkAction('deactivate')}
                 >
-                  Deactivate ({selectedIds.length})
+                  {t('admins.actions.deactivate')} ({selectedIds.length})
                 </Button>
                 <Button
                   variant="outlined"
@@ -599,7 +601,7 @@ export default function AdminsPage() {
                   startIcon={<Delete />}
                   onClick={() => handleBulkAction('delete')}
                 >
-                  Delete ({selectedIds.length})
+                  {t('admins.actions.delete')} ({selectedIds.length})
                 </Button>
               </>
             )}
@@ -618,25 +620,25 @@ export default function AdminsPage() {
                       onChange={(e) => handleSelectAll(e.target.checked)}
                     />
                   </TableCell>
-                  <TableCell>Admin</TableCell>
-                  <TableCell>Contact</TableCell>
-                  <TableCell>Permissions</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Joined</TableCell>
-                  <TableCell align="center">Actions</TableCell>
+                  <TableCell>{t('admins.table.headers.admin')}</TableCell>
+                  <TableCell>{t('admins.table.headers.contact')}</TableCell>
+                  <TableCell>{t('admins.table.headers.permissions')}</TableCell>
+                  <TableCell>{t('admins.table.headers.status')}</TableCell>
+                  <TableCell>{t('admins.table.headers.joined')}</TableCell>
+                  <TableCell align="center">{t('admins.table.headers.actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
-                      Loading...
+                      {t('common.loading')}
                     </TableCell>
                   </TableRow>
                 ) : admins.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
-                      No admins found
+                      {t('admins.table.noAdminsFound')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -717,7 +719,7 @@ export default function AdminsPage() {
                         {new Date(admin.user.createdAt).toLocaleDateString(locale, dateFormatOptions)}
                       </TableCell>
                       <TableCell align="center">
-                        <Tooltip title="View Details">
+                        <Tooltip title={t('admins.actions.view')}>
                           <IconButton 
                             size="small"
                             onClick={() => handleViewAdmin(admin)}
@@ -725,7 +727,7 @@ export default function AdminsPage() {
                             <Visibility />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Edit Admin">
+                        <Tooltip title={t('admins.actions.edit')}>
                           <IconButton 
                             size="small" 
                             onClick={() => handleOpenDialog(admin)}
@@ -761,12 +763,12 @@ export default function AdminsPage() {
           >
             <Box display="flex" alignItems="center" gap={2}>
               <Typography variant="body2" color="text.secondary">
-                Showing {((pagination.current - 1) * pagination.limit) + 1} to{' '}
-                {Math.min(pagination.current * pagination.limit, pagination.total)} of{' '}
-                {pagination.total} admins
+                {t('admins.pagination.showing')} {((pagination.current - 1) * pagination.limit) + 1} {t('admins.pagination.to')}{' '}
+                {Math.min(pagination.current * pagination.limit, pagination.total)} {t('admins.pagination.of')}{' '}
+                {pagination.total} {t('admins.pagination.admins')}
               </Typography>
               <FormControl size="small" sx={{ minWidth: 80 }}>
-                <InputLabel>Per page</InputLabel>
+                <InputLabel>{t('admins.pagination.perPage')}</InputLabel>
                 <Select
                   value={pageSize}
                   onChange={handlePageSizeChange}
@@ -798,20 +800,20 @@ export default function AdminsPage() {
         {/* Add/Edit Admin Dialog */}
         <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
           <DialogTitle>
-            {selectedAdmin ? 'Edit Admin' : 'Add New Admin'}
+            {selectedAdmin ? t('admins.dialog.editTitle') : t('admins.addNew')}
           </DialogTitle>
           <DialogContent>
             <Box display="flex" flexDirection="column" gap={2} mt={1}>
               <Box display="flex" gap={2}>
                 <TextField
-                  label="First Name"
+                  label={t('admins.form.firstName')}
                   value={formData.firstName}
                   onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                   fullWidth
                   required
                 />
                 <TextField
-                  label="Last Name"
+                  label={t('admins.form.lastName')}
                   value={formData.lastName}
                   onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                   fullWidth
@@ -819,7 +821,7 @@ export default function AdminsPage() {
                 />
               </Box>
               <TextField
-                label="Email"
+                label={t('admins.form.email')}
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -828,13 +830,13 @@ export default function AdminsPage() {
               />
               <Box display="flex" gap={2}>
                 <TextField
-                  label="Phone Number"
+                  label={t('admins.form.phoneNumber')}
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                   fullWidth
                 />
                 <TextField
-                  label="Address"
+                  label={t('admins.form.address')}
                   value={formData.address}
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
                   fullWidth
@@ -842,7 +844,7 @@ export default function AdminsPage() {
               </Box>
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
-                  Permissions
+                  {t('admins.form.permissions')}
                 </Typography>
                 {availablePermissions.map((permission) => (
                   <FormControlLabel
@@ -866,9 +868,9 @@ export default function AdminsPage() {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button onClick={handleCloseDialog}>{t('admins.dialog.cancel')}</Button>
             <Button onClick={handleSubmit} variant="contained">
-              {selectedAdmin ? 'Update' : 'Create'}
+              {selectedAdmin ? t('admins.dialog.update') : t('admins.dialog.create')}
             </Button>
           </DialogActions>
         </Dialog>
@@ -885,7 +887,7 @@ export default function AdminsPage() {
               <Avatar>
                 <AdminPanelSettings />
               </Avatar>
-              Admin Details
+              {t('admins.dialog.viewTitle')}
             </Box>
           </DialogTitle>
           <DialogContent>
@@ -894,12 +896,12 @@ export default function AdminsPage() {
                 {/* Basic Information */}
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom color="primary">
-                    Basic Information
+                    {t('admins.view.basicInfo')}
                   </Typography>
                   <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        First Name
+                        {t('admins.form.firstName')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewAdmin.user.firstName}
@@ -907,7 +909,7 @@ export default function AdminsPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Last Name
+                        {t('admins.form.lastName')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewAdmin.user.lastName}
@@ -915,7 +917,7 @@ export default function AdminsPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Email Address
+                        {t('admins.view.emailAddress')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {viewAdmin.user.email}
@@ -923,10 +925,10 @@ export default function AdminsPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Status
+                        {t('admins.table.headers.status')}
                       </Typography>
                       <Chip
-                        label={viewAdmin.user.isActive ? 'Active' : 'Inactive'}
+                        label={viewAdmin.user.isActive ? t('admins.status.active') : t('admins.status.inactive')}
                         color={viewAdmin.user.isActive ? 'success' : 'error'}
                         size="small"
                       />
@@ -937,23 +939,23 @@ export default function AdminsPage() {
                 {/* Contact Information */}
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom color="primary">
-                    Contact Information
+                    {t('admins.view.contactInfo')}
                   </Typography>
                   <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Phone Number
+                        {t('admins.form.phoneNumber')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {viewAdmin.user.phoneNumber || 'Not provided'}
+                        {viewAdmin.user.phoneNumber || t('admins.view.notProvided')}
                       </Typography>
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Address
+                        {t('admins.form.address')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {viewAdmin.user.address || 'Not provided'}
+                        {viewAdmin.user.address || t('admins.view.notProvided')}
                       </Typography>
                     </Box>
                   </Box>
@@ -962,7 +964,7 @@ export default function AdminsPage() {
                 {/* Permissions */}
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom color="primary">
-                    Permissions & Access Rights
+                    {t('admins.view.permissions')}
                   </Typography>
                   <Box display="flex" flexWrap="wrap" gap={1}>
                     {Object.entries(viewAdmin.permissions || {}).map(([key, value]) => (
@@ -981,12 +983,12 @@ export default function AdminsPage() {
                 {/* Account Information */}
                 <Paper sx={{ p: 2 }}>
                   <Typography variant="h6" gutterBottom color="primary">
-                    Account Information
+                    {t('admins.view.accountInfo')}
                   </Typography>
                   <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Account Created
+                        {t('admins.view.accountCreated')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {new Date(viewAdmin.user.createdAt).toLocaleDateString(locale, dateFormatOptions)}
@@ -994,7 +996,7 @@ export default function AdminsPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Last Updated
+                        {t('admins.view.lastUpdated')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
                         {new Date(viewAdmin.user.updatedAt).toLocaleDateString(locale, dateFormatOptions)}
@@ -1002,7 +1004,7 @@ export default function AdminsPage() {
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Admin ID
+                        {t('admins.view.adminId')}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium" fontFamily="monospace">
                         {viewAdmin.id}
@@ -1014,7 +1016,7 @@ export default function AdminsPage() {
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseViewDialog}>Close</Button>
+            <Button onClick={handleCloseViewDialog}>{t('admins.dialog.close')}</Button>
             <Button 
               onClick={() => {
                 handleCloseViewDialog();
@@ -1023,7 +1025,7 @@ export default function AdminsPage() {
               variant="contained"
               startIcon={<Edit />}
             >
-              Edit Admin
+              {t('admins.actions.edit')}
             </Button>
           </DialogActions>
         </Dialog>
