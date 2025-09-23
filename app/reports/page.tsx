@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -54,19 +54,7 @@ import StatisticsSummary, { StatCard } from '@/components/reports/StatisticsSumm
 import DashboardCard from '@/components/reports/DashboardCard';
 import ReportChart from '@/components/reports/ReportChart';
 import { downloadCSV } from '@/lib/export-utils';
-import { useTranslation } from 'react-i18next';
-import { 
-  generateMockStudents, 
-  generateMockClasses, 
-  generateMockTeachers, 
-  generateMockSubjects,
-  generateAttendanceData,
-  generateGradeDistribution,
-  generateMonthlyAttendance,
-  generateSubjectPerformance
-} from '@/lib/mock-report-data';
-
-// Define interfaces for the data structures
+import { useTranslation } from 'react-i18next';// Define interfaces for the data structures
 interface Student {
   id: string;
   name?: string;
@@ -111,7 +99,11 @@ interface Teacher {
 interface ClassItem {
   id: string;
   name: string;
-  gradeLevel: string;
+  gradeLevel: {
+    id: string;
+    level: number;
+    nameAr: string;
+  };
 }
 
 interface Subject {
@@ -153,6 +145,8 @@ export default function ReportsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState('term');
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('all');
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState<{
     start: dayjs.Dayjs;
     end: dayjs.Dayjs;
@@ -201,6 +195,32 @@ export default function ReportsPage() {
       setError('');
       
       try {
+        // Fetch academic years
+        const academicYearsResponse = await fetch('/api/academic/academic-years', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (academicYearsResponse.ok) {
+          const academicYearsData = await academicYearsResponse.json();
+          console.log('Academic Years API response:', academicYearsData);
+          const years = academicYearsData.data || academicYearsData.academicYears || [];
+          console.log('Academic years array:', years);
+          console.log('Number of academic years:', years.length);
+          setAcademicYears(years);
+          
+          // Set default academic year if not set and years are available
+          if (selectedAcademicYear === 'all' && years.length > 0) {
+            // Find the active academic year or use the first one
+            const activeYear = years.find((year: any) => year.isActive) || years[0];
+            console.log('Setting default academic year to:', activeYear);
+            setSelectedAcademicYear(activeYear.id);
+          }
+        } else {
+          console.error('Academic Years API failed:', academicYearsResponse.status, await academicYearsResponse.text());
+          // Don't use fallback data - keep empty array
+          setAcademicYears([]);
+        }
+
         // Fetch students
         const studentsResponse = await fetch('/api/users/students', {
           headers: { Authorization: `Bearer ${token}` }
@@ -286,7 +306,7 @@ export default function ReportsPage() {
         const startDateStr = dateRange.start.format('YYYY-MM-DD');
         const endDateStr = dateRange.end.format('YYYY-MM-DD');
         
-        const attendanceResponse = await fetch(`/api/reports?type=class-attendance&startDate=${startDateStr}&endDate=${endDateStr}${selectedClass !== 'all' ? `&classRoomId=${selectedClass}` : ''}`, {
+        const attendanceResponse = await fetch(`/api/reports?type=class-attendance&startDate=${startDateStr}&endDate=${endDateStr}${selectedClass !== 'all' ? `&classRoomId=${selectedClass}` : ''}${selectedAcademicYear !== 'all' ? `&academicYearId=${selectedAcademicYear}` : ''}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -405,7 +425,7 @@ export default function ReportsPage() {
           }
 
           // Process grade distribution from the response
-          const gradesResponse = await fetch(`/api/reports?type=class-grades&startDate=${startDateStr}&endDate=${endDateStr}${selectedClass !== 'all' ? `&classRoomId=${selectedClass}` : ''}`, {
+          const gradesResponse = await fetch(`/api/reports?type=class-grades&startDate=${startDateStr}&endDate=${endDateStr}${selectedClass !== 'all' ? `&classRoomId=${selectedClass}` : ''}${selectedAcademicYear !== 'all' ? `&academicYearId=${selectedAcademicYear}` : ''}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
 
@@ -473,7 +493,7 @@ export default function ReportsPage() {
     };
     
     fetchReportData();
-  }, [token, selectedClass, dateRange]);
+  }, [token, selectedClass, selectedAcademicYear, dateRange]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -485,6 +505,7 @@ export default function ReportsPage() {
   
   const clearFilters = () => {
     setSelectedClass('all');
+    setSelectedAcademicYear('all');
     setSelectedPeriod('term');
     setDateRange({
       start: dayjs().subtract(3, 'month'),
@@ -590,13 +611,161 @@ export default function ReportsPage() {
     return tabs;
   };
 
-  // Transform attendance data for charts
-  const attendanceChartData = [
-    { label: t('reports.attendanceAnalytics.present'), value: 91.5, color: '#4caf50' },
-    { label: t('reports.attendanceAnalytics.absent'), value: 5.2, color: '#f44336' },
-    { label: t('reports.attendanceAnalytics.late'), value: 2.1, color: '#ff9800' },
-    { label: t('reports.attendanceAnalytics.excused'), value: 1.2, color: '#2196f3' }
-  ];
+  // Calculate real attendance statistics
+  const attendanceStats = useMemo(() => {
+    if (attendanceData.length === 0) {
+      return {
+        overallAttendance: 0,
+        perfectAttendance: 0,
+        chronicAbsence: 0,
+        tardinessRate: 0
+      };
+    }
+
+    // Calculate totals from attendance data
+    const totals = attendanceData.reduce(
+      (acc, day) => ({
+        present: acc.present + (day.present || 0),
+        absent: acc.absent + (day.absent || 0),
+        late: acc.late + (day.late || 0),
+        excused: acc.excused + (day.excused || 0),
+        total: acc.total + (day.total || 0)
+      }),
+      { present: 0, absent: 0, late: 0, excused: 0, total: 0 }
+    );
+
+    const overallAttendance = totals.total > 0 ? Math.round((totals.present / totals.total) * 100 * 10) / 10 : 0;
+    const tardinessRate = totals.total > 0 ? Math.round((totals.late / totals.total) * 100 * 10) / 10 : 0;
+
+    // For perfect attendance and chronic absence, we'd need student-level data
+    // For now, return 0 or calculate based on available data
+    return {
+      overallAttendance,
+      perfectAttendance: 0, // Would need student attendance records
+      chronicAbsence: 0, // Would need student attendance records
+      tardinessRate
+    };
+  }, [attendanceData]);
+
+  // Calculate real school overview statistics
+  const schoolOverviewStats = useMemo(() => {
+    const totalStudents = students.length;
+    const totalTeachers = teachers.length;
+    const studentTeacherRatio = totalTeachers > 0 ? `1:${Math.round(totalStudents / totalTeachers)}` : 'N/A';
+
+    // Calculate average attendance from student data
+    const studentsWithAttendance = students.filter(s => s.attendance !== null && s.attendance !== undefined);
+    const averageAttendance = studentsWithAttendance.length > 0
+      ? Math.round(studentsWithAttendance.reduce((sum, s) => sum + (s.attendance || 0), 0) / studentsWithAttendance.length * 10) / 10
+      : 0;
+
+    // Calculate average grade from student data
+    const studentsWithGrades = students.filter(s => s.averageGrade !== null && s.averageGrade !== undefined);
+    const averageGrade = studentsWithGrades.length > 0
+      ? Math.round(studentsWithGrades.reduce((sum, s) => sum + (s.averageGrade || 0), 0) / studentsWithGrades.length * 10) / 10
+      : 0;
+
+    // Calculate passing rate (assuming 60% is passing)
+    const passingStudents = studentsWithGrades.filter(s => (s.averageGrade || 0) >= 60).length;
+    const passingRate = studentsWithGrades.length > 0
+      ? Math.round((passingStudents / studentsWithGrades.length) * 100 * 10) / 10
+      : 0;
+
+    return {
+      totalStudents,
+      totalTeachers,
+      studentTeacherRatio,
+      averageAttendance,
+      averageGrade,
+      passingRate
+    };
+  }, [students, teachers]);
+
+  // Calculate real academic performance statistics
+  const academicPerformanceStats = useMemo(() => {
+    const studentsWithGrades = students.filter(s => s.averageGrade !== null && s.averageGrade !== undefined);
+    
+    if (studentsWithGrades.length === 0) {
+      return {
+        averageScore: 0,
+        passingRate: 0,
+        aPlusStudents: 0,
+        atRiskStudents: 0
+      };
+    }
+
+    const averageScore = Math.round(studentsWithGrades.reduce((sum, s) => sum + (s.averageGrade || 0), 0) / studentsWithGrades.length * 10) / 10;
+    const passingStudents = studentsWithGrades.filter(s => (s.averageGrade || 0) >= 60).length;
+    const passingRate = Math.round((passingStudents / studentsWithGrades.length) * 100 * 10) / 10;
+    const aPlusStudents = studentsWithGrades.filter(s => (s.averageGrade || 0) >= 90).length;
+    const atRiskStudents = studentsWithGrades.filter(s => (s.averageGrade || 0) < 60).length;
+
+    return {
+      averageScore,
+      passingRate,
+      aPlusStudents,
+      atRiskStudents
+    };
+  }, [students]);
+
+  // Calculate real staff statistics
+  const staffStats = useMemo(() => {
+    const totalFaculty = teachers.length;
+    const teacherStudentRatio = students.length > 0 ? Math.round(students.length / totalFaculty) : 0;
+    const averagePerformance = teachers.length > 0 
+      ? Math.round(teachers.reduce((sum, t) => sum + (t.performance || 0), 0) / teachers.length * 10) / 10
+      : 0;
+    const averageTeachingLoad = teachers.length > 0 
+      ? Math.round(teachers.reduce((sum, t) => sum + (t.teachingLoad || 0), 0) / teachers.length * 10) / 10
+      : 0;
+
+    return {
+      totalFaculty,
+      teacherStudentRatio,
+      averagePerformance,
+      averageTeachingLoad
+    };
+  }, [teachers, students]);
+
+  // Transform attendance data for charts - calculate from real data
+  const attendanceChartData = React.useMemo(() => {
+    if (attendanceData.length === 0) {
+      return [
+        { label: t('reports.attendanceAnalytics.present'), value: 0, color: '#4caf50' },
+        { label: t('reports.attendanceAnalytics.absent'), value: 0, color: '#f44336' },
+        { label: t('reports.attendanceAnalytics.late'), value: 0, color: '#ff9800' },
+        { label: t('reports.attendanceAnalytics.excused'), value: 0, color: '#2196f3' }
+      ];
+    }
+
+    // Calculate totals from real attendance data
+    const totals = attendanceData.reduce(
+      (acc, day) => ({
+        present: acc.present + (day.present || 0),
+        absent: acc.absent + (day.absent || 0),
+        late: acc.late + (day.late || 0),
+        excused: acc.excused + (day.excused || 0),
+        total: acc.total + (day.total || 0)
+      }),
+      { present: 0, absent: 0, late: 0, excused: 0, total: 0 }
+    );
+
+    if (totals.total === 0) {
+      return [
+        { label: t('reports.attendanceAnalytics.present'), value: 0, color: '#4caf50' },
+        { label: t('reports.attendanceAnalytics.absent'), value: 0, color: '#f44336' },
+        { label: t('reports.attendanceAnalytics.late'), value: 0, color: '#ff9800' },
+        { label: t('reports.attendanceAnalytics.excused'), value: 0, color: '#2196f3' }
+      ];
+    }
+
+    return [
+      { label: t('reports.attendanceAnalytics.present'), value: Math.round((totals.present / totals.total) * 100 * 10) / 10, color: '#4caf50' },
+      { label: t('reports.attendanceAnalytics.absent'), value: Math.round((totals.absent / totals.total) * 100 * 10) / 10, color: '#f44336' },
+      { label: t('reports.attendanceAnalytics.late'), value: Math.round((totals.late / totals.total) * 100 * 10) / 10, color: '#ff9800' },
+      { label: t('reports.attendanceAnalytics.excused'), value: Math.round((totals.excused / totals.total) * 100 * 10) / 10, color: '#2196f3' }
+    ];
+  }, [attendanceData, t]);
   
   // Transform grade distribution for charts
   const gradeChartData = gradeDistribution.map(item => ({
@@ -616,8 +785,11 @@ export default function ReportsPage() {
     value: item.average
   }));
 
-  // Mock data for the top students table
-  const topStudents = generateMockStudents(5).sort((a, b) => b.averageGrade - a.averageGrade);
+  // Get top performing students from real data
+  const topStudents = students
+    .filter(student => student.averageGrade !== null && student.averageGrade !== undefined)
+    .sort((a, b) => (b.averageGrade || 0) - (a.averageGrade || 0))
+    .slice(0, 5);
 
   const downloadAttendanceData = () => {
     const columns = [
@@ -642,9 +814,9 @@ export default function ReportsPage() {
         onFilterToggle={toggleFilters}
         showFilters={showFilters}
         onClearFilters={clearFilters}
-        filterCount={selectedClass !== 'all' ? 1 : 0}
+        filterCount={(selectedClass !== 'all' ? 1 : 0) + (selectedAcademicYear !== 'all' ? 1 : 0)}
         exportData={{
-          data: generateMockStudents(20),
+          data: students.slice(0, 20),
           columns: [
             { key: 'id', label: t('reports.id') },
             { key: 'name', label: t('reports.studentName') },
@@ -657,7 +829,26 @@ export default function ReportsPage() {
       >
         {/* Filter Controls */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth>
+              <InputLabel id="academic-year-select-label">Academic Year</InputLabel>
+              <Select
+                labelId="academic-year-select-label"
+                id="academic-year-select"
+                value={selectedAcademicYear}
+                label="Academic Year"
+                onChange={(e) => setSelectedAcademicYear(e.target.value)}
+              >
+                <MenuItem value="all">All Years</MenuItem>
+                {academicYears.map((year: any) => (
+                  <MenuItem key={year.id} value={year.id}>
+                    {year.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel id="class-select-label">Class</InputLabel>
               <Select
@@ -669,7 +860,9 @@ export default function ReportsPage() {
               >
                 <MenuItem value="all">All Classes</MenuItem>
                 {classes.map((cls: any) => (
-                  <MenuItem key={cls.id} value={cls.id}>{cls.name} - {cls.gradeLevel}</MenuItem>
+                  <MenuItem key={cls.id} value={cls.id}>
+                    {cls.name} - Grade {cls.gradeLevel?.level || 'N/A'}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -719,7 +912,7 @@ export default function ReportsPage() {
         stats={[
           {
             title: t('reports.academicPerformanceSection.averageScore'),
-            value: '76.8%',
+            value: `${academicPerformanceStats.averageScore}%`,
             description: t('reports.academicPerformanceSection.allSubjects'),
             trend: 'up',
             trendValue: '+0.8%',
@@ -727,7 +920,7 @@ export default function ReportsPage() {
           },
           {
             title: t('reports.academicPerformanceSection.passingRate'),
-            value: '89.2%',
+            value: `${academicPerformanceStats.passingRate}%`,
             description: t('reports.academicPerformanceSection.studentsAbove60'),
             trend: 'up',
             trendValue: '+1.3%',
@@ -735,15 +928,15 @@ export default function ReportsPage() {
           },
           {
             title: t('reports.academicPerformanceSection.aPlusStudents'),
-            value: '42',
-            description: t('reports.academicPerformanceSection.percentOfTotal', { percentage: '13.1' }),
+            value: academicPerformanceStats.aPlusStudents.toString(),
+            description: t('reports.academicPerformanceSection.percentOfTotal', { percentage: ((academicPerformanceStats.aPlusStudents / students.length) * 100).toFixed(1) }),
             trend: 'up',
             trendValue: '+5',
             color: 'info'
           },
           {
             title: t('reports.academicPerformanceSection.atRisk'),
-            value: '32',
+            value: academicPerformanceStats.atRiskStudents.toString(),
             description: t('reports.academicPerformanceSection.studentsBelow60'),
             trend: 'down',
             trendValue: '-2',
@@ -823,7 +1016,7 @@ export default function ReportsPage() {
         onFilterToggle={toggleFilters}
         showFilters={showFilters}
         onClearFilters={clearFilters}
-        filterCount={selectedClass !== 'all' || selectedPeriod === 'custom' ? 1 : 0}
+        filterCount={(selectedClass !== 'all' ? 1 : 0) + (selectedPeriod === 'custom' ? 1 : 0) + (selectedAcademicYear !== 'all' ? 1 : 0)}
         exportData={{
           data: attendanceData,
           columns: [
@@ -839,7 +1032,26 @@ export default function ReportsPage() {
       >
         {/* Filter Controls */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth>
+              <InputLabel id="academic-year-select-label">Academic Year</InputLabel>
+              <Select
+                labelId="academic-year-select-label"
+                id="academic-year-select"
+                value={selectedAcademicYear}
+                label="Academic Year"
+                onChange={(e) => setSelectedAcademicYear(e.target.value)}
+              >
+                <MenuItem value="all">All Years</MenuItem>
+                {academicYears.map((year: any) => (
+                  <MenuItem key={year.id} value={year.id}>
+                    {year.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth>
               <InputLabel id="class-select-label">Class</InputLabel>
               <Select
@@ -851,7 +1063,9 @@ export default function ReportsPage() {
               >
                 <MenuItem value="all">All Classes</MenuItem>
                 {classes.map((cls: any) => (
-                  <MenuItem key={cls.id} value={cls.id}>{cls.name} - {cls.gradeLevel}</MenuItem>
+                  <MenuItem key={cls.id} value={cls.id}>
+                    {cls.name} - Grade {cls.gradeLevel?.level || 'N/A'}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -901,31 +1115,31 @@ export default function ReportsPage() {
         stats={[
           {
             title: t('reports.attendanceAnalytics.overallAttendance'),
-            value: '91.5%',
+            value: `${attendanceStats.overallAttendance}%`,
             description: selectedPeriod === 'custom' ? 'Custom period' : t('reports.attendanceAnalytics.currentTerm'),
-            trend: 'down',
-            trendValue: '-1.2%',
+            trend: 'neutral',
+            trendValue: '0%',
             color: 'primary'
           },
           {
             title: t('reports.attendanceAnalytics.perfectAttendance'),
-            value: '67',
+            value: attendanceStats.perfectAttendance.toString(),
             description: t('reports.attendanceAnalytics.perfectAttendanceDesc'),
-            trend: 'down',
-            trendValue: '-3',
+            trend: 'neutral',
+            trendValue: '0',
             color: 'success'
           },
           {
             title: t('reports.attendanceAnalytics.chronicAbsence'),
-            value: '22',
+            value: attendanceStats.chronicAbsence.toString(),
             description: t('reports.attendanceAnalytics.chronicAbsenceDesc'),
-            trend: 'up',
-            trendValue: '+2',
+            trend: 'neutral',
+            trendValue: '0',
             color: 'error'
           },
           {
             title: t('reports.attendanceAnalytics.tardinessRate'),
-            value: '2.1%',
+            value: `${attendanceStats.tardinessRate}%`,
             description: t('reports.attendanceAnalytics.averageDailyLate'),
             trend: 'neutral',
             trendValue: '0%',
@@ -1038,7 +1252,26 @@ export default function ReportsPage() {
       >
         {/* Filter Controls */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel id="academic-year-select-label">Academic Year</InputLabel>
+              <Select
+                labelId="academic-year-select-label"
+                id="academic-year-select"
+                value={selectedAcademicYear}
+                label="Academic Year"
+                onChange={(e) => setSelectedAcademicYear(e.target.value)}
+              >
+                <MenuItem value="all">All Years</MenuItem>
+                {academicYears.map((year: any) => (
+                  <MenuItem key={year.id} value={year.id}>
+                    {year.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={4}>
             <FormControl fullWidth>
               <InputLabel id="class-select-label">Class</InputLabel>
               <Select
@@ -1050,7 +1283,9 @@ export default function ReportsPage() {
               >
                 <MenuItem value="all">All Classes</MenuItem>
                 {classes.map((cls: any) => (
-                  <MenuItem key={cls.id} value={cls.id}>{cls.name} - {cls.gradeLevel}</MenuItem>
+                  <MenuItem key={cls.id} value={cls.id}>
+                    {cls.name} - Grade {cls.gradeLevel?.level || 'N/A'}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -1073,20 +1308,26 @@ export default function ReportsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    <Typography>{t('reports.loadingStudentData')}</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : students.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    <Typography>{t('reports.noStudentsFound')}</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                students.slice(0, 10).map((student: any) => {
+              {(() => {
+                // Filter students based on selected class
+                const filteredStudents = selectedClass === 'all' 
+                  ? students 
+                  : students.filter((student: any) => student.classId === selectedClass);
+                
+                return loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      <Typography>{t('reports.loadingStudentData')}</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredStudents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      <Typography>{t('reports.noStudentsFound')}</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredStudents.slice(0, 10).map((student: any) => {
                   console.log(`Rendering student ${student.id}:`, {
                     name: student.name,
                     grade: student.grade,
@@ -1128,7 +1369,8 @@ export default function ReportsPage() {
                     </TableRow>
                   );
                 })
-              )}
+                );
+              })()}
             </TableBody>
           </Table>
         </TableContainer>
@@ -1211,21 +1453,21 @@ export default function ReportsPage() {
         stats={[
           {
             title: t('reports.staffReportsSection.totalFaculty'),
-            value: '78',
+            value: staffStats.totalFaculty.toString(),
             description: t('reports.staffReportsSection.departmentsCount'),
             icon: <PersonIcon />,
             color: 'primary'
           },
           {
             title: t('reports.staffReportsSection.teacherStudentRatio'),
-            value: '1:16',
+            value: `1:${staffStats.teacherStudentRatio}`,
             description: t('reports.staffReportsSection.schoolAverage'),
             icon: <GroupIcon />,
             color: 'info'
           },
           {
             title: t('reports.staffReportsSection.averagePerformance'),
-            value: '91.2%',
+            value: `${staffStats.averagePerformance}%`,
             description: t('reports.staffReportsSection.basedOnReviews'),
             trend: 'up',
             trendValue: '+1.7%',
@@ -1233,7 +1475,7 @@ export default function ReportsPage() {
           },
           {
             title: t('reports.staffReportsSection.teachingLoad'),
-            value: '24.3h',
+            value: `${staffStats.averageTeachingLoad}h`,
             description: t('reports.staffReportsSection.weeklyAverage'),
             color: 'warning'
           }
@@ -1298,12 +1540,12 @@ export default function ReportsPage() {
         description={t("reports.schoolOverviewSection.description")}
         exportData={{
           data: [
-            { metric: t('reports.schoolOverviewSection.totalStudents'), value: 1247 },
-            { metric: 'Total Staff', value: 78 },
-            { metric: 'Student-Teacher Ratio', value: '1:16' },
-            { metric: t('reports.schoolOverviewSection.averageAttendance'), value: '91.5%' },
-            { metric: t('reports.schoolOverviewSection.averageGrade'), value: '76.8%' },
-            { metric: t('reports.schoolOverviewSection.passingRate'), value: '89.2%' },
+            { metric: t('reports.schoolOverviewSection.totalStudents'), value: schoolOverviewStats.totalStudents },
+            { metric: 'Total Staff', value: schoolOverviewStats.totalTeachers },
+            { metric: 'Student-Teacher Ratio', value: schoolOverviewStats.studentTeacherRatio },
+            { metric: t('reports.schoolOverviewSection.averageAttendance'), value: `${schoolOverviewStats.averageAttendance}%` },
+            { metric: t('reports.schoolOverviewSection.averageGrade'), value: `${schoolOverviewStats.averageGrade}%` },
+            { metric: t('reports.schoolOverviewSection.passingRate'), value: `${schoolOverviewStats.passingRate}%` },
           ],
           columns: [
             { key: 'metric', label: 'Metric' },
@@ -1319,29 +1561,29 @@ export default function ReportsPage() {
         stats={[
           {
             title: t('reports.schoolOverviewSection.totalStudents'),
-            value: '1,247',
+            value: schoolOverviewStats.totalStudents.toLocaleString(),
             icon: <SchoolIcon />,
             color: 'primary'
           },
           {
             title: t('reports.schoolOverviewSection.averageAttendance'),
-            value: '91.5%',
-            trend: 'down',
-            trendValue: '-1.2%',
+            value: `${schoolOverviewStats.averageAttendance}%`,
+            trend: 'neutral',
+            trendValue: '0%',
             color: 'warning'
           },
           {
             title: t('reports.schoolOverviewSection.averageGrade'),
-            value: '76.8%',
-            trend: 'up',
-            trendValue: '+0.8%',
+            value: `${schoolOverviewStats.averageGrade}%`,
+            trend: 'neutral',
+            trendValue: '0%',
             color: 'success'
           },
           {
             title: t('reports.schoolOverviewSection.graduationRate'),
-            value: '94.7%',
-            trend: 'up',
-            trendValue: '+2.1%',
+            value: `${schoolOverviewStats.passingRate}%`,
+            trend: 'neutral',
+            trendValue: '0%',
             color: 'info'
           }
         ]}

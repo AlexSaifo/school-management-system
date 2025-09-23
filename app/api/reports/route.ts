@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const subjectId = searchParams.get('subjectId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const academicYearId = searchParams.get('academicYearId');
 
     const dateFilter = startDate && endDate ? {
       gte: new Date(startDate),
@@ -32,17 +33,17 @@ export async function GET(request: NextRequest) {
 
     switch (type) {
       case 'student-attendance':
-        return await getStudentAttendanceReport(studentId!, dateFilter);
+        return await getStudentAttendanceReport(studentId!, dateFilter, academicYearId);
       case 'class-attendance':
-        return await getClassAttendanceReport(classRoomId, dateFilter);
+        return await getClassAttendanceReport(classRoomId, dateFilter, academicYearId);
       case 'student-grades':
-        return await getStudentGradesReport(studentId!, dateFilter);
+        return await getStudentGradesReport(studentId!, dateFilter, academicYearId);
       case 'class-grades':
-        return await getClassGradesReport(classRoomId, subjectId, dateFilter);
+        return await getClassGradesReport(classRoomId, subjectId, dateFilter, academicYearId);
       case 'teacher-performance':
-        return await getTeacherPerformanceReport(teacherId!, dateFilter);
+        return await getTeacherPerformanceReport(teacherId!, dateFilter, academicYearId);
       case 'school-overview':
-        return await getSchoolOverviewReport(dateFilter);
+        return await getSchoolOverviewReport(dateFilter, academicYearId);
       default:
         return NextResponse.json({ error: 'Invalid report type' }, { status: 400 });
     }
@@ -52,11 +53,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function getStudentAttendanceReport(studentId: string, dateFilter?: any) {
+async function getStudentAttendanceReport(studentId: string, dateFilter?: any, academicYearId?: string | null) {
   const attendances = await prisma.attendance.findMany({
     where: {
       studentId,
-      ...(dateFilter && { date: dateFilter })
+      ...(dateFilter && { date: dateFilter }),
+      ...(academicYearId && { 
+        classRoom: {
+          academicYearId: academicYearId
+        }
+      })
     },
     include: {
       classRoom: {
@@ -96,10 +102,15 @@ async function getStudentAttendanceReport(studentId: string, dateFilter?: any) {
   });
 }
 
-async function getClassAttendanceReport(classRoomId: string | null, dateFilter?: any) {
+async function getClassAttendanceReport(classRoomId: string | null, dateFilter?: any, academicYearId?: string | null) {
   const whereClause: any = {
     ...(classRoomId && { classRoomId }),
-    ...(dateFilter && { date: dateFilter })
+    ...(dateFilter && { date: dateFilter }),
+    ...(academicYearId && { 
+      classRoom: {
+        academicYearId: academicYearId
+      }
+    })
   };
 
   const attendances = await prisma.attendance.findMany({
@@ -184,11 +195,16 @@ async function getClassAttendanceReport(classRoomId: string | null, dateFilter?:
   });
 }
 
-async function getStudentGradesReport(studentId: string, dateFilter?: any) {
+async function getStudentGradesReport(studentId: string, dateFilter?: any, academicYearId?: string | null) {
   const grades = await prisma.grade.findMany({
     where: {
       studentId,
-      ...(dateFilter && { examDate: dateFilter })
+      ...(dateFilter && { examDate: dateFilter }),
+      ...(academicYearId && { 
+        classRoom: {
+          academicYearId: academicYearId
+        }
+      })
     },
     include: {
       subject: true
@@ -233,7 +249,7 @@ async function getStudentGradesReport(studentId: string, dateFilter?: any) {
   });
 }
 
-async function getClassGradesReport(classRoomId: string | null, subjectId?: string | null, dateFilter?: any) {
+async function getClassGradesReport(classRoomId: string | null, subjectId?: string | null, dateFilter?: any, academicYearId?: string | null) {
   const whereClause: any = {
     ...(classRoomId && {
       student: {
@@ -241,7 +257,14 @@ async function getClassGradesReport(classRoomId: string | null, subjectId?: stri
       }
     }),
     ...(subjectId && { subjectId }),
-    ...(dateFilter && { examDate: dateFilter })
+    ...(dateFilter && { examDate: dateFilter }),
+    ...(academicYearId && {
+      student: {
+        classRoom: {
+          academicYearId: academicYearId
+        }
+      }
+    })
   };
 
   const grades = await prisma.grade.findMany({
@@ -310,7 +333,7 @@ async function getClassGradesReport(classRoomId: string | null, subjectId?: stri
   });
 }
 
-async function getTeacherPerformanceReport(teacherId: string, dateFilter?: any) {
+async function getTeacherPerformanceReport(teacherId: string, dateFilter?: any, academicYearId?: string | null) {
   // Get teacher's subjects
   const teacherSubjects = await prisma.teacherSubject.findMany({
     where: { teacherId },
@@ -319,7 +342,14 @@ async function getTeacherPerformanceReport(teacherId: string, dateFilter?: any) 
 
   // Get classes taught by teacher
   const timetables = await prisma.timetable.findMany({
-    where: { teacherId },
+    where: { 
+      teacherId,
+      ...(academicYearId && {
+        classRoom: {
+          academicYearId: academicYearId
+        }
+      })
+    },
     include: {
       classRoom: {
         include: {
@@ -336,7 +366,14 @@ async function getTeacherPerformanceReport(teacherId: string, dateFilter?: any) 
   const grades = await prisma.grade.findMany({
     where: {
       subjectId: { in: teacherSubjects.map(ts => ts.subjectId) },
-      ...(dateFilter && { examDate: dateFilter })
+      ...(dateFilter && { examDate: dateFilter }),
+      ...(academicYearId && {
+        student: {
+          classRoom: {
+            academicYearId: academicYearId
+          }
+        }
+      })
     },
     include: {
       student: {
@@ -371,18 +408,34 @@ async function getTeacherPerformanceReport(teacherId: string, dateFilter?: any) 
   });
 }
 
-async function getSchoolOverviewReport(dateFilter?: any) {
+async function getSchoolOverviewReport(dateFilter?: any, academicYearId?: string | null) {
   // Total counts
   const [totalStudents, totalTeachers, totalClasses] = await Promise.all([
-    prisma.student.count(),
+    prisma.student.count({
+      where: academicYearId ? {
+        classRoom: {
+          academicYearId: academicYearId
+        }
+      } : undefined
+    }),
     prisma.teacher.count(),
-    prisma.classRoom.count({ where: { isActive: true } })
+    prisma.classRoom.count({ 
+      where: { 
+        isActive: true,
+        ...(academicYearId && { academicYearId })
+      } 
+    })
   ]);
 
   // Recent attendance stats
   const recentAttendances = await prisma.attendance.findMany({
     where: {
-      ...(dateFilter && { date: dateFilter })
+      ...(dateFilter && { date: dateFilter }),
+      ...(academicYearId && {
+        classRoom: {
+          academicYearId: academicYearId
+        }
+      })
     },
     take: 1000 // Limit for performance
   });
