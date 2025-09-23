@@ -182,6 +182,55 @@ async function main() {
       })
     ]);
 
+    // 2.5. Create Academic Years and Semesters
+    console.log('📅 Creating academic years and semesters...');
+    const academicYears = await Promise.all([
+      prisma.academicYear.upsert({
+        where: { name: '2024-2025' },
+        update: {},
+        create: {
+          name: '2024-2025',
+          nameAr: '2024-2025',
+          startDate: new Date('2024-09-01'),
+          endDate: new Date('2025-06-30'),
+          status: 'ACTIVE',
+          isActive: true,
+          totalDays: 180,
+          completedDays: 45,
+          color: '#1976d2'
+        }
+      })
+    ]);
+
+    const semesters = await Promise.all([
+      prisma.semester.create({
+        data: {
+          name: 'First Semester 2024-2025',
+          nameAr: 'الفصل الدراسي الأول 2024-2025',
+          startDate: new Date('2024-09-01'),
+          endDate: new Date('2024-12-31'),
+          status: 'ACTIVE',
+          days: 90,
+          completedDays: 45,
+          isActive: true,
+          academicYearId: academicYears[0].id
+        }
+      }),
+      prisma.semester.create({
+        data: {
+          name: 'Second Semester 2024-2025',
+          nameAr: 'الفصل الدراسي الثاني 2024-2025',
+          startDate: new Date('2025-01-01'),
+          endDate: new Date('2025-06-30'),
+          status: 'PLANNING',
+          days: 90,
+          completedDays: 0,
+          isActive: false,
+          academicYearId: academicYears[0].id
+        }
+      })
+    ]);
+
     // 3. Create Users (Base table for all roles)
     console.log('👥 Creating users...');
     const users = await Promise.all([
@@ -570,10 +619,10 @@ async function main() {
     const classrooms = await Promise.all([
       prisma.classRoom.upsert({
         where: {
-          gradeLevelId_sectionNumber_academicYear: {
+          gradeLevelId_sectionNumber_academicYearId: {
             gradeLevelId: gradeLevels[0].id,
             sectionNumber: 1,
-            academicYear: '2024-2025'
+            academicYearId: academicYears[0].id
           }
         },
         update: {},
@@ -588,16 +637,16 @@ async function main() {
           floor: 1,
           capacity: 30,
           facilities: ['Whiteboard', 'Projector', 'Computers'],
-          academicYear: '2024-2025',
+          academicYearId: academicYears[0].id,
           isActive: true
         }
       }),
       prisma.classRoom.upsert({
         where: {
-          gradeLevelId_sectionNumber_academicYear: {
+          gradeLevelId_sectionNumber_academicYearId: {
             gradeLevelId: gradeLevels[0].id,
             sectionNumber: 2,
-            academicYear: '2024-2025'
+            academicYearId: academicYears[0].id
           }
         },
         update: {},
@@ -612,16 +661,16 @@ async function main() {
           floor: 1,
           capacity: 30,
           facilities: ['Whiteboard', 'Projector', 'Computers'],
-          academicYear: '2024-2025',
+          academicYearId: academicYears[0].id,
           isActive: true
         }
       }),
       prisma.classRoom.upsert({
         where: {
-          gradeLevelId_sectionNumber_academicYear: {
+          gradeLevelId_sectionNumber_academicYearId: {
             gradeLevelId: gradeLevels[1].id,
             sectionNumber: 1,
-            academicYear: '2024-2025'
+            academicYearId: academicYears[0].id
           }
         },
         update: {},
@@ -636,7 +685,7 @@ async function main() {
           floor: 2,
           capacity: 30,
           facilities: ['Whiteboard', 'Projector', 'Computers'],
-          academicYear: '2024-2025',
+          academicYearId: academicYears[0].id,
           isActive: true
         }
       })
@@ -968,16 +1017,8 @@ async function main() {
     console.log('📅 Creating timetable entries...');
     await Promise.all([
       // Monday schedule for Grade 1 Section A
-      prisma.timetable.upsert({
-        where: {
-          classRoomId_timeSlotId_dayOfWeek: {
-            classRoomId: classrooms[0].id,
-            timeSlotId: timeSlots[0].id,
-            dayOfWeek: 1 // Monday
-          }
-        },
-        update: {},
-        create: {
+      prisma.timetable.create({
+        data: {
           classRoomId: classrooms[0].id,
           subjectId: subjects[0].id, // Math
           teacherId: teachers[0].id,
@@ -988,16 +1029,8 @@ async function main() {
           isActive: true
         }
       }),
-      prisma.timetable.upsert({
-        where: {
-          classRoomId_timeSlotId_dayOfWeek: {
-            classRoomId: classrooms[0].id,
-            timeSlotId: timeSlots[1].id,
-            dayOfWeek: 1
-          }
-        },
-        update: {},
-        create: {
+      prisma.timetable.create({
+        data: {
           classRoomId: classrooms[0].id,
           subjectId: subjects[1].id, // Science
           teacherId: teachers[1].id,
@@ -1008,16 +1041,8 @@ async function main() {
           isActive: true
         }
       }),
-      prisma.timetable.upsert({
-        where: {
-          classRoomId_timeSlotId_dayOfWeek: {
-            classRoomId: classrooms[0].id,
-            timeSlotId: timeSlots[3].id,
-            dayOfWeek: 1
-          }
-        },
-        update: {},
-        create: {
+      prisma.timetable.create({
+        data: {
           classRoomId: classrooms[0].id,
           subjectId: subjects[2].id, // English
           teacherId: teachers[2].id,

@@ -33,7 +33,7 @@ export default function AcademicPage() {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
 
-  const academicSections = [
+  const academicSections = React.useMemo(() => [
     {
       title: t('academic.classrooms.title'),
       description: t('academic.classrooms.subtitle'),
@@ -88,8 +88,16 @@ export default function AcademicPage() {
       route: '/academic/grades',
       stats: '12 Grades'
     },
-
-  ];
+    {
+      title: t('studentProgression.title'),
+      description: t('studentProgression.subtitle'),
+      icon: <TrendingUp />,
+      color: '#ed6c02',
+      gradient: 'linear-gradient(135deg, #ff9800 0%, #ed6c02 100%)',
+      route: '/academic/student-progression',
+      stats: t('navigation.manageTransitions')
+    },
+  ], [t]);
 
   return (
     <SidebarLayout>

@@ -27,6 +27,18 @@ enum Status {
   SUSPENDED
 }
 
+enum AcademicYearStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+}
+
+enum SemesterStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -60,6 +72,9 @@ model User {
   chatParticipants    ChatParticipant[]    @relation("ChatParticipants")
   sentMessages        Message[]            @relation("MessageSender")
   messageReadReceipts MessageReadReceipt[] @relation("MessageReadReceipts")
+
+  // Student progression relationships
+  processedProgressions StudentAcademicProgression[]
 
   @@map("users")
 }
@@ -140,6 +155,7 @@ model Student {
   grades                Grade[]
   assignmentSubmissions AssignmentSubmission[]
   examResults           ExamResult[]
+  academicProgressions  StudentAcademicProgression[]
 
   @@map("students")
 }
@@ -170,6 +186,54 @@ model StudentParent {
   @@map("student_parents")
 }
 
+// Student Academic Progression - tracks student movements between grades/years
+model StudentAcademicProgression {
+  id             String   @id @default(cuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // From academic year/semester
+  fromAcademicYearId String?
+  fromAcademicYear   AcademicYear? @relation("ProgressionFromYear", fields: [fromAcademicYearId], references: [id])
+  fromSemesterId     String?
+  fromSemester       Semester?     @relation("ProgressionFromSemester", fields: [fromSemesterId], references: [id])
+  fromGradeLevelId   String?
+  fromGradeLevel     GradeLevel?   @relation("ProgressionFromGrade", fields: [fromGradeLevelId], references: [id])
+  fromClassRoomId    String?
+  fromClassRoom      ClassRoom?    @relation("ProgressionFromClass", fields: [fromClassRoomId], references: [id])
+
+  // To academic year/semester
+  toAcademicYearId String
+  toAcademicYear   AcademicYear @relation("ProgressionToYear", fields: [toAcademicYearId], references: [id])
+  toSemesterId     String?
+  toSemester       Semester?     @relation("ProgressionToSemester", fields: [toSemesterId], references: [id])
+  toGradeLevelId   String
+  toGradeLevel     GradeLevel   @relation("ProgressionToGrade", fields: [toGradeLevelId], references: [id])
+  toClassRoomId    String?
+  toClassRoom      ClassRoom?    @relation("ProgressionToClass", fields: [toClassRoomId], references: [id])
+
+  // Progression details
+  progressionType   ProgressionType // PROMOTED, RETAINED, GRADUATED, TRANSFERRED
+  reason           String? // Reason for progression/retention
+  effectiveDate    DateTime // When the progression takes effect
+  processedById    String // Admin/teacher who processed this
+  processedBy      User    @relation(fields: [processedById], references: [id])
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("student_academic_progressions")
+}
+
+enum ProgressionType {
+  PROMOTED    // Moved to next grade
+  RETAINED    // Kept in same grade
+  GRADUATED   // Completed final grade
+  TRANSFERRED // Transferred to another school
+  ENROLLED    // Initial enrollment
+}
+
 // ClassRoom model - combines class and its main room (الشعبة مع غرفتها الأساسية)
 model ClassRoom {
   id             String     @id @default(cuid())
@@ -188,10 +252,13 @@ model ClassRoom {
   capacity   Int // Maximum students
   facilities String[] // Basic facilities for this classroom
 
-  academicYear String
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  semesterId     String? // Optional - for semester-specific classes
+  semester       Semester?    @relation(fields: [semesterId], references: [id])
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   // Relationships
   students    Student[]
@@ -200,7 +267,11 @@ model ClassRoom {
   exams       Exam[]
   timetables  Timetable[]
 
-  @@unique([gradeLevelId, sectionNumber, academicYear])
+  // Student progression relationships
+  progressionFrom StudentAcademicProgression[] @relation("ProgressionFromClass")
+  progressionTo   StudentAcademicProgression[] @relation("ProgressionToClass")
+
+  @@unique([gradeLevelId, sectionNumber, academicYearId])
   @@unique([roomNumber])
   @@map("classrooms")
 }
@@ -251,6 +322,12 @@ model Subject {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Academic year and semester relationships
+  academicYearId String?
+  academicYear   AcademicYear? @relation(fields: [academicYearId], references: [id])
+  semesterId     String?
+  semester       Semester?     @relation(fields: [semesterId], references: [id])
 
   // Relationships
   gradeSubjects   GradeSubject[]
@@ -414,6 +491,10 @@ model Assignment {
   // Student submissions
   submissions AssignmentSubmission[]
 
+  // Semester scoping (optional)
+  semesterId String?
+  semester   Semester? @relation(fields: [semesterId], references: [id])
+
   @@map("assignments")
 }
 
@@ -458,6 +539,10 @@ model Exam {
   // Exam results
   results ExamResult[]
 
+  // Semester scoping (optional)
+  semesterId String?
+  semester   Semester? @relation(fields: [semesterId], references: [id])
+
   @@map("exams")
 }
 
@@ -494,6 +579,10 @@ model Timetable {
   specialLocationId String?
   specialLocation   SpecialLocation? @relation(fields: [specialLocationId], references: [id])
 
+  // Semester scoping (optional)
+  semesterId String?
+  semester   Semester? @relation(fields: [semesterId], references: [id])
+
   // Time information
   timeSlotId String
   timeSlot   TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
@@ -507,7 +596,7 @@ model Timetable {
   // Relationships
   attendances Attendance[]
 
-  @@unique([classRoomId, timeSlotId, dayOfWeek])
+  @@unique([classRoomId, timeSlotId, dayOfWeek, semesterId])
   @@map("timetables")
 }
 
@@ -554,6 +643,10 @@ model GradeLevel {
   // Relationships
   classRooms    ClassRoom[] // Updated relationship
   gradeSubjects GradeSubject[]
+
+  // Student progression relationships
+  progressionFrom StudentAcademicProgression[] @relation("ProgressionFromGrade")
+  progressionTo   StudentAcademicProgression[] @relation("ProgressionToGrade")
 
   @@unique([level])
   @@map("grade_levels")
@@ -654,6 +747,62 @@ model MessageAttachment {
   createdAt    DateTime @default(now())
 
   @@map("message_attachments")
+}
+
+// Academic Year Management
+model AcademicYear {
+  id           String             @id @default(cuid())
+  name         String             @unique // "2024-2025"
+  nameAr       String?            // Arabic name
+  startDate    DateTime
+  endDate      DateTime
+  status       AcademicYearStatus @default(PLANNING)
+  isActive     Boolean            @default(false)
+  totalDays    Int                @default(180)
+  completedDays Int               @default(0)
+  color        String             @default("#1976d2") // Hex color for UI
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  // Relationships
+  semesters Semester[]
+  classes   ClassRoom[]
+  subjects  Subject[]
+
+  // Student progression relationships
+  progressionFrom StudentAcademicProgression[] @relation("ProgressionFromYear")
+  progressionTo   StudentAcademicProgression[] @relation("ProgressionToYear")
+
+  @@map("academic_years")
+}
+
+model Semester {
+  id             String          @id @default(cuid())
+  name           String          // "First Semester", "Second Semester"
+  nameAr         String?         // Arabic name
+  startDate      DateTime
+  endDate        DateTime
+  status         SemesterStatus  @default(PLANNING)
+  days           Int             @default(90)
+  completedDays  Int             @default(0)
+  isActive       Boolean         @default(false)
+  academicYearId String
+  academicYear   AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  // Reverse relations
+  classes     ClassRoom[]
+  subjects    Subject[]
+  timetables  Timetable[]
+  assignments Assignment[]
+  exams       Exam[]
+
+  // Student progression relationships
+  progressionFrom StudentAcademicProgression[] @relation("ProgressionFromSemester")
+  progressionTo   StudentAcademicProgression[] @relation("ProgressionToSemester")
+
+  @@map("semesters")
 }
 
 model MessageReadReceipt {

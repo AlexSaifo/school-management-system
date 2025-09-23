@@ -54,6 +54,23 @@ import DataTable, { Column, Action } from '@/components/DataTable';
 import FilterPanel, { Filter, FilterOption, BulkAction } from '@/components/FilterPanel';
 import PageHeader from '@/components/PageHeader';
 import PaginationControls from '@/components/PaginationControls';
+import CryptoJS from 'crypto-js';
+
+// AES encryption utilities
+const SECRET_KEY = process.env.NEXT_PUBLIC_AES_SECRET_KEY || 'your-secret-key-here';
+
+const decryptPassword = (encryptedPassword: string): string => {
+  if (encryptedPassword.startsWith('$2a$') || encryptedPassword.startsWith('$2b$') || encryptedPassword.startsWith('$2y$')) {
+    // Legacy bcrypt hash - return placeholder since we can't decrypt
+    return '••••••••';
+  }
+  try {
+    const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch (error) {
+    return '••••••••';
+  }
+};
 
 interface Parent {
   id: string;
@@ -119,6 +136,8 @@ export default function ParentsPage() {
     phoneNumber: '',
     address: '',
     emergencyContact: '',
+    password: '',
+    confirmPassword: '',
   });
 
   // State for student relations with relationship types
@@ -178,6 +197,8 @@ export default function ParentsPage() {
         phoneNumber: parent.user.phoneNumber || '',
         address: parent.user.address || '',
         emergencyContact: parent.emergencyContact,
+        password: '', // Don't populate password for security
+        confirmPassword: '', // Don't populate confirm password
       });
       // Initialize student relations from existing children
       setStudentRelations(parent.children?.map(child => ({
@@ -193,6 +214,8 @@ export default function ParentsPage() {
         phoneNumber: '',
         address: '',
         emergencyContact: '',
+        password: '',
+        confirmPassword: '',
       });
       setStudentRelations([]);
     }
@@ -206,6 +229,28 @@ export default function ParentsPage() {
   };
 
   const handleSubmit = async () => {
+    // Basic validation
+    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Password validation (only for new parents or when admin is changing password)
+    if (!selectedParent) {
+      if (!formData.password.trim()) {
+        alert('Password is required for new parents');
+        return;
+      }
+      if (formData.password.length < 6) {
+        alert('Password must be at least 6 characters long');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        alert('Passwords do not match');
+        return;
+      }
+    }
+
     try {
       const url = selectedParent 
         ? `/api/users/parents/${selectedParent.id}` 
@@ -213,8 +258,19 @@ export default function ParentsPage() {
       
       const method = selectedParent ? 'PATCH' : 'POST';  // Changed PUT to PATCH to match the API implementation
 
-      const requestData = {
-        ...formData,
+      // Prepare request data
+      const requestData = { ...formData };
+      
+      // Remove confirmPassword as it's not needed in the API
+      delete (requestData as any).confirmPassword;
+      
+      // For updates, only include password if it's provided
+      if (selectedParent && !requestData.password.trim()) {
+        delete (requestData as any).password;
+      }
+
+      const finalRequestData = {
+        ...requestData,
         studentRelations: studentRelations, // Include selected student relations with types
       };
 
@@ -224,7 +280,7 @@ export default function ParentsPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify(finalRequestData),
       });
 
       if (response.ok) {
@@ -402,6 +458,20 @@ export default function ParentsPage() {
       key: 'user.firstName',
       label: t('parents.parent'),
       render: (value, row) => `${row.user.firstName} ${row.user.lastName}`,
+    },
+    {
+      key: 'password',
+      label: t('parents.password'),
+      render: (value, row) => {
+        // Only show password for admins
+        if (user?.role !== 'ADMIN') {
+          return '••••••••';
+        }
+        // Decrypt and show the actual password
+        const encryptedPassword = row.user?.password || '';
+        if (!encryptedPassword) return 'Not set';
+        return decryptPassword(encryptedPassword);
+      },
     },
     {
       key: 'children',
@@ -583,6 +653,36 @@ export default function ParentsPage() {
                 fullWidth
                 required
               />
+              {!selectedParent && (
+                <>
+                  <TextField
+                    label={t('parents.password')}
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    fullWidth
+                    required={!selectedParent}
+                  />
+                  <TextField
+                    label={t('parents.confirmPassword')}
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                    fullWidth
+                    required={!selectedParent}
+                  />
+                </>
+              )}
+              {selectedParent && user?.role === 'ADMIN' && (
+                <TextField
+                  label={t('parents.password')}
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  fullWidth
+                  placeholder="Leave empty to keep current password"
+                />
+              )}
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('parents.phoneNumber')}

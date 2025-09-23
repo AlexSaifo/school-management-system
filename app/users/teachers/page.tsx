@@ -53,6 +53,23 @@ import FilterPanel, { Filter, FilterOption, BulkAction } from '@/components/Filt
 import TeacherSubjectManager from '@/components/TeacherSubjectManager';
 import PageHeader from '@/components/PageHeader';
 import PaginationControls from '@/components/PaginationControls';
+import CryptoJS from 'crypto-js';
+
+// Static secret key for decryption (match API); prefer env like students
+const SECRET_KEY = process.env.NEXT_PUBLIC_AES_SECRET_KEY || 'your-secret-key-here';
+
+// Decryption utility (mirror StudentsClient behavior)
+const decryptPassword = (encryptedPassword: string): string => {
+  if (encryptedPassword.startsWith('$2a$') || encryptedPassword.startsWith('$2b$') || encryptedPassword.startsWith('$2y$')) {
+    return '••••••••';
+  }
+  try {
+    const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch (error) {
+    return '••••••••';
+  }
+};
 
 interface Teacher {
   id: string;
@@ -60,6 +77,7 @@ interface Teacher {
     firstName: string;
     lastName: string;
     email: string;
+    password?: string;
     phoneNumber: string;
     address: string;
     isActive: boolean; // For backward compatibility
@@ -115,6 +133,8 @@ export default function TeachersPage() {
     firstName: '',
     lastName: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     phoneNumber: '',
     address: '',
     employeeId: '',
@@ -127,6 +147,8 @@ export default function TeachersPage() {
     firstName: '',
     lastName: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     phoneNumber: '',
     address: '',
     employeeId: '',
@@ -183,6 +205,8 @@ export default function TeachersPage() {
       firstName: '',
       lastName: '',
       email: '',
+      password: '',
+      confirmPassword: '',
       phoneNumber: '',
       address: '',
       employeeId: '',
@@ -207,6 +231,26 @@ export default function TeachersPage() {
       errors.email = t('teachers.errors.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = t('teachers.errors.emailInvalid');
+    }
+
+    // Password validation (only for new teachers or when admin is changing password)
+    if (!selectedTeacher) {
+      if (!formData.password.trim()) {
+        errors.password = t('teachers.errors.passwordRequired');
+      } else if (formData.password.length < 6) {
+        errors.password = t('teachers.errors.passwordTooShort');
+      }
+
+      if (!formData.confirmPassword.trim()) {
+        errors.confirmPassword = t('teachers.errors.confirmPasswordRequired');
+      } else if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = t('teachers.errors.passwordsDoNotMatch');
+      }
+    } else if (selectedTeacher && user?.role === 'ADMIN' && formData.password.trim()) {
+      // For updates, validate password only if admin is providing a new one
+      if (formData.password.length < 6) {
+        errors.password = t('teachers.errors.passwordTooShort');
+      }
     }
 
     // Phone number validation
@@ -253,6 +297,8 @@ export default function TeachersPage() {
       firstName: '',
       lastName: '',
       email: '',
+      password: '',
+      confirmPassword: '',
       phoneNumber: '',
       address: '',
       employeeId: '',
@@ -268,6 +314,8 @@ export default function TeachersPage() {
         firstName: teacher.user.firstName,
         lastName: teacher.user.lastName,
         email: teacher.user.email,
+        password: '', // Don't populate password for security
+        confirmPassword: '', // Don't populate confirm password
         phoneNumber: teacher.user.phoneNumber || '',
         address: teacher.user.address || '',
         employeeId: teacher.employeeId,
@@ -282,6 +330,8 @@ export default function TeachersPage() {
         firstName: '',
         lastName: '',
         email: '',
+        password: '',
+        confirmPassword: '',
         phoneNumber: '',
         address: '',
         employeeId: '',
@@ -312,13 +362,24 @@ export default function TeachersPage() {
       
       const method = selectedTeacher ? 'PATCH' : 'POST';  // Changed PUT to PATCH to match the API implementation
 
+      // Prepare request data
+      const requestData: any = { ...formData };
+      
+      // Remove confirmPassword as it's not needed in the API
+      delete requestData.confirmPassword;
+      
+      // For updates, only include password if it's provided
+      if (selectedTeacher && !requestData.password.trim()) {
+        delete requestData.password;
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestData),
       });
 
       if (response.ok) {
@@ -496,6 +557,7 @@ export default function TeachersPage() {
     const headers = [
       t('teachers.table.headers.teacher'),
       t('teachers.form.email'),
+      ...(user?.role === 'ADMIN' ? [t('teachers.table.headers.password')] : []),
       t('teachers.form.phoneNumber'),
       t('teachers.table.headers.employeeId'),
       t('teachers.table.headers.subjects'),
@@ -506,6 +568,7 @@ export default function TeachersPage() {
     const rows = teachers.map(teacher => [
       `${teacher.user.firstName} ${teacher.user.lastName}`,
       teacher.user.email,
+      ...(user?.role === 'ADMIN' ? [teacher.user.password ? decryptPassword(teacher.user.password) : 'Not set'] : []),
       teacher.user.phoneNumber || t('teachers.page.notProvided'),
       teacher.employeeId,
       teacher.subjects.map(s => isRTL ? s.nameAr : s.name).join(', ') || t('teachers.page.noSubjectsAssigned'),
@@ -544,6 +607,20 @@ export default function TeachersPage() {
       key: 'user.firstName',
       label: t('teachers.table.headers.teacher'),
       render: (value, row) => `${row.user.firstName} ${row.user.lastName}`,
+    },
+    {
+      key: 'password',
+      label: t('teachers.table.headers.password'),
+      render: (value, row) => {
+        // Only show password for admins
+        if (user?.role !== 'ADMIN') {
+          return '••••••••';
+        }
+        // Decrypt and show the actual password
+        const encryptedPassword = row.user?.password || '';
+        if (!encryptedPassword) return 'Not set';
+        return decryptPassword(encryptedPassword);
+      },
     },
     {
       key: 'employeeId',
@@ -761,6 +838,42 @@ export default function TeachersPage() {
                 error={!!formErrors.email}
                 helperText={formErrors.email}
               />
+              {!selectedTeacher && (
+                <>
+                  <TextField
+                    label={t('teachers.form.password')}
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    fullWidth
+                    required={!selectedTeacher}
+                    error={!!formErrors.password}
+                    helperText={formErrors.password}
+                  />
+                  <TextField
+                    label={t('teachers.form.confirmPassword')}
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                    fullWidth
+                    required={!selectedTeacher}
+                    error={!!formErrors.confirmPassword}
+                    helperText={formErrors.confirmPassword}
+                  />
+                </>
+              )}
+              {selectedTeacher && user?.role === 'ADMIN' && (
+                <TextField
+                  label={t('teachers.form.password')}
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  fullWidth
+                  placeholder="Leave empty to keep current password"
+                  error={!!formErrors.password}
+                  helperText={formErrors.password}
+                />
+              )}
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('teachers.form.phoneNumber')}

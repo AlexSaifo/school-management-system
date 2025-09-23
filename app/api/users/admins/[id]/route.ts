@@ -54,6 +54,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         firstName: admin.firstName,
         lastName: admin.lastName,
         email: admin.email,
+        password: admin.password || '', // Include hashed password for admin display
         phoneNumber: admin.phone || '',
         address: admin.address || '',
         isActive: admin.status === 'ACTIVE',

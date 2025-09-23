@@ -118,7 +118,7 @@ export default function ReportChart({
           outerRadius={80}
           innerRadius={30}
           dataKey="value"
-          label={({name, value, percent}) => `${name}: ${(percent * 100).toFixed(1)}%`}
+          label={({name, value, percent}) => `${name}: ${(percent as number * 100).toFixed(1)}%`}
         >
           {formatData().map((entry, index) => (
             <Cell 

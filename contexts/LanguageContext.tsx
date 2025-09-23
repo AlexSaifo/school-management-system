@@ -22,10 +22,23 @@ interface LanguageProviderProps {
 }
 
 export function LanguageProvider({ children }: LanguageProviderProps) {
-  // Default to English for server-side rendering to avoid hydration mismatch
-  const [language, setLanguageState] = useState<Language>('en');
-  // Flag to track if we've initialized from client storage yet
-  const [initialized, setInitialized] = useState(false);
+  // Initialize with a function to avoid hydration mismatch
+  const [language, setLanguageState] = useState<Language>(() => {
+    // Only access localStorage on client-side
+    if (typeof window !== 'undefined') {
+      const savedLanguage = localStorage.getItem('language') as Language;
+      if (savedLanguage && (savedLanguage === 'ar' || savedLanguage === 'en')) {
+        return savedLanguage;
+      }
+    }
+    // Default to English for both server and initial client render
+    return 'en';
+  });
+
+  const [initialized, setInitialized] = useState(() => {
+    // Check if we're on client and have localStorage
+    return typeof window === 'undefined';
+  });
 
   const direction: Direction = language === 'ar' ? 'rtl' : 'ltr';
   const isRTL = direction === 'rtl';
@@ -49,23 +62,16 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   };
 
   useEffect(() => {
-    // This effect should only run once on client-side to initialize from localStorage
+    // This effect should only run once on client-side to ensure i18n is initialized
     if (typeof window !== 'undefined' && !initialized) {
-      // Load saved language from localStorage or use default
-      const savedLanguage = localStorage.getItem('language') as Language;
-      if (savedLanguage && (savedLanguage === 'ar' || savedLanguage === 'en')) {
-        setLanguageState(savedLanguage);
-        i18n.changeLanguage(savedLanguage);
-      } else {
-        // Default to English if nothing saved
-        const defaultLang = 'en';
-        setLanguageState(defaultLang);
-        localStorage.setItem('language', defaultLang);
-        i18n.changeLanguage(defaultLang);
-      }
+      // Ensure i18n is set to the correct language
+      i18n.changeLanguage(language);
+      // Update document properties
+      document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = language;
       setInitialized(true);
     }
-  }, [initialized]);
+  }, [language, initialized]);
   
   // Effect to update document properties when language changes
   useEffect(() => {

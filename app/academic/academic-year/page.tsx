@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Typography, 
   Box, 
@@ -33,16 +33,11 @@ import {
   Divider
 } from '@mui/material';
 import { 
-  CalendarMonth, 
   Add, 
   Edit, 
   Delete, 
   Schedule, 
-  Event,
-  ArrowBack,
-  School,
   DateRange,
-  Today,
   EventAvailable,
   EventBusy
 } from '@mui/icons-material';
@@ -59,164 +54,71 @@ export default function AcademicYearPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedYear, setSelectedYear] = useState<any>(null);
   const [dialogType, setDialogType] = useState<'year' | 'semester' | 'event'>('year');
+  const [formData, setFormData] = useState({
+    name: '',
+    nameAr: '',
+    startDate: '',
+    endDate: '',
+    status: 'Planning',
+    totalDays: 180,
+    color: '#1976d2',
+    // semester-specific fields
+    days: 90,
+    academicYearId: ''
+  });
 
-  // Mock data for academic years
-  const academicYears = [
-    {
-      id: 1,
-      name: '2024-2025',
-      nameAr: '2024-2025',
-      startDate: '2024-09-01',
-      endDate: '2025-06-30',
-      status: 'Active',
-      isActive: true,
-      totalDays: 180,
-      completedDays: 45,
-      color: '#1976d2',
-      semesters: [
-        {
-          id: 1,
-          name: 'First Semester',
-          nameAr: 'الفصل الأول',
-          startDate: '2024-09-01',
-          endDate: '2025-01-15',
-          status: 'Active',
-          days: 90,
-          completedDays: 45
-        },
-        {
-          id: 2,
-          name: 'Second Semester',
-          nameAr: 'الفصل الثاني',
-          startDate: '2025-01-30',
-          endDate: '2025-06-30',
-          status: 'Upcoming',
-          days: 90,
-          completedDays: 0
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: '2023-2024',
-      nameAr: '2023-2024',
-      startDate: '2023-09-01',
-      endDate: '2024-06-30',
-      status: 'Completed',
-      isActive: false,
-      totalDays: 180,
-      completedDays: 180,
-      color: '#4caf50',
-      semesters: [
-        {
-          id: 3,
-          name: 'First Semester',
-          nameAr: 'الفصل الأول',
-          startDate: '2023-09-01',
-          endDate: '2024-01-15',
-          status: 'Completed',
-          days: 90,
-          completedDays: 90
-        },
-        {
-          id: 4,
-          name: 'Second Semester',
-          nameAr: 'الفصل الثاني',
-          startDate: '2024-01-30',
-          endDate: '2024-06-30',
-          status: 'Completed',
-          days: 90,
-          completedDays: 90
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: '2025-2026',
-      nameAr: '2025-2026',
-      startDate: '2025-09-01',
-      endDate: '2026-06-30',
-      status: 'Planning',
-      isActive: false,
-      totalDays: 180,
-      completedDays: 0,
-      color: '#ff9800',
-      semesters: [
-        {
-          id: 5,
-          name: 'First Semester',
-          nameAr: 'الفصل الأول',
-          startDate: '2025-09-01',
-          endDate: '2026-01-15',
-          status: 'Planning',
-          days: 90,
-          completedDays: 0
-        },
-        {
-          id: 6,
-          name: 'Second Semester',
-          nameAr: 'الفصل الثاني',
-          startDate: '2026-01-30',
-          endDate: '2026-06-30',
-          status: 'Planning',
-          days: 90,
-          completedDays: 0
-        }
-      ]
-    }
-  ];
+  // State for academic years data
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
-  // Mock data for important events
-  const academicEvents = [
-    {
-      id: 1,
-      name: 'First Day of School',
-      nameAr: 'اليوم الأول من المدرسة',
-      date: '2024-09-01',
-      type: 'Academic',
-      color: '#1976d2'
-    },
-    {
-      id: 2,
-      name: 'Mid-term Exams',
-      nameAr: 'امتحانات منتصف الفصل',
-      date: '2024-11-15',
-      type: 'Assessment',
-      color: '#f57c00'
-    },
-    {
-      id: 3,
-      name: 'Winter Break',
-      nameAr: 'عطلة الشتاء',
-      date: '2024-12-20',
-      type: 'Holiday',
-      color: '#2196f3'
-    },
-    {
-      id: 4,
-      name: 'Final Exams',
-      nameAr: 'الامتحانات النهائية',
-      date: '2025-01-05',
-      type: 'Assessment',
-      color: '#d32f2f'
-    },
-    {
-      id: 5,
-      name: 'Spring Semester Begins',
-      nameAr: 'بداية الفصل الربيعي',
-      date: '2025-01-30',
-      type: 'Academic',
-      color: '#4caf50'
-    },
-    {
-      id: 6,
-      name: 'Graduation Ceremony',
-      nameAr: 'حفل التخرج',
-      date: '2025-06-15',
-      type: 'Event',
-      color: '#9c27b0'
+  // Fetch academic years from API
+  const fetchAcademicYears = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      const response = await fetch('/api/academic/academic-years', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const years = data.data || [];
+        setAcademicYears(years);
+        const cookieActive = document.cookie
+          .split('; ')
+          .find(r => r.startsWith('active_academic_year_id='))?.split('=')[1];
+        const active = years.find((y: any) => y.id === cookieActive) || years.find((y: any) => y.isActive) || years[0];
+        if (active) {
+          document.cookie = `active_academic_year_id=${active.id}; path=/`;
+          const activeSem = active.semesters?.find((s: any) => s.isActive) || active.semesters?.[0];
+          if (activeSem) {
+            document.cookie = `active_semester_id=${activeSem.id}; path=/`;
+          }
+        }
+      } else {
+        setError(t('Failed to load academic years'));
+      }
+    } catch (error) {
+      console.error('Error fetching academic years:', error);
+      setError(t('Failed to load academic years'));
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchAcademicYears();
+  }, []);
+
+  // Removed hardcoded academic events
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -231,12 +133,29 @@ export default function AcademicYearPage() {
   const handleAddYear = () => {
     setSelectedYear(null);
     setDialogType('year');
+    setError(''); // Clear any previous errors
     setOpenDialog(true);
   };
 
   const handleAddSemester = () => {
+    if (!academicYears || academicYears.length === 0) {
+      setError(t('Please create an academic year first'));
+      return;
+    }
+    const defaultYear = academicYears.find((y: any) => y.isActive) || academicYears[0];
     setSelectedYear(null);
     setDialogType('semester');
+    setFormData({
+      name: '',
+      nameAr: '',
+      startDate: '',
+      endDate: '',
+      status: 'Planning',
+      totalDays: 180,
+      color: '#1976d2',
+      days: 90,
+      academicYearId: defaultYear?.id || ''
+    });
     setOpenDialog(true);
   };
 
@@ -249,12 +168,242 @@ export default function AcademicYearPage() {
   const handleEdit = (item: any, type: 'year' | 'semester' | 'event') => {
     setSelectedYear(item);
     setDialogType(type);
+
+  const formatDateForInput = (date: string | Date) => {
+    const d = new Date(date);
+    return d.toISOString().split('T')[0]; // YYYY-MM-DD format
+  };
+
+  if (type === 'year') {
+      // Format dates for the date input fields
+      setFormData({
+        name: item.name || '',
+        nameAr: item.nameAr || '',
+        startDate: formatDateForInput(item.startDate),
+        endDate: formatDateForInput(item.endDate),
+        status: item.status || 'Planning',
+        totalDays: item.totalDays || 180,
+        color: item.color || '#1976d2',
+        days: 90,
+        academicYearId: item.id || ''
+      });
+    }
+
+    if (type === 'semester') {
+      setFormData({
+        name: item.name || '',
+        nameAr: item.nameAr || '',
+        startDate: item.startDate ? formatDateForInput(item.startDate) : '',
+        endDate: item.endDate ? formatDateForInput(item.endDate) : '',
+        status: item.status || 'Planning',
+        totalDays: 180,
+        color: '#1976d2',
+        days: item.days ?? 90,
+        academicYearId: item.academicYearId || ''
+      });
+    }
+
+    setError(''); // Clear any previous errors
     setOpenDialog(true);
+  };
+
+  const handleToggleActive = async (year: any, nextActive: boolean) => {
+    try {
+      setError('');
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      const response = await fetch(`/api/academic/academic-years/${year.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: nextActive })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        setError(err.error || t('Failed to update active status'));
+        return;
+      }
+
+      await fetchAcademicYears();
+    } catch (e) {
+      console.error('Error toggling active status:', e);
+      setError(t('Failed to update active status'));
+    }
+  };
+
+  const handleToggleActiveSemester = async (semester: any, nextActive: boolean) => {
+    try {
+      setError('');
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      const response = await fetch(`/api/academic/semesters/${semester.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: nextActive })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        setError(err.error || t('Failed to update active semester'));
+        return;
+      }
+
+      if (nextActive) {
+        document.cookie = `active_semester_id=${semester.id}; path=/`;
+      }
+      await fetchAcademicYears();
+    } catch (e) {
+      console.error('Error toggling active semester:', e);
+      setError(t('Failed to update active semester'));
+    }
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedYear(null);
+    setError(''); // Clear error when closing dialog
+    setFormData({
+      name: '',
+      nameAr: '',
+      startDate: '',
+      endDate: '',
+      status: 'Planning',
+      totalDays: 180,
+      color: '#1976d2',
+      days: 90,
+      academicYearId: ''
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (dialogType === 'year') {
+      try {
+        const token = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('auth_token='))
+          ?.split('=')[1];
+
+        const isUpdate = !!selectedYear;
+        const method = isUpdate ? 'PUT' : 'POST';
+        const url = isUpdate
+          ? `/api/academic/academic-years/${selectedYear.id}`
+          : '/api/academic/academic-years';
+
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            nameAr: formData.nameAr,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+            status: formData.status.toUpperCase(),
+            totalDays: formData.totalDays,
+            color: formData.color
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          // Refresh the academic years list
+          await fetchAcademicYears();
+          // Reset form data and close dialog
+          setFormData({
+            name: '',
+            nameAr: '',
+            startDate: '',
+            endDate: '',
+            status: 'Planning',
+            totalDays: 180,
+            color: '#1976d2',
+            days: 90,
+            academicYearId: ''
+          });
+          setSelectedYear(null);
+          setOpenDialog(false);
+        } else {
+          const errorData = await response.json();
+          setError(errorData.error || `Failed to ${isUpdate ? 'update' : 'create'} academic year`);
+          return; // Don't close dialog on error
+        }
+      } catch (error) {
+        console.error(`Error ${selectedYear ? 'updating' : 'creating'} academic year:`, error);
+        setError(`Failed to ${selectedYear ? 'update' : 'create'} academic year`);
+        return; // Don't close dialog on error
+      }
+    }
+
+    if (dialogType === 'semester') {
+      try {
+        const token = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('auth_token='))
+          ?.split('=')[1];
+
+        const isUpdate = !!(selectedYear && selectedYear.id);
+        const method = isUpdate ? 'PUT' : 'POST';
+        const url = isUpdate
+          ? `/api/academic/semesters/${selectedYear.id}`
+          : '/api/academic/semesters';
+
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            nameAr: formData.nameAr,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+            status: formData.status.toUpperCase(),
+            days: formData.days,
+            academicYearId: formData.academicYearId
+          })
+        });
+
+        if (response.ok) {
+          await fetchAcademicYears();
+          setFormData({
+            name: '',
+            nameAr: '',
+            startDate: '',
+            endDate: '',
+            status: 'Planning',
+            totalDays: 180,
+            color: '#1976d2',
+            days: 90,
+            academicYearId: ''
+          });
+          setSelectedYear(null);
+          setOpenDialog(false);
+        } else {
+          const errorData = await response.json();
+          setError(errorData.error || `Failed to ${isUpdate ? 'update' : 'create'} semester`);
+          return;
+        }
+      } catch (error) {
+        console.error(`Error ${selectedYear ? 'updating' : 'creating'} semester:`, error);
+        setError(`Failed to ${selectedYear ? 'update' : 'create'} semester`);
+        return;
+      }
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -280,14 +429,7 @@ export default function AcademicYearPage() {
 
           {/* Additional Action Buttons */}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button
-              variant="outlined"
-              startIcon={<Event />}
-              onClick={handleAddEvent}
-              sx={{ px: 2 }}
-            >
-              {t('academic.addEvent')}
-            </Button>
+
             <Button
               variant="outlined"
               startIcon={<Schedule />}
@@ -334,6 +476,7 @@ export default function AcademicYearPage() {
                               <Switch 
                                 checked={year.isActive} 
                                 size="small"
+                                onChange={(e) => handleToggleActive(year, e.target.checked)}
                                 sx={{
                                   '& .MuiSwitch-switchBase.Mui-checked': {
                                     color: year.color,
@@ -391,31 +534,7 @@ export default function AcademicYearPage() {
                         </Stack>
                       </Box>
 
-                      {/* Progress */}
-                      <Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" fontWeight="bold">
-                            {t('academic.progress')}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {year.completedDays}/{year.totalDays} {t('academic.days')}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ 
-                          width: '100%', 
-                          height: 8, 
-                          backgroundColor: `${year.color}20`,
-                          borderRadius: 4,
-                          overflow: 'hidden'
-                        }}>
-                          <Box sx={{
-                            width: `${(year.completedDays / year.totalDays) * 100}%`,
-                            height: '100%',
-                            backgroundColor: year.color,
-                            transition: 'width 0.3s ease'
-                          }} />
-                        </Box>
-                      </Box>
+                      {/* Progress removed per request */}
 
                       {/* Semesters */}
                       <Box>
@@ -423,7 +542,7 @@ export default function AcademicYearPage() {
                           {t('academic.semesters')}:
                         </Typography>
                         <Stack spacing={1}>
-                          {year.semesters.map((semester, index) => (
+                          {year.semesters.map((semester: any, index: number) => (
                             <Box key={semester.id} sx={{ 
                               p: 1.5, 
                               border: '1px solid',
@@ -435,15 +554,30 @@ export default function AcademicYearPage() {
                                 <Typography variant="body2" fontWeight="bold">
                                   {isRTL ? semester.nameAr : semester.name}
                                 </Typography>
-                                <Chip 
-                                  label={t(`academic.${semester.status.toLowerCase()}`)} 
-                                  size="small" 
-                                  sx={{ 
-                                    background: `${getStatusColor(semester.status)}20`,
-                                    color: getStatusColor(semester.status),
-                                    fontSize: '0.65rem'
-                                  }} 
-                                />
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <FormControlLabel
+                                    control={
+                                      <Switch
+                                        size="small"
+                                        checked={!!semester.isActive}
+                                        onChange={(e) => handleToggleActiveSemester(semester, e.target.checked)}
+                                      />
+                                    }
+                                    label=""
+                                  />
+                                  <IconButton size="small" onClick={() => handleEdit(semester, 'semester')}>
+                                    <Edit fontSize="inherit" />
+                                  </IconButton>
+                                  <Chip 
+                                    label={t(`academic.${semester.status.toLowerCase()}`)} 
+                                    size="small" 
+                                    sx={{ 
+                                      background: `${getStatusColor(semester.status)}20`,
+                                      color: getStatusColor(semester.status),
+                                      fontSize: '0.65rem'
+                                    }} 
+                                  />
+                                </Box>
                               </Box>
                               <Typography variant="caption" color="text.secondary">
                                 {formatDate(semester.startDate)} - {formatDate(semester.endDate)}
@@ -459,140 +593,7 @@ export default function AcademicYearPage() {
             ))}
           </Grid>
 
-          {/* Academic Calendar Timeline */}
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Schedule />
-                    {t('academic.academicCalendar')}
-                  </Typography>
-                  <Box sx={{ pl: 2 }}>
-                    {academicEvents.map((event, index) => (
-                      <Box key={event.id} sx={{ display: 'flex', mb: 2 }}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 2 }}>
-                          <Avatar
-                            sx={{ 
-                              width: 32,
-                              height: 32,
-                              backgroundColor: event.color,
-                              color: 'white'
-                            }}
-                          >
-                            <Event fontSize="small" />
-                          </Avatar>
-                          {index < academicEvents.length - 1 && (
-                            <Box 
-                              sx={{ 
-                                width: 2, 
-                                height: 40, 
-                                backgroundColor: 'grey.300', 
-                                mt: 1 
-                              }} 
-                            />
-                          )}
-                        </Box>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="subtitle2" fontWeight="bold">
-                            {isRTL ? event.nameAr : event.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {formatDate(event.date)}
-                          </Typography>
-                          <Chip 
-                            label={t(`academic.${event.type.toLowerCase()}`)} 
-                            size="small" 
-                            sx={{ 
-                              mt: 0.5,
-                              backgroundColor: `${event.color}20`,
-                              color: event.color,
-                              fontSize: '0.7rem'
-                            }} 
-                          />
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} md={4}>
-              <Stack spacing={3}>
-                {/* Current Academic Year Stats */}
-                <Card sx={{ background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', color: 'white' }}>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Today />
-                      {t('academic.currentYear')}
-                    </Typography>
-                    <Typography variant="h4" fontWeight="bold" gutterBottom>
-                      2024-2025
-                    </Typography>
-                    <Stack spacing={1}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2">{t('academic.daysCompleted')}:</Typography>
-                        <Typography variant="body2" fontWeight="bold">45/180</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2">{t('academic.currentSemester')}:</Typography>
-                        <Typography variant="body2" fontWeight="bold">{t('academic.first')}</Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="body2">{t('academic.daysRemaining')}:</Typography>
-                        <Typography variant="body2" fontWeight="bold">135</Typography>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Stats */}
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Card sx={{ background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)', color: 'white' }}>
-                      <CardContent sx={{ textAlign: 'center', p: 2 }}>
-                        <Typography variant="h4" fontWeight="bold">3</Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                          {t('academic.totalYears')}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Card sx={{ background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', color: 'white' }}>
-                      <CardContent sx={{ textAlign: 'center', p: 2 }}>
-                        <Typography variant="h4" fontWeight="bold">6</Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                          {t('academic.semesters')}
-                        </Typography>
-                      </CardContent>
-                    </Card>  
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Card sx={{ background: 'linear-gradient(135deg, #e91e63 0%, #c2185b 100%)', color: 'white' }}>
-                      <CardContent sx={{ textAlign: 'center', p: 2 }}>
-                        <Typography variant="h4" fontWeight="bold">12</Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                          {t('academic.events')}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Card sx={{ background: 'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)', color: 'white' }}>
-                      <CardContent sx={{ textAlign: 'center', p: 2 }}>
-                        <Typography variant="h4" fontWeight="bold">180</Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                          {t('academic.schoolDays')}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-              </Stack>
-            </Grid>
-          </Grid>
+          {/* Removed hardcoded Academic Calendar and sidebar stats */}
         </Stack>
 
         {/* Add/Edit Dialog */}
@@ -609,20 +610,29 @@ export default function AcademicYearPage() {
           </DialogTitle>
           <DialogContent>
             <Stack spacing={3} sx={{ mt: 2 }}>
+              {error && (
+                <Typography color="error" variant="body2" sx={{ mb: 2 }}>
+                  {error}
+                </Typography>
+              )}
               {dialogType === 'year' && (
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       label={t('academic.yearName')}
-                      defaultValue={selectedYear?.name || ''}
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       label={t('academic.yearNameArabic')}
-                      defaultValue={selectedYear?.nameAr || ''}
+                      value={formData.nameAr}
+                      onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
+                      required
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -631,7 +641,9 @@ export default function AcademicYearPage() {
                       label={t('academic.startDate')}
                       type="date"
                       InputLabelProps={{ shrink: true }}
-                      defaultValue={selectedYear?.startDate || ''}
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      required
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -640,7 +652,9 @@ export default function AcademicYearPage() {
                       label={t('academic.endDate')}
                       type="date"
                       InputLabelProps={{ shrink: true }}
-                      defaultValue={selectedYear?.endDate || ''}
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      required
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -648,13 +662,17 @@ export default function AcademicYearPage() {
                       fullWidth
                       label={t('academic.totalDays')}
                       type="number"
-                      defaultValue={selectedYear?.totalDays || ''}
+                      value={formData.totalDays}
+                      onChange={(e) => setFormData({ ...formData, totalDays: parseInt(e.target.value) || 180 })}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
                       <InputLabel>{t('academic.status')}</InputLabel>
-                      <Select defaultValue={selectedYear?.status || ''}>
+                      <Select 
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      >
                         <MenuItem value="Planning">{t('academic.planning')}</MenuItem>
                         <MenuItem value="Active">{t('academic.active')}</MenuItem>
                         <MenuItem value="Completed">{t('academic.completed')}</MenuItem>
@@ -670,14 +688,17 @@ export default function AcademicYearPage() {
                     <TextField
                       fullWidth
                       label={t('academic.semesterName')}
-                      defaultValue={selectedYear?.name || ''}
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       label={t('academic.semesterNameArabic')}
-                      defaultValue={selectedYear?.nameAr || ''}
+                      value={formData.nameAr}
+                      onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -686,7 +707,9 @@ export default function AcademicYearPage() {
                       label={t('academic.startDate')}
                       type="date"
                       InputLabelProps={{ shrink: true }}
-                      defaultValue={selectedYear?.startDate || ''}
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      required
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -695,15 +718,32 @@ export default function AcademicYearPage() {
                       label={t('academic.endDate')}
                       type="date"
                       InputLabelProps={{ shrink: true }}
-                      defaultValue={selectedYear?.endDate || ''}
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      required
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label={t('academic.days')}
+                      type="number"
+                      value={formData.days}
+                      onChange={(e) => setFormData({ ...formData, days: parseInt(e.target.value) || 90 })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
                       <InputLabel>{t('academic.academicYear')}</InputLabel>
-                      <Select defaultValue="">
-                        <MenuItem value="2024-2025">2024-2025</MenuItem>
-                        <MenuItem value="2025-2026">2025-2026</MenuItem>
+                      <Select 
+                        value={formData.academicYearId}
+                        label={t('academic.academicYear')}
+                        onChange={(e) => setFormData({ ...formData, academicYearId: String(e.target.value) })}
+                        required
+                      >
+                        {academicYears.map((y: any) => (
+                          <MenuItem key={y.id} value={y.id}>{y.name}</MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   </Grid>
@@ -756,7 +796,7 @@ export default function AcademicYearPage() {
             </Button>
             <Button 
               variant="contained" 
-              onClick={handleCloseDialog}
+              onClick={handleSubmit}
               sx={{
                 background: 'linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%)'
               }}

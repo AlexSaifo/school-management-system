@@ -24,7 +24,7 @@ interface AttachmentFile {
   originalName: string;
   fileName: string;
   size: number;
-  type: string;
+  type?: string;
   url: string;
 }
 
@@ -173,7 +173,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
     document.body.removeChild(link);
   };
 
-  const getFileIcon = (type: string) => {
+  const getFileIcon = (type: string | undefined) => {
+    if (!type) return '📎';
     if (type.includes('image')) return '🖼️';
     if (type.includes('pdf')) return '📄';
     if (type.includes('word') || type.includes('document')) return '📝';
@@ -256,7 +257,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     />
                   </Box>
                 }
-                secondary={attachment.type}
+                secondary={attachment.type || 'Unknown type'}
               />
               
               <ListItemSecondaryAction>

@@ -48,7 +48,8 @@ export function StatCard({
   };
   
   const getColorByName = () => {
-    return theme.palette[color].main;
+    const validColor = color === 'default' ? 'primary' : color;
+    return theme.palette[validColor].main;
   };
   
   if (loading) {

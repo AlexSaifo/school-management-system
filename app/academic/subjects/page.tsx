@@ -98,7 +98,7 @@ export default function SubjectsPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(t('academic.all'));
   const [formData, setFormData] = useState({
     name: '',
     nameAr: '',
@@ -142,19 +142,29 @@ export default function SubjectsPage() {
     const name = subject.name.toLowerCase();
     const code = subject.code.toLowerCase();
     
-    if (name.includes('math') || name.includes('algebra') || name.includes('geometry')) return 'Math';
-    if (name.includes('science') || name.includes('physics') || name.includes('chemistry') || name.includes('biology')) return 'Science';
-    if (name.includes('english') || name.includes('arabic') || name.includes('language')) return 'Language';
-    if (name.includes('history') || name.includes('geography') || name.includes('social')) return 'Social';
-    if (name.includes('art') || name.includes('music') || name.includes('creative')) return 'Creative';
-    if (name.includes('religion') || name.includes('islamic') || code.includes('rel')) return 'Religious';
-    if (name.includes('physical') || name.includes('sport') || name.includes('pe')) return 'Physical';
-    return 'Other';
+    if (name.includes('math') || name.includes('algebra') || name.includes('geometry')) return t('academic.math');
+    if (name.includes('science') || name.includes('physics') || name.includes('chemistry') || name.includes('biology')) return t('academic.science');
+    if (name.includes('english') || name.includes('arabic') || name.includes('language')) return t('academic.language');
+    if (name.includes('history') || name.includes('geography') || name.includes('social')) return t('academic.social');
+    if (name.includes('art') || name.includes('music') || name.includes('creative')) return t('academic.creative');
+    if (name.includes('religion') || name.includes('islamic') || code.includes('rel')) return t('academic.religious');
+    if (name.includes('physical') || name.includes('sport') || name.includes('pe')) return t('academic.physical');
+    return t('academic.other');
   };
 
-  const categories = ['All', 'Math', 'Science', 'Language', 'Social', 'Creative', 'Religious', 'Physical', 'Other'];
+  const categories = [
+    t('academic.all'), 
+    t('academic.math'), 
+    t('academic.science'), 
+    t('academic.language'), 
+    t('academic.social'), 
+    t('academic.creative'), 
+    t('academic.religious'), 
+    t('academic.physical'), 
+    t('academic.other')
+  ];
   
-  const filteredSubjects = selectedCategory === 'All' 
+  const filteredSubjects = selectedCategory === t('academic.all') 
     ? subjects 
     : subjects.filter(subject => categorizeSubject(subject) === selectedCategory);
 
@@ -260,10 +270,10 @@ export default function SubjectsPage() {
               <MenuBook sx={{ fontSize: 40, color: 'primary.main' }} />
               <Box>
                 <Typography variant="h4" component="h1" fontWeight="bold">
-                  Subject Management
+                  {t('academic.subjectManagement')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Manage academic subjects, assignments, and curriculum
+                  {t('academic.manageSubjectsDescription')}
                 </Typography>
               </Box>
             </Box>
@@ -277,7 +287,7 @@ export default function SubjectsPage() {
                 py: 1.5
               }}
             >
-              Add Subject
+              {t('academic.addSubject')}
             </Button>
           </Box>
 
@@ -291,7 +301,7 @@ export default function SubjectsPage() {
           {/* Category Filter */}
           <Box>
             <Typography variant="h6" gutterBottom>
-              Filter by Category
+              {t('academic.filterByCategory')}
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap">
               {categories.map((category) => (
@@ -399,13 +409,13 @@ export default function SubjectsPage() {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Groups sx={{ fontSize: 16, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary">
-                              {subject.stats.teacherCount} Teachers
+                              {subject.stats.teacherCount} {t('academic.teacherCount')}
                             </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <School sx={{ fontSize: 16, color: 'text.secondary' }} />
                             <Typography variant="body2" color="text.secondary">
-                              {subject.stats.gradeCount} Grades
+                              {subject.stats.gradeCount} {t('academic.gradeCount')}
                             </Typography>
                           </Box>
                         </Box>
@@ -454,12 +464,12 @@ export default function SubjectsPage() {
                 >
                   <MenuBook sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
                   <Typography variant="h6" gutterBottom>
-                    No subjects found
+                    {t('academic.noSubjectsFound')}
                   </Typography>
                   <Typography variant="body2">
-                    {selectedCategory === 'All' 
-                      ? 'Start by adding your first subject'
-                      : `No subjects found in ${selectedCategory} category`
+                    {selectedCategory === t('academic.all') 
+                      ? t('academic.startByAddingFirstSubject')
+                      : t('academic.noSubjectsFoundInCategory', { category: selectedCategory })
                     }
                   </Typography>
                 </Box>
@@ -477,7 +487,7 @@ export default function SubjectsPage() {
           fullWidth
         >
           <DialogTitle>
-            {selectedSubject ? 'Edit Subject' : 'Add Subject'}
+            {selectedSubject ? t('academic.editSubject') : t('academic.addSubject')}
           </DialogTitle>
           <DialogContent>
             <Stack spacing={3} sx={{ mt: 2 }}>
@@ -485,7 +495,7 @@ export default function SubjectsPage() {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Subject Name (English)"
+                    label={t('academic.subjectName')}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
@@ -494,7 +504,7 @@ export default function SubjectsPage() {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Subject Name (Arabic)"
+                    label={t('academic.subjectNameArabic')}
                     value={formData.nameAr}
                     onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
                     required
@@ -503,7 +513,7 @@ export default function SubjectsPage() {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Subject Code"
+                    label={t('academic.subjectCode')}
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                     required
@@ -512,7 +522,7 @@ export default function SubjectsPage() {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Color"
+                    label={t('academic.color')}
                     type="color"
                     value={formData.color}
                     onChange={(e) => setFormData({ ...formData, color: e.target.value })}
@@ -521,7 +531,7 @@ export default function SubjectsPage() {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Description"
+                    label={t('academic.description')}
                     multiline
                     rows={3}
                     value={formData.description}
@@ -533,7 +543,7 @@ export default function SubjectsPage() {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button 
               variant="contained" 
@@ -542,7 +552,7 @@ export default function SubjectsPage() {
                 background: 'linear-gradient(135deg, #388e3c 0%, #2e7d32 100%)'
               }}
             >
-              {selectedSubject ? 'Update' : 'Add'}
+              {selectedSubject ? t('common.update') : t('common.add')}
             </Button>
           </DialogActions>
         </Dialog>

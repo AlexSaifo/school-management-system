@@ -5,12 +5,6 @@ import {
   Box,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   IconButton,
   Dialog,
@@ -56,6 +50,22 @@ import FilterPanel, { Filter, FilterOption, BulkAction } from '@/components/Filt
 import PageHeader from '@/components/PageHeader';
 import PaginationControls from '@/components/PaginationControls';
 import { useTranslation } from 'react-i18next';
+import CryptoJS from 'crypto-js';
+
+// AES encryption utilities (for consistency with other user types)
+const SECRET_KEY = process.env.NEXT_PUBLIC_AES_SECRET_KEY || 'your-secret-key-here';
+
+const decryptPassword = (encryptedPassword: string): string => {
+  if (encryptedPassword.startsWith('$2a$') || encryptedPassword.startsWith('$2b$') || encryptedPassword.startsWith('$2y$')) {
+    return '••••••••';
+  }
+  try {
+    const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch (error) {
+    return '••••••••';
+  }
+};
 
 interface Admin {
   id: string;
@@ -63,6 +73,7 @@ interface Admin {
     firstName: string;
     lastName: string;
     email: string;
+    password?: string;
     phoneNumber: string;
     address: string;
     isActive: boolean;
@@ -216,8 +227,9 @@ export default function AdminsPage() {
   };
 
   const handleSubmit = async () => {
-    // Validate passwords for new admin creation
+    // Validate passwords
     if (!selectedAdmin) {
+      // Creating: password required
       if (!formData.password) {
         alert(t('admins.form.password') + ' is required');
         return;
@@ -230,6 +242,18 @@ export default function AdminsPage() {
         alert(t('admins.form.passwordMismatch'));
         return;
       }
+    } else {
+      // Updating: password optional, but if provided, must be valid and match
+      if (formData.password && formData.password.length > 0) {
+        if (formData.password.length < 6) {
+          alert(t('admins.form.passwordHelper'));
+          return;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          alert(t('admins.form.passwordMismatch'));
+          return;
+        }
+      }
     }
 
     try {
@@ -240,8 +264,12 @@ export default function AdminsPage() {
       const method = selectedAdmin ? 'PUT' : 'POST';
 
       // Prepare data to send (exclude confirmPassword for API)
-      const dataToSend = { ...formData };
+      const dataToSend: any = { ...formData };
       delete dataToSend.confirmPassword;
+      // On updates, omit password if left blank to avoid validation error
+      if (selectedAdmin && (!dataToSend.password || dataToSend.password.trim() === '')) {
+        delete dataToSend.password;
+      }
 
       const response = await fetch(url, {
         method,
@@ -416,6 +444,11 @@ export default function AdminsPage() {
       key: 'user.firstName',
       label: t('admins.table.headers.admin'),
       render: (value, row) => `${row.user.firstName} ${row.user.lastName}`,
+    },
+    {
+      key: 'password',
+      label: t('teachers.table.headers.password'),
+      render: (value, row) => decryptPassword(row.user.password || ''),
     },
     {
       key: 'user.phoneNumber',
@@ -634,149 +667,20 @@ export default function AdminsPage() {
           </Box>
         </Paper>
 
-        <Paper>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      indeterminate={selectedIds.length > 0 && selectedIds.length < admins.length}
-                      checked={admins.length > 0 && selectedIds.length === admins.length}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                    />
-                  </TableCell>
-                  <TableCell>{t('admins.table.headers.admin')}</TableCell>
-                  <TableCell>{t('admins.table.headers.contact')}</TableCell>
-                  <TableCell>{t('admins.table.headers.permissions')}</TableCell>
-                  <TableCell>{t('admins.table.headers.status')}</TableCell>
-                  <TableCell>{t('admins.table.headers.joined')}</TableCell>
-                  <TableCell align="center">{t('admins.table.headers.actions')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      {t('common.loading')}
-                    </TableCell>
-                  </TableRow>
-                ) : admins.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      {t('admins.table.noAdminsFound')}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  admins.map((admin) => (
-                    <TableRow key={admin.id}>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={selectedIds.includes(admin.id)}
-                          onChange={(e) => handleSelectOne(admin.id, e.target.checked)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box display="flex" alignItems="center" gap={2}>
-                          <Avatar>
-                            <AdminPanelSettings />
-                          </Avatar>
-                          <Box>
-                            <Typography variant="subtitle2">
-                              {admin.user.firstName} {admin.user.lastName}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {admin.user.email}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2">
-                            {admin.user.phoneNumber || 'No phone'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {admin.user.address || 'No address'}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box display="flex" gap={0.5} flexWrap="wrap">
-                          {(() => {
-                            const enabledPermissions = admin.permissions 
-                              ? Object.entries(admin.permissions)
-                                  .filter(([key, value]) => Boolean(value))
-                                  .map(([key]) => key)
-                              : [];
-                            return enabledPermissions.slice(0, 2).map((permission) => (
-                              <Chip 
-                                key={permission} 
-                                label={permission.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim()} 
-                                size="small" 
-                                variant="outlined"
-                              />
-                            ));
-                          })()}
-                          {(() => {
-                            const enabledPermissions = admin.permissions 
-                              ? Object.entries(admin.permissions)
-                                  .filter(([key, value]) => Boolean(value))
-                                  .map(([key]) => key)
-                              : [];
-                            return enabledPermissions.length > 2 && (
-                              <Chip 
-                                label={`+${enabledPermissions.length - 2}`} 
-                                size="small" 
-                                variant="outlined"
-                              />
-                            );
-                          })()}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={admin.user.isActive ? 'Active' : 'Inactive'}
-                          color={admin.user.isActive ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {new Date(admin.user.createdAt).toLocaleDateString(locale, dateFormatOptions)}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Tooltip title={t('admins.actions.view')}>
-                          <IconButton 
-                            size="small"
-                            onClick={() => handleViewAdmin(admin)}
-                          >
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title={t('admins.actions.edit')}>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleOpenDialog(admin)}
-                          >
-                            <Edit />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title={admin.user.isActive ? 'Deactivate' : 'Activate'}>
-                          <IconButton 
-                            size="small"
-                            onClick={() => toggleAdminStatus(admin.id, admin.user.isActive)}
-                          >
-                            {admin.user.isActive ? <Delete /> : <Add />}
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
+        <DataTable
+          columns={columns}
+          data={admins}
+          actions={actions}
+          loading={loading}
+          emptyMessage={t('admins.table.noAdminsFound')}
+          selectable={true}
+          selectedIds={selectedIds}
+          onSelectAll={handleSelectAll}
+          onSelectOne={handleSelectOne}
+          avatarIcon={<AdminPanelSettings />}
+          avatarField="user.firstName"
+          subtitleField="user.email"
+        />
 
         {/* Pagination Controls */}
         <Paper sx={{ p: 2, mt: 2 }}>
@@ -854,29 +758,26 @@ export default function AdminsPage() {
                 fullWidth
                 required
               />
-              {!selectedAdmin && (
-                <>
-                  <TextField
-                    label={t('admins.form.password')}
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    fullWidth
-                    required
-                    helperText={t('admins.form.passwordHelper')}
-                  />
-                  <TextField
-                    label={t('admins.form.confirmPassword')}
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                    fullWidth
-                    required
-                    error={formData.password !== formData.confirmPassword && formData.confirmPassword !== ''}
-                    helperText={formData.password !== formData.confirmPassword && formData.confirmPassword !== '' ? t('admins.form.passwordMismatch') : ''}
-                  />
-                </>
-              )}
+              {/* Password fields (required on create, optional on edit) */}
+              <TextField
+                label={t('admins.form.password')}
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                fullWidth
+                required={!selectedAdmin}
+                helperText={t('admins.form.passwordHelper')}
+              />
+              <TextField
+                label={t('admins.form.confirmPassword')}
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                fullWidth
+                required={!selectedAdmin}
+                error={formData.password !== formData.confirmPassword && formData.confirmPassword !== ''}
+                helperText={formData.password !== formData.confirmPassword && formData.confirmPassword !== '' ? t('admins.form.passwordMismatch') : ''}
+              />
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('admins.form.phoneNumber')}

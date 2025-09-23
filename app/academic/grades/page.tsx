@@ -37,6 +37,7 @@ import {
   People as PeopleIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import SidebarLayout from '@/components/layout/SidebarLayout';
 
 interface GradeLevel {
   id: string;
@@ -90,7 +91,7 @@ export default function GradeManagementPage() {
   const fetchGradeLevels = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/academic/grade-levels', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -148,7 +149,7 @@ export default function GradeManagementPage() {
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const url = editingGrade 
         ? `/api/academic/grade-levels/${editingGrade.id}`
         : '/api/academic/grade-levels';
@@ -185,7 +186,7 @@ export default function GradeManagementPage() {
     if (!confirm(t('academic.grades.confirmDelete'))) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/academic/grade-levels/${gradeId}`, {
         method: 'DELETE',
         headers: {
@@ -213,27 +214,30 @@ export default function GradeManagementPage() {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+      <SidebarLayout>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </SidebarLayout>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          {t('academic.grades.title')}
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          {t('academic.grades.addGrade')}
-        </Button>
-      </Box>
+    <SidebarLayout>
+      <Box sx={{ p: 3 }}>
+        {/* Header */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            {t('academic.grades.title')}
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+          >
+            {t('academic.grades.addGrade')}
+          </Button>
+        </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
@@ -454,5 +458,6 @@ export default function GradeManagementPage() {
         </DialogActions>
       </Dialog>
     </Box>
+    </SidebarLayout>
   );
 }

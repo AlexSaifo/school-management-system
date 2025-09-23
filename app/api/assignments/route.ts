@@ -176,7 +176,8 @@ export async function POST(request: NextRequest) {
       dueDate, 
       totalMarks, 
       instructions, 
-      attachments 
+      attachments,
+      semesterId
     } = body;
 
     // Validate required fields
@@ -229,6 +230,22 @@ export async function POST(request: NextRequest) {
     // Create assignments for each classroom
     const assignments = await Promise.all(
       classRoomIdsArray.map(async (classRoomId: string) => {
+        let resolvedSemesterId = semesterId as string | undefined;
+        if (!resolvedSemesterId && dueDate) {
+          // Try to infer semester by classRoom's academic year and dueDate
+          const cls = await prisma.classRoom.findUnique({ where: { id: classRoomId } });
+          if (cls?.academicYearId) {
+            const sem = await prisma.semester.findFirst({
+              where: {
+                academicYearId: cls.academicYearId,
+                startDate: { lte: new Date(dueDate) },
+                endDate: { gte: new Date(dueDate) }
+              },
+              orderBy: { startDate: 'asc' }
+            });
+            if (sem) resolvedSemesterId = sem.id;
+          }
+        }
         return prisma.assignment.create({
           data: {
             title,
@@ -239,7 +256,8 @@ export async function POST(request: NextRequest) {
             dueDate: new Date(dueDate),
             totalMarks,
             instructions,
-            attachments: attachments || null
+            attachments: attachments || null,
+            ...(resolvedSemesterId && { semesterId: resolvedSemesterId })
           },
           include: {
             subject: {

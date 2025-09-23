@@ -1,16 +1,32 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import CryptoJS from 'crypto-js';
 
 type Role = 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+const AES_SECRET_KEY = process.env.AES_SECRET_KEY || 'your-secret-key-here';
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
 }
 
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
+export async function verifyPassword(password: string, storedPassword: string): Promise<boolean> {
+  // Check if stored password is a bcrypt hash (starts with $2a$, $2b$, or $2y$)
+  if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$') || storedPassword.startsWith('$2y$')) {
+    // Legacy bcrypt hash - use bcrypt comparison
+    return bcrypt.compare(password, storedPassword);
+  } else {
+    // AES encrypted password - decrypt and compare
+    try {
+      const bytes = CryptoJS.AES.decrypt(storedPassword, AES_SECRET_KEY);
+      const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
+      return decryptedPassword === password;
+    } catch (error) {
+      // If decryption fails, password is invalid
+      return false;
+    }
+  }
 }
 
 export function generateToken(payload: { userId: string; email: string; role: Role }): string {

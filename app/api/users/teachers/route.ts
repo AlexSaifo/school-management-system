@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import CryptoJS from 'crypto-js';
 import { z } from 'zod';
+
+// Static secret key for encryption (in production, this should be in environment variables)
+const SECRET_KEY = 'school-management-secret-key-2025';
+
+// Encryption/Decryption utilities
+const encryptPassword = (password: string): string => {
+  return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+};
+
+const decryptPassword = (encryptedPassword: string): string => {
+  const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+  return bytes.toString(CryptoJS.enc.Utf8);
+};
 
 // Validation schema for teacher creation
 const createTeacherSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   phoneNumber: z.string().min(10, 'Valid phone number required'),
   address: z.string().min(1, 'Address is required'),
   employeeId: z.string().min(1, 'Employee ID is required'),
@@ -103,6 +117,7 @@ export async function GET(request: NextRequest) {
         firstName: teacher.firstName || '',
         lastName: teacher.lastName || '',
         email: teacher.email || '',
+        password: teacher.password || '', // Include hashed password
         phoneNumber: teacher.phone || '', // Corrected field name
         address: teacher.address || '',
         isActive: teacher.status === 'ACTIVE', // For backwards compatibility
@@ -165,9 +180,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generate temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    // Encrypt the password with static secret key
+    const encryptedPassword = encryptPassword(validatedData.password);
     
     // Check if employee ID already exists
     const existingEmployee = await prisma.teacher.findUnique({
@@ -189,7 +203,7 @@ export async function POST(request: NextRequest) {
           firstName: validatedData.firstName,
           lastName: validatedData.lastName,
           email: validatedData.email,
-          password: hashedPassword,
+          password: encryptedPassword,
           phone: validatedData.phoneNumber, // Corrected field name
           address: validatedData.address,
           role: 'TEACHER',
@@ -218,7 +232,6 @@ export async function POST(request: NextRequest) {
       message: 'Teacher created successfully',
       data: {
         id: result.user.id,
-        tempPassword,
       },
     });
   } catch (error) {

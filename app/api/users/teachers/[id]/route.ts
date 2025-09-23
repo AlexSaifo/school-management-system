@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import CryptoJS from 'crypto-js';
 import { z } from 'zod';
+
+// Static secret key for encryption (in production, this should be in environment variables)
+const SECRET_KEY = 'school-management-secret-key-2025';
+
+// Encryption/Decryption utilities
+const encryptPassword = (password: string): string => {
+  return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+};
+
+const decryptPassword = (encryptedPassword: string): string => {
+  const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+  return bytes.toString(CryptoJS.enc.Utf8);
+};
 
 // Validation schema for teacher update
 const updateTeacherSchema = z.object({
   firstName: z.string().min(1, 'First name is required').optional(),
   lastName: z.string().min(1, 'Last name is required').optional(),
   email: z.string().email('Invalid email format').optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
   phoneNumber: z.string().min(10, 'Valid phone number required').optional(),
   address: z.string().optional(),
   employeeId: z.string().optional(),
@@ -57,6 +72,7 @@ export async function GET(
         firstName: teacher.firstName || '',
         lastName: teacher.lastName || '',
         email: teacher.email || '',
+        password: teacher.password || '', // Include hashed password
         phoneNumber: teacher.phone || '',
         address: teacher.address || '',
         status: teacher.status || 'ACTIVE',
@@ -155,6 +171,7 @@ export async function PATCH(
       if (validatedData.firstName !== undefined) userData.firstName = validatedData.firstName;
       if (validatedData.lastName !== undefined) userData.lastName = validatedData.lastName;
       if (validatedData.email !== undefined) userData.email = validatedData.email;
+      if (validatedData.password !== undefined) userData.password = encryptPassword(validatedData.password);
       if (validatedData.phoneNumber !== undefined) userData.phone = validatedData.phoneNumber;
       if (validatedData.address !== undefined) userData.address = validatedData.address;
       if (validatedData.status !== undefined) userData.status = validatedData.status;

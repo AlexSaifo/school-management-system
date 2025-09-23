@@ -107,7 +107,7 @@ export default function ClassesPage() {
 
   const fetchClassRooms = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       
       if (!token) {
         console.log('No token found, redirecting to login');
@@ -143,7 +143,7 @@ export default function ClassesPage() {
 
   const fetchGradeLevels = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       
       if (!token) {
         console.log('No token found for grade levels');
@@ -214,7 +214,7 @@ export default function ClassesPage() {
 
   const handleSubmit = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const url = selectedClass 
         ? `/api/academic/classrooms/${selectedClass.id}`
         : '/api/academic/classrooms';
@@ -248,7 +248,7 @@ export default function ClassesPage() {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/academic/classrooms/${id}`, {
         method: 'DELETE',
         headers: {

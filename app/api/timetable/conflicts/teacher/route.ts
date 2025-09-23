@@ -17,12 +17,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get active semester from cookies
+    const activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    if (!activeSemesterId) {
+      return NextResponse.json(
+        { success: false, error: 'No active semester selected' },
+        { status: 400 }
+      );
+    }
+
     // Find conflicting timetable entries for the teacher
     const conflicts = await prisma.timetable.findMany({
       where: {
         teacherId,
         dayOfWeek: parseInt(dayOfWeek),
         timeSlotId,
+        semesterId: activeSemesterId,
         isActive: true,
         ...(excludeClassId && { classRoomId: { not: excludeClassId } })
       },

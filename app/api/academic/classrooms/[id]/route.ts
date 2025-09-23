@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { handleApiAuth } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.substring(7);
-    const auth = await verifyToken(token);
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Authenticate the request
+    const authResult = await handleApiAuth(request, false);
+    if (!authResult.success) {
+      return authResult.response;
     }
 
     const classRoom = await prisma.classRoom.findUnique({
@@ -60,16 +54,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.substring(7);
-    const auth = await verifyToken(token);
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Authenticate the request
+    const authResult = await handleApiAuth(request, false);
+    if (!authResult.success) {
+      return authResult.response;
     }
 
     const body = await request.json();
@@ -104,7 +92,7 @@ export async function PUT(
         where: {
           gradeLevelId,
           section,
-          academicYear: existingClassRoom.academicYear,
+          academicYearId: existingClassRoom.academicYearId,
           NOT: { id: params.id }
         }
       });
@@ -122,7 +110,7 @@ export async function PUT(
       const duplicateRoom = await prisma.classRoom.findFirst({
         where: {
           roomNumber,
-          academicYear: existingClassRoom.academicYear,
+          academicYearId: existingClassRoom.academicYearId,
           NOT: { id: params.id }
         }
       });
@@ -194,16 +182,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Get token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.substring(7);
-    const auth = await verifyToken(token);
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Authenticate the request
+    const authResult = await handleApiAuth(request, false);
+    if (!authResult.success) {
+      return authResult.response;
     }
 
     // Check if classroom exists

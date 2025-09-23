@@ -483,7 +483,7 @@ const ChatPage: React.FC = () => {
 
   return (
     <SidebarLayout>
-      <Box sx={{ height: '90vh', display: 'flex', position: 'relative' }}>
+      <Box sx={{ height: '100%', display: 'flex', position: 'relative' }}>
         {/* Desktop Chat List Sidebar - Hidden on mobile */}
         {!isMobile && (
           <Paper 
@@ -791,9 +791,13 @@ const ChatPage: React.FC = () => {
                   flexGrow: 1,
                   overflow: 'auto',
                   p: { xs: 0.5, sm: 1 },
-                  bgcolor: 'background.default'
+                  bgcolor: 'background.default',
+                  position: 'relative',
+                  zIndex: 1
                 }}
                 onScroll={handleScroll}
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
               >
                 {messagesLoading && messagesPage === 1 && (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>

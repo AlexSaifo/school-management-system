@@ -285,7 +285,7 @@ export default function SpecialLocationsPage() {
   const fetchSpecialLocations = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       
       const response = await fetch('/api/academic/special-locations', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -296,7 +296,7 @@ export default function SpecialLocationsPage() {
       }
 
       const data = await response.json();
-      setSpecialLocations(data.specialLocations || []);
+      setSpecialLocations(data.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch special locations');
     } finally {
@@ -343,7 +343,7 @@ export default function SpecialLocationsPage() {
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const url = editingLocation 
         ? `/api/academic/special-locations/${editingLocation.id}`
         : '/api/academic/special-locations';
@@ -377,7 +377,7 @@ export default function SpecialLocationsPage() {
     if (!confirm(t('academic.specialLocations.confirmDelete'))) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/academic/special-locations/${locationId}`, {
         method: 'DELETE',
         headers: {

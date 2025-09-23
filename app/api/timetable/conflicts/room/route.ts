@@ -18,6 +18,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get active semester from cookies
+    const activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    if (!activeSemesterId) {
+      return NextResponse.json(
+        { success: false, error: 'No active semester selected' },
+        { status: 400 }
+      );
+    }
+
     // If no roomId is provided, return empty conflicts (no conflicts for default classroom)
     if (!roomId || roomId === '') {
       return NextResponse.json({
@@ -33,6 +42,7 @@ export async function GET(request: NextRequest) {
         specialLocationId: roomId,
         dayOfWeek: parseInt(dayOfWeek),
         timeSlotId,
+        semesterId: activeSemesterId,
         isActive: true,
         ...(excludeClassId && { classRoomId: { not: excludeClassId } })
       },

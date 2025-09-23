@@ -15,6 +15,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get active semester from cookies
+    const activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    if (!activeSemesterId) {
+      return NextResponse.json(
+        { success: false, error: 'No active semester selected' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the semester exists and is active
+    const activeSemester = await prisma.semester.findUnique({
+      where: { id: activeSemesterId },
+      select: { id: true, isActive: true, academicYearId: true }
+    });
+
+    if (!activeSemester || !activeSemester.isActive) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or inactive semester' },
+        { status: 400 }
+      );
+    }
+
     // Get class details with grade level
     const classDetails = await prisma.classRoom.findUnique({
       where: { id: classId },
@@ -62,17 +84,12 @@ export async function POST(request: NextRequest) {
       orderBy: { slotOrder: 'asc' }
     });
 
-    // Get available rooms (use classroom IDs for regular lessons)
-    const availableRooms = await prisma.classRoom.findMany({
-      where: {
-        isActive: true
-      },
-      take: 5 // Use first 5 classrooms
-    });
-
-    // Clear existing timetable for this class
+    // Clear existing timetable for this class and semester
     await prisma.timetable.deleteMany({
-      where: { classRoomId: classId }
+      where: { 
+        classRoomId: classId,
+        semesterId: activeSemesterId
+      }
     });
 
     // Create weekly schedule distribution
@@ -110,6 +127,7 @@ export async function POST(request: NextRequest) {
       subjectId: string;
       teacherId: string | null;
       specialLocationId: string | null;
+      semesterId: string;
       slotType: SlotType;
     }> = [];
 
@@ -132,13 +150,14 @@ export async function POST(request: NextRequest) {
           entry.timeSlotId === timeSlot.id
         );
 
-        // Also check for global teacher conflicts in database
+        // Also check for global teacher conflicts in database (same semester)
         if (!hasConflict && subjectData.teacher?.id) {
           const existingConflicts = await prisma.timetable.findFirst({
             where: {
               teacherId: subjectData.teacher.id,
               dayOfWeek: dayOfWeek,
               timeSlotId: timeSlot.id,
+              semesterId: activeSemesterId,
               isActive: true,
               classRoomId: { not: classId }
             }
@@ -153,7 +172,8 @@ export async function POST(request: NextRequest) {
             dayOfWeek: dayOfWeek,
             subjectId: subjectData.subject.id,
             teacherId: subjectData.teacher?.id || null,
-            specialLocationId: availableRooms[Math.floor(Math.random() * availableRooms.length)]?.id || null,
+            specialLocationId: null, // Regular lessons use the main classroom
+            semesterId: activeSemesterId,
             slotType: SlotType.LESSON
           });
           
@@ -194,13 +214,14 @@ export async function POST(request: NextRequest) {
           entry.timeSlotId === timeSlot.id
         );
 
-        // Also check for global teacher conflicts in database
+        // Also check for global teacher conflicts in database (same semester)
         if (!hasConflict && randomSubject.teacher?.id) {
           const existingConflicts = await prisma.timetable.findFirst({
             where: {
               teacherId: randomSubject.teacher.id,
               dayOfWeek: dayOfWeek,
               timeSlotId: timeSlot.id,
+              semesterId: activeSemesterId,
               isActive: true,
               classRoomId: { not: classId }
             }
@@ -215,7 +236,8 @@ export async function POST(request: NextRequest) {
             dayOfWeek: dayOfWeek,
             subjectId: randomSubject.subject.id,
             teacherId: randomSubject.teacher?.id || null,
-            specialLocationId: availableRooms[Math.floor(Math.random() * availableRooms.length)]?.id || null,
+            specialLocationId: null, // Regular lessons use the main classroom
+            semesterId: activeSemesterId,
             slotType: SlotType.LESSON
           });
         }
@@ -249,6 +271,7 @@ export async function POST(request: NextRequest) {
           subjectId: null,
           teacherId: null,
           specialLocationId: null,
+          semesterId: activeSemesterId,
           slotType: slot.slotType,
           isActive: true
         });

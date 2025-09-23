@@ -18,7 +18,11 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: {
-            students: true
+            students: true,
+            timetables: true,
+            attendances: true,
+            assignments: true,
+            exams: true
           }
         }
       },
@@ -58,11 +62,12 @@ export async function POST(request: NextRequest) {
       capacity,
       facilities,
       isActive,
-      academicYear
+      academicYearId,
+      semesterId
     } = body;
 
     // Validate required fields
-    if (!section || !gradeLevelId || !roomNumber || !academicYear) {
+    if (!section || !gradeLevelId || !roomNumber || !academicYearId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -74,7 +79,7 @@ export async function POST(request: NextRequest) {
       where: {
         gradeLevelId,
         section,
-        academicYear
+        academicYearId
       }
     });
 
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest) {
     const existingRoom = await prisma.classRoom.findFirst({
       where: {
         roomNumber,
-        academicYear
+        academicYearId
       }
     });
 
@@ -118,16 +123,26 @@ export async function POST(request: NextRequest) {
         nameAr: nameAr || `${gradeLevel.nameAr} - شعبة ${section}`,
         section,
         sectionNumber: sectionNumber || 1,
-        gradeLevelId,
+        gradeLevel: {
+          connect: { id: gradeLevelId }
+        },
         roomNumber,
         floor: floor || 1,
         capacity: capacity || 30,
         facilities: facilities || [],
         isActive: isActive !== undefined ? isActive : true,
-        academicYear
+        academicYear: {
+          connect: { id: academicYearId }
+        },
+        ...(semesterId && {
+          semester: {
+            connect: { id: semesterId }
+          }
+        })
       },
       include: {
-        gradeLevel: true
+        gradeLevel: true,
+        academicYear: true
       }
     });
 

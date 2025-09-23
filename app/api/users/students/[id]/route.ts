@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import CryptoJS from 'crypto-js';
+
+// AES encryption utilities
+const SECRET_KEY = process.env.AES_SECRET_KEY || 'your-secret-key-here';
+
+const encryptPassword = (password: string): string => {
+  return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+};
+
+const decryptPassword = (encryptedPassword: string): string => {
+  const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+  return bytes.toString(CryptoJS.enc.Utf8);
+};
 
 // Validation schema for student update
 const updateStudentSchema = z.object({
@@ -21,6 +34,7 @@ const updateStudentSchema = z.object({
   bloodGroup: z.string().optional(),
   emergencyContact: z.string().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 });
 
 export async function GET(
@@ -186,6 +200,7 @@ export async function PATCH(
       if (validatedData.phoneNumber !== undefined) userData.phone = validatedData.phoneNumber; // Fixed field name
       if (validatedData.address !== undefined) userData.address = validatedData.address;
       if (validatedData.status !== undefined) userData.status = validatedData.status;
+      if (validatedData.password !== undefined) userData.password = encryptPassword(validatedData.password);
 
       const user = Object.keys(userData).length > 0
         ? await tx.user.update({
@@ -194,7 +209,7 @@ export async function PATCH(
           })
         : existingUser;
 
-      // Update student profile data
+      // Update or create student profile data
       const studentData: any = {};
       if (validatedData.studentId !== undefined) studentData.studentId = validatedData.studentId;
       if (validatedData.classRoomId !== undefined) studentData.classRoomId = validatedData.classRoomId;
@@ -204,24 +219,38 @@ export async function PATCH(
       if (validatedData.bloodGroup !== undefined) studentData.bloodGroup = validatedData.bloodGroup;
       if (validatedData.emergencyContact !== undefined) studentData.emergencyContact = validatedData.emergencyContact;
 
-      const student = Object.keys(studentData).length > 0
-        ? await tx.student.update({
-            where: { id: existingUser.student?.id },
+      let student;
+      if (Object.keys(studentData).length > 0) {
+        if (existingUser.student?.id) {
+          // Update existing student record
+          student = await tx.student.update({
+            where: { id: existingUser.student.id },
             data: studentData,
-          })
-        : existingUser.student;
+          });
+        } else {
+          // Create new student record
+          studentData.userId = studentId;
+          student = await tx.student.create({
+            data: studentData,
+          });
+        }
+      } else {
+        student = existingUser.student;
+      }
 
       // Update parent-student relationships if parent relations provided
       if (validatedData.parentRelations && validatedData.parentRelations.length > 0) {
         // Delete existing relationships
-        await tx.studentParent.deleteMany({
-          where: { studentId: existingUser.student?.id },
-        });
+        if (student?.id) {
+          await tx.studentParent.deleteMany({
+            where: { studentId: student.id },
+          });
+        }
 
         // Create new relationships with relationship types
         const parentStudents = await Promise.all(
           validatedData.parentRelations.map(async (relation: any) => {
-            // Find the parent record by userId to get the actual parentId
+            // Find the parent record by userId
             const parentRecord = await tx.parent.findUnique({
               where: { userId: relation.parentId },
             });
@@ -232,8 +261,8 @@ export async function PATCH(
 
             return tx.studentParent.create({
               data: {
-                parentId: parentRecord.id, // Use the actual parent ID, not user ID
-                studentId: existingUser.student?.id,
+                parentId: parentRecord.id, // Use the actual parent ID
+                studentId: student.id,
                 relationship: relation.relationship,
               },
             });

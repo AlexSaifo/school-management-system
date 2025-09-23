@@ -74,6 +74,13 @@ interface ClassRoom {
   academicYear: string;
   gradeLevel: GradeLevel;
   students?: { id: string }[];
+  _count?: {
+    students: number;
+    timetables: number;
+    attendances: number;
+    assignments: number;
+    exams: number;
+  };
 }
 
 interface TabPanelProps {
@@ -143,7 +150,7 @@ export default function ClassRoomManagementPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       
       // Fetch classrooms and grade levels
       const [classRoomsRes, gradeLevelsRes] = await Promise.all([
@@ -214,7 +221,7 @@ export default function ClassRoomManagementPage() {
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const url = editingClassRoom 
         ? `/api/academic/classrooms/${editingClassRoom.id}`
         : '/api/academic/classrooms';
@@ -251,7 +258,7 @@ export default function ClassRoomManagementPage() {
     if (!confirm(t('academic.classrooms.confirmDelete'))) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/academic/classrooms/${classRoomId}`, {
         method: 'DELETE',
         headers: {
@@ -268,6 +275,29 @@ export default function ClassRoomManagementPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete classroom');
     }
+  };
+
+  const handleGradeLevelChange = (gradeLevelId: string) => {
+    // Find the next available section number for this grade level and academic year
+    const existingSections = classRooms
+      .filter(cr => cr.gradeLevel.id === gradeLevelId && cr.academicYear === '2024-2025')
+      .map(cr => cr.sectionNumber)
+      .sort((a, b) => a - b);
+    
+    let nextSectionNumber = 1;
+    for (const num of existingSections) {
+      if (num === nextSectionNumber) {
+        nextSectionNumber++;
+      } else {
+        break;
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      gradeLevelId,
+      sectionNumber: nextSectionNumber
+    }));
   };
 
   const handleFacilityToggle = (facility: string) => {
@@ -501,7 +531,7 @@ export default function ClassRoomManagementPage() {
                           size="small"
                         />
                       </TableCell>
-                      <TableCell>{classRoom.students?.length || 0}</TableCell>
+                      <TableCell>{classRoom._count?.students || 0}</TableCell>
                       <TableCell align="center">
                         <Tooltip title={t('common.edit')}>
                           <IconButton
@@ -516,7 +546,13 @@ export default function ClassRoomManagementPage() {
                             size="small"
                             color="error"
                             onClick={() => handleDelete(classRoom.id)}
-                            disabled={(classRoom.students?.length ?? 0) > 0}
+                            disabled={
+                              (classRoom._count?.students ?? 0) > 0 ||
+                              (classRoom._count?.timetables ?? 0) > 0 ||
+                              (classRoom._count?.attendances ?? 0) > 0 ||
+                              (classRoom._count?.assignments ?? 0) > 0 ||
+                              (classRoom._count?.exams ?? 0) > 0
+                            }
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -572,7 +608,7 @@ export default function ClassRoomManagementPage() {
                   <Select
                     value={formData.gradeLevelId}
                     label={t('academic.classrooms.gradeLevel')}
-                    onChange={(e) => setFormData({ ...formData, gradeLevelId: e.target.value })}
+                    onChange={(e) => handleGradeLevelChange(e.target.value)}
                   >
                     {gradeLevels.map(grade => (
                       <MenuItem key={grade.id} value={grade.id}>

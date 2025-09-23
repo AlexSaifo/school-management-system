@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import CryptoJS from 'crypto-js';
+
+// AES encryption utilities
+const SECRET_KEY = process.env.AES_SECRET_KEY || 'your-secret-key-here';
+
+const encryptPassword = (password: string): string => {
+  return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+};
 
 // Validation schema for parent update
 const updateParentSchema = z.object({
@@ -15,6 +23,7 @@ const updateParentSchema = z.object({
     studentId: z.string(),
     relationship: z.string().min(1, 'Relationship is required')
   })).optional(), // Array of student relationships with types
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 });
 
 export async function GET(
@@ -145,6 +154,7 @@ export async function PATCH(
       if (validatedData.phoneNumber !== undefined) userData.phone = validatedData.phoneNumber;
       if (validatedData.address !== undefined) userData.address = validatedData.address;
       if (validatedData.status !== undefined) userData.status = validatedData.status;
+      if (validatedData.password !== undefined) userData.password = encryptPassword(validatedData.password);
 
       const user = Object.keys(userData).length > 0
         ? await tx.user.update({

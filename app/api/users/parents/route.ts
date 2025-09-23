@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import CryptoJS from 'crypto-js';
 import { z } from 'zod';
+
+// AES encryption utilities
+const SECRET_KEY = process.env.AES_SECRET_KEY || 'your-secret-key-here';
+
+const encryptPassword = (password: string): string => {
+  return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+};
 
 // Validation schema for parent creation
 const createParentSchema = z.object({
@@ -16,6 +23,7 @@ const createParentSchema = z.object({
     studentId: z.string(),
     relationship: z.string().min(1, 'Relationship is required')
   })).optional(), // Array of student relationships with types
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 // Validation schema for bulk operations
@@ -103,6 +111,7 @@ export async function GET(request: NextRequest) {
         email: parent.email || '',
         phoneNumber: parent.phone || '', // Corrected field name
         address: parent.address || '',
+        password: parent.password || '', // Include encrypted password for admin display
         isActive: parent.status === 'ACTIVE', // For backwards compatibility
         status: parent.status || 'ACTIVE',
         createdAt: parent.createdAt,
@@ -166,9 +175,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generate temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    // Encrypt password
+    const encryptedPassword = encryptPassword(validatedData.password);
     
     // Create parent with transaction
     const result = await prisma.$transaction(async (tx: any) => {
@@ -178,7 +186,7 @@ export async function POST(request: NextRequest) {
           firstName: validatedData.firstName,
           lastName: validatedData.lastName,
           email: validatedData.email,
-          password: hashedPassword,
+          password: encryptedPassword,
           phone: validatedData.phoneNumber, // Corrected field name
           address: validatedData.address,
           role: 'PARENT',
@@ -228,7 +236,6 @@ export async function POST(request: NextRequest) {
       message: 'Parent created successfully',
       data: {
         id: result.user.id,
-        tempPassword,
       },
     });
   } catch (error) {

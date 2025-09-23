@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import CryptoJS from 'crypto-js';
 import { z } from 'zod';
+
+// Static secret key for encryption (in production, this should be in environment variables)
+const SECRET_KEY = 'school-management-secret-key-2025';
+
+// Encryption/Decryption utilities
+const encryptPassword = (password: string): string => {
+  return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+};
+
+const decryptPassword = (encryptedPassword: string): string => {
+  const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+  return bytes.toString(CryptoJS.enc.Utf8);
+};
 
 // Validation schema for student creation
 const createStudentSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
   studentId: z.string().min(1, 'Student ID is required'),
@@ -39,6 +53,7 @@ export async function GET(request: NextRequest) {
     // Search parameters
     const search = searchParams.get('search') || '';
     const classId = searchParams.get('class') || '';
+    const gradeId = searchParams.get('grade') || '';
     const status = searchParams.get('status') || '';
     const bloodGroup = searchParams.get('bloodGroup') || '';
     
@@ -60,7 +75,19 @@ export async function GET(request: NextRequest) {
     // Add class filter
     if (classId) {
       where.student = {
+        ...where.student,
         classRoomId: classId,
+      };
+    }
+    
+    // Add grade filter
+    if (gradeId && gradeId !== 'all') {
+      where.student = {
+        ...where.student,
+        classRoom: {
+          ...where.student?.classRoom,
+          gradeLevelId: gradeId,
+        },
       };
     }
     
@@ -119,6 +146,7 @@ export async function GET(request: NextRequest) {
         email: student.email || '',
         phone: student.phone || '', // Using correct field from schema
         address: student.address || '',
+        password: student.password || '', // Include encrypted password for admin display
         isActive: student.status === 'ACTIVE', // Keep isActive for backward compatibility
         status: student.status || 'ACTIVE',
         createdAt: student.createdAt,
@@ -201,9 +229,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generate temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+    // Encrypt the provided password with static secret key
+    const encryptedPassword = encryptPassword(validatedData.password);
     
     // Create student with transaction
     const result = await prisma.$transaction(async (tx: any) => {
@@ -213,7 +240,7 @@ export async function POST(request: NextRequest) {
           firstName: validatedData.firstName,
           lastName: validatedData.lastName,
           email: validatedData.email,
-          password: hashedPassword,
+          password: encryptedPassword,
           phone: validatedData.phoneNumber, // Using phoneNumber from form but correct field name is phone
           address: validatedData.address,
           role: 'STUDENT',
@@ -268,7 +295,6 @@ export async function POST(request: NextRequest) {
       message: 'Student created successfully',
       data: {
         id: result.user.id,
-        tempPassword,
       },
     });
   } catch (error) {

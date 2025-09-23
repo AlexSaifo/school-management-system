@@ -59,6 +59,12 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const dayOfWeek = searchParams.get('dayOfWeek');
 
+    // Get active semester from cookies
+    const activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    if (!activeSemesterId) {
+      return NextResponse.json({ error: 'No active semester selected' }, { status: 400 });
+    }
+
     // First, get the class details
     const classDetails = await prisma.classRoom.findUnique({
       where: { id: classId },
@@ -85,6 +91,7 @@ export async function GET(
     // Build where clause
     const whereClause: any = {
       classRoomId: classId,
+      semesterId: activeSemesterId,
       isActive: true
     };
 
@@ -217,6 +224,13 @@ export async function POST(
     }
 
     const { classId } = params;
+
+    // Get active semester from cookies
+    const activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    if (!activeSemesterId) {
+      return NextResponse.json({ error: 'No active semester selected' }, { status: 400 });
+    }
+
     const body = await request.json();
     let { timeSlotId, dayOfWeek, subjectId, teacherId, roomId, slotType, notes } = body;
     
@@ -245,6 +259,7 @@ export async function POST(
           teacherId: teacherId,
           timeSlotId: timeSlotId,
           dayOfWeek: dayOfWeek,
+          semesterId: activeSemesterId,
           isActive: true,
           classRoomId: { not: classId }
         }
@@ -320,10 +335,11 @@ export async function POST(
     // Create or update timetable entry
     const timetableEntry = await prisma.timetable.upsert({
       where: {
-        classRoomId_timeSlotId_dayOfWeek: {
+        classRoomId_timeSlotId_dayOfWeek_semesterId: {
           classRoomId: classId,
           timeSlotId: timeSlotId,
-          dayOfWeek: dayOfWeek
+          dayOfWeek: dayOfWeek,
+          semesterId: activeSemesterId
         }
       },
       update: {
@@ -338,6 +354,7 @@ export async function POST(
         classRoomId: classId,
         timeSlotId: timeSlotId,
         dayOfWeek: dayOfWeek,
+        semesterId: activeSemesterId,
         subjectId: subjectId || null,
         teacherId: teacherId || null,
         // specialLocationId can only be a valid special location ID or null
@@ -415,12 +432,19 @@ export async function DELETE(
       );
     }
 
+    // Get active semester from cookies
+    const activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    if (!activeSemesterId) {
+      return NextResponse.json({ error: 'No active semester selected' }, { status: 400 });
+    }
+
     const deletedEntry = await prisma.timetable.delete({
       where: {
-        classRoomId_timeSlotId_dayOfWeek: {
+        classRoomId_timeSlotId_dayOfWeek_semesterId: {
           classRoomId: classId,
           timeSlotId: timeSlotId,
-          dayOfWeek: parseInt(dayOfWeek)
+          dayOfWeek: parseInt(dayOfWeek),
+          semesterId: activeSemesterId
         }
       }
     });

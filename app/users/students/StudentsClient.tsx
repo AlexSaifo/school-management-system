@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -53,10 +53,27 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import CryptoJS from 'crypto-js';
 import DataTable, { Column, Action } from "@/components/DataTable";
 import FilterPanel, { Filter, FilterOption, BulkAction } from "@/components/FilterPanel";
 import PageHeader from "@/components/PageHeader";
 import PaginationControls from "@/components/PaginationControls";
+
+// AES encryption utilities
+const SECRET_KEY = process.env.NEXT_PUBLIC_AES_SECRET_KEY || 'your-secret-key-here';
+
+const decryptPassword = (encryptedPassword: string): string => {
+  if (encryptedPassword.startsWith('$2a$') || encryptedPassword.startsWith('$2b$') || encryptedPassword.startsWith('$2y$')) {
+    // Legacy bcrypt hash - return placeholder since we can't decrypt
+    return '••••••••';
+  }
+  try {
+    const bytes = CryptoJS.AES.decrypt(encryptedPassword, SECRET_KEY);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch (error) {
+    return '••••••••';
+  }
+};
 
 interface GradeLevel {
   id: string;
@@ -159,7 +176,7 @@ interface Student {
   emergencyContact?: string;
 }
 
-// Zod validation schema matching backend createStudentSchema
+// Zod validation schema for creating students (password required)
 const createStudentFormSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
@@ -175,9 +192,52 @@ const createStudentFormSchema = z.object({
   emergencyContact: z.string().optional(),
   guardianName: z.string().optional(),
   guardianPhone: z.string().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().optional(),
+}).refine((data) => {
+  // Confirm password must match password
+  if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
-type CreateStudentFormData = z.infer<typeof createStudentFormSchema>;
+// Zod validation schema for editing students (password optional)
+const editStudentFormSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email format'),
+  phoneNumber: z.string().optional(),
+  address: z.string().optional(),
+  studentId: z.string().min(1, 'Student ID is required'),
+  classRoomId: z.string().min(1, 'Classroom is required'),
+  rollNumber: z.string().optional(),
+  dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  admissionDate: z.string().min(1, 'Admission date is required'),
+  bloodGroup: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  guardianName: z.string().optional(),
+  guardianPhone: z.string().optional(),
+  password: z.string().optional().refine((val) => !val || val.length >= 6, {
+    message: 'Password must be at least 6 characters',
+  }),
+  confirmPassword: z.string().optional(),
+}).refine((data) => {
+  // If password is provided, confirm password must also be provided and match
+  if (data.password) {
+    return data.confirmPassword && data.password === data.confirmPassword;
+  }
+  // If no password, confirm password should also be empty
+  return !data.confirmPassword;
+}, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type StudentFormData = z.infer<typeof createStudentFormSchema> | z.infer<typeof editStudentFormSchema>;
 
 export default function StudentsClient() {
   const { user, token } = useAuth();
@@ -209,7 +269,12 @@ export default function StudentsClient() {
   });
   const [pageSize, setPageSize] = useState(10);
   
-  // React Hook Form setup with Zod validation
+  // React Hook Form setup with conditional Zod validation
+  const currentSchema = useMemo(() => 
+    selectedStudent ? editStudentFormSchema : createStudentFormSchema, 
+    [selectedStudent]
+  );
+  
   const {
     register,
     handleSubmit,
@@ -217,8 +282,8 @@ export default function StudentsClient() {
     reset,
     setValue,
     watch
-  } = useForm<CreateStudentFormData>({
-    resolver: zodResolver(createStudentFormSchema),
+  } = useForm<StudentFormData>({
+    resolver: zodResolver(currentSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -234,6 +299,8 @@ export default function StudentsClient() {
       rollNumber: "",
       guardianName: "",
       guardianPhone: "",
+      password: "",
+      confirmPassword: "",
     }
   });
 
@@ -300,6 +367,14 @@ export default function StudentsClient() {
       fetchClassRooms();
     }
   }, [openDialog, token]);
+  
+  // Clear confirm password when password is cleared
+  useEffect(() => {
+    const passwordValue = watch('password');
+    if (!passwordValue && watch('confirmPassword')) {
+      setValue('confirmPassword', '');
+    }
+  }, [watch('password'), setValue]);
   
   // States to track loading for different data sets
   const [loadingGradeLevels, setLoadingGradeLevels] = useState(false);
@@ -892,7 +967,7 @@ export default function StudentsClient() {
     reset();
   };
 
-  const handleFormSubmit = async (data: CreateStudentFormData) => {
+  const handleFormSubmit = async (data: StudentFormData) => {
     try {
       const url = selectedStudent
         ? `/api/users/students/${selectedStudent.id}`
@@ -911,6 +986,14 @@ export default function StudentsClient() {
 
       // Remove phoneNumber from request data since API expects 'phone'
       delete (requestData as any).phoneNumber;
+      
+      // Remove confirmPassword as it's not needed in the API
+      delete (requestData as any).confirmPassword;
+      
+      // For updates, only include password if it's provided
+      if (selectedStudent && !requestData.password?.trim()) {
+        delete (requestData as any).password;
+      }
 
       const response = await fetch(url, {
         method,
@@ -1419,6 +1502,20 @@ export default function StudentsClient() {
       render: (value, row) => `${row.user.firstName} ${row.user.lastName}`,
     },
     {
+      key: 'password',
+      label: t('students.password'),
+      render: (value, row) => {
+        // Only show password for admins
+        if (user?.role !== 'ADMIN') {
+          return '••••••••';
+        }
+        // Decrypt and show the actual password
+        const encryptedPassword = row.user?.password || '';
+        if (!encryptedPassword) return 'Not set';
+        return decryptPassword(encryptedPassword);
+      },
+    },
+    {
       key: 'studentId',
       label: t('students.studentId'),
     },
@@ -1640,6 +1737,51 @@ export default function StudentsClient() {
                 fullWidth
                 required
               />
+              {!selectedStudent && (
+                <>
+                  <TextField
+                    label={t('students.password')}
+                    type="password"
+                    {...register('password')}
+                    error={!!errors.password}
+                    helperText={errors.password?.message}
+                    fullWidth
+                    required={!selectedStudent}
+                  />
+                  <TextField
+                    label={t('students.confirmPassword')}
+                    type="password"
+                    {...register('confirmPassword')}
+                    error={!!errors.confirmPassword}
+                    helperText={errors.confirmPassword?.message}
+                    fullWidth
+                    required={!selectedStudent}
+                  />
+                </>
+              )}
+              {selectedStudent && user?.role === 'ADMIN' && (
+                <>
+                  <TextField
+                    label={t('students.password')}
+                    type="password"
+                    {...register('password')}
+                    error={!!errors.password}
+                    helperText={errors.password?.message}
+                    fullWidth
+                    placeholder="Leave empty to keep current password"
+                  />
+                  {watch('password') && (
+                    <TextField
+                      label={t('students.confirmPassword')}
+                      type="password"
+                      {...register('confirmPassword')}
+                      error={!!errors.confirmPassword}
+                      helperText={errors.confirmPassword?.message}
+                      fullWidth
+                    />
+                  )}
+                </>
+              )}
               <Box display="flex" gap={2}>
                 <TextField
                   label={t('students.phone')}
@@ -1763,29 +1905,7 @@ export default function StudentsClient() {
                   ))}
                 </TextField>
               </Box>
-              {/* Guardian Information Fields */}
-              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
-                {t('navigation.parents')}
-              </Typography>
-              
-              <Box display="flex" gap={2}>
-                <TextField
-                  label={t('students.parentName')}
-                  {...register('guardianName')}
-                  error={!!errors.guardianName}
-                  helperText={errors.guardianName?.message}
-                  fullWidth
-                />
-                {/* Changed to parent phone for clarity */}
-                <TextField
-                  label={t('students.parentPhone')}
-                  {...register('guardianPhone')}
-                  error={!!errors.guardianPhone}
-                  helperText={errors.guardianPhone?.message}
-                  fullWidth
-                />
-              </Box>
-              
+  
               {/* Parent Relations Management */}
               <Box mt={2}>
                 <Divider sx={{ my: 2 }} />
