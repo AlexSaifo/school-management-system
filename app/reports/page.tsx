@@ -715,15 +715,11 @@ export default function ReportsPage() {
     const averagePerformance = teachers.length > 0 
       ? Math.round(teachers.reduce((sum, t) => sum + (t.performance || 0), 0) / teachers.length * 10) / 10
       : 0;
-    const averageTeachingLoad = teachers.length > 0 
-      ? Math.round(teachers.reduce((sum, t) => sum + (t.teachingLoad || 0), 0) / teachers.length * 10) / 10
-      : 0;
 
     return {
       totalFaculty,
       teacherStudentRatio,
-      averagePerformance,
-      averageTeachingLoad
+      averagePerformance
     };
   }, [teachers, students]);
 
@@ -1472,12 +1468,6 @@ export default function ReportsPage() {
             trend: 'up',
             trendValue: '+1.7%',
             color: 'success'
-          },
-          {
-            title: t('reports.staffReportsSection.teachingLoad'),
-            value: `${staffStats.averageTeachingLoad}h`,
-            description: t('reports.staffReportsSection.weeklyAverage'),
-            color: 'warning'
           }
         ]}
         loading={loading}

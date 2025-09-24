@@ -188,9 +188,9 @@ model StudentParent {
 
 // Student Academic Progression - tracks student movements between grades/years
 model StudentAcademicProgression {
-  id             String   @id @default(cuid())
-  studentId      String
-  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   // From academic year/semester
   fromAcademicYearId String?
@@ -206,19 +206,19 @@ model StudentAcademicProgression {
   toAcademicYearId String
   toAcademicYear   AcademicYear @relation("ProgressionToYear", fields: [toAcademicYearId], references: [id])
   toSemesterId     String?
-  toSemester       Semester?     @relation("ProgressionToSemester", fields: [toSemesterId], references: [id])
+  toSemester       Semester?    @relation("ProgressionToSemester", fields: [toSemesterId], references: [id])
   toGradeLevelId   String
   toGradeLevel     GradeLevel   @relation("ProgressionToGrade", fields: [toGradeLevelId], references: [id])
   toClassRoomId    String?
-  toClassRoom      ClassRoom?    @relation("ProgressionToClass", fields: [toClassRoomId], references: [id])
+  toClassRoom      ClassRoom?   @relation("ProgressionToClass", fields: [toClassRoomId], references: [id])
 
   // Progression details
-  progressionType   ProgressionType // PROMOTED, RETAINED, GRADUATED, TRANSFERRED
-  reason           String? // Reason for progression/retention
-  effectiveDate    DateTime // When the progression takes effect
-  processedById    String // Admin/teacher who processed this
-  processedBy      User    @relation(fields: [processedById], references: [id])
-  notes            String?
+  progressionType ProgressionType // PROMOTED, RETAINED, GRADUATED, TRANSFERRED
+  reason          String? // Reason for progression/retention
+  effectiveDate   DateTime // When the progression takes effect
+  processedById   String // Admin/teacher who processed this
+  processedBy     User            @relation(fields: [processedById], references: [id])
+  notes           String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -227,11 +227,11 @@ model StudentAcademicProgression {
 }
 
 enum ProgressionType {
-  PROMOTED    // Moved to next grade
-  RETAINED    // Kept in same grade
-  GRADUATED   // Completed final grade
+  PROMOTED // Moved to next grade
+  RETAINED // Kept in same grade
+  GRADUATED // Completed final grade
   TRANSFERRED // Transferred to another school
-  ENROLLED    // Initial enrollment
+  ENROLLED // Initial enrollment
 }
 
 // ClassRoom model - combines class and its main room (الشعبة مع غرفتها الأساسية)
@@ -751,18 +751,18 @@ model MessageAttachment {
 
 // Academic Year Management
 model AcademicYear {
-  id           String             @id @default(cuid())
-  name         String             @unique // "2024-2025"
-  nameAr       String?            // Arabic name
-  startDate    DateTime
-  endDate      DateTime
-  status       AcademicYearStatus @default(PLANNING)
-  isActive     Boolean            @default(false)
-  totalDays    Int                @default(180)
-  completedDays Int               @default(0)
-  color        String             @default("#1976d2") // Hex color for UI
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id            String             @id @default(cuid())
+  name          String             @unique // "2024-2025"
+  nameAr        String? // Arabic name
+  startDate     DateTime
+  endDate       DateTime
+  status        AcademicYearStatus @default(PLANNING)
+  isActive      Boolean            @default(false)
+  totalDays     Int                @default(180)
+  completedDays Int                @default(0)
+  color         String             @default("#1976d2") // Hex color for UI
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   // Relationships
   semesters Semester[]
@@ -777,19 +777,19 @@ model AcademicYear {
 }
 
 model Semester {
-  id             String          @id @default(cuid())
-  name           String          // "First Semester", "Second Semester"
-  nameAr         String?         // Arabic name
+  id             String         @id @default(cuid())
+  name           String // "First Semester", "Second Semester"
+  nameAr         String? // Arabic name
   startDate      DateTime
   endDate        DateTime
-  status         SemesterStatus  @default(PLANNING)
-  days           Int             @default(90)
-  completedDays  Int             @default(0)
-  isActive       Boolean         @default(false)
+  status         SemesterStatus @default(PLANNING)
+  days           Int            @default(90)
+  completedDays  Int            @default(0)
+  isActive       Boolean        @default(false)
   academicYearId String
-  academicYear   AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   // Reverse relations
   classes     ClassRoom[]
