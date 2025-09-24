@@ -5,7 +5,7 @@ import { handleApiAuth } from '@/lib/api-auth';
 export async function GET(request: NextRequest) {
   try {
     // Authenticate the request
-    const authResult = await handleApiAuth(request, false);
+    const authResult = await handleApiAuth(request, true); // Require admin access
     if (!authResult.success) {
       return authResult.response;
     }

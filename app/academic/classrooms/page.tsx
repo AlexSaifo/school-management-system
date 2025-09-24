@@ -112,6 +112,7 @@ export default function ClassRoomManagementPage() {
   
   const [classRooms, setClassRooms] = useState<ClassRoom[]>([]);
   const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -131,7 +132,8 @@ export default function ClassRoomManagementPage() {
     floor: 1,
     capacity: 30,
     facilities: [] as string[],
-    isActive: true
+    isActive: true,
+    academicYearId: ''
   });
 
   const facilityOptions = [
@@ -152,27 +154,32 @@ export default function ClassRoomManagementPage() {
       setLoading(true);
       const token = localStorage.getItem('auth_token');
       
-      // Fetch classrooms and grade levels
-      const [classRoomsRes, gradeLevelsRes] = await Promise.all([
+      // Fetch classrooms, grade levels, and academic years
+      const [classRoomsRes, gradeLevelsRes, academicYearsRes] = await Promise.all([
         fetch('/api/academic/classrooms', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
         fetch('/api/academic/grade-levels', {
           headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/academic/academic-years', {
+          headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
 
-      if (!classRoomsRes.ok || !gradeLevelsRes.ok) {
+      if (!classRoomsRes.ok || !gradeLevelsRes.ok || !academicYearsRes.ok) {
         throw new Error('Failed to fetch data');
       }
 
-      const [classRoomsData, gradeLevelsData] = await Promise.all([
+      const [classRoomsData, gradeLevelsData, academicYearsData] = await Promise.all([
         classRoomsRes.json(),
-        gradeLevelsRes.json()
+        gradeLevelsRes.json(),
+        academicYearsRes.json()
       ]);
 
       setClassRooms(classRoomsData.classRooms || []);
       setGradeLevels(gradeLevelsData.gradeLevels || []);
+      setAcademicYears(academicYearsData.data || academicYearsData.academicYears || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
     } finally {
@@ -193,10 +200,12 @@ export default function ClassRoomManagementPage() {
         floor: classRoom.floor,
         capacity: classRoom.capacity,
         facilities: classRoom.facilities,
-        isActive: classRoom.isActive
+        isActive: classRoom.isActive,
+        academicYearId: classRoom.academicYear.id
       });
     } else {
       setEditingClassRoom(null);
+      const activeYear = academicYears.find(year => year.isActive) || academicYears[0];
       setFormData({
         name: '',
         nameAr: '',
@@ -207,7 +216,8 @@ export default function ClassRoomManagementPage() {
         floor: 1,
         capacity: 30,
         facilities: [],
-        isActive: true
+        isActive: true,
+        academicYearId: activeYear?.id || ''
       });
     }
     setOpenDialog(true);
@@ -234,10 +244,7 @@ export default function ClassRoomManagementPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...formData,
-          academicYear: '2024-2025'
-        })
+        body: JSON.stringify(formData)
       });
 
       if (!response.ok) {
@@ -619,6 +626,22 @@ export default function ClassRoomManagementPage() {
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>{t('academic.academicYear')}</InputLabel>
+                  <Select
+                    value={formData.academicYearId}
+                    label={t('academic.academicYear')}
+                    onChange={(e) => setFormData({ ...formData, academicYearId: e.target.value })}
+                  >
+                    {academicYears.map(year => (
+                      <MenuItem key={year.id} value={year.id}>
+                        {year.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label={t('academic.classrooms.section')}
@@ -693,7 +716,7 @@ export default function ClassRoomManagementPage() {
             <Button
               onClick={handleSubmit}
               variant="contained"
-              disabled={submitting || !formData.gradeLevelId || !formData.section || !formData.roomNumber}
+              disabled={submitting || !formData.gradeLevelId || !formData.section || !formData.roomNumber || !formData.academicYearId}
             >
               {submitting ? <CircularProgress size={20} /> : t('common.save')}
             </Button>

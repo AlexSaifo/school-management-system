@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import TimetableManager from '@/components/TimetableManager';
 import StudentTimetable from '@/components/StudentTimetable';
+import TeacherTimetable from '@/components/TeacherTimetable';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function TimetablePage() {
@@ -49,6 +50,8 @@ export default function TimetablePage() {
         <Box>
           {user.role === 'STUDENT' ? (
             <StudentTimetable />
+          ) : user.role === 'TEACHER' ? (
+            <TeacherTimetable />
           ) : (
             <TimetableManager />
           )}

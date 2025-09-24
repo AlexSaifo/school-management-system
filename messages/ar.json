@@ -48,6 +48,7 @@
     "noResults": "لم يتم العثور على نتائج",
     "create": "إنشاء",
     "filters": "المرشحات",
+    "minutes": "دقيقة",
     "students": "طالب"
   },
   "navigation": {
@@ -460,7 +461,101 @@
     "errorCreateUser": "فشل في إنشاء المستخدم",
     "errorCreateEvent": "فشل في إنشاء الحدث",
     "errorCreateAnnouncement": "فشل في إنشاء الإعلان",
-    "errorDeleteUser": "فشل في حذف المستخدم"
+    "errorDeleteUser": "فشل في حذف المستخدم",
+    "teacher": {
+      "welcome": "مرحباً، {{name}}!",
+      "departmentTitle": "لوحة تحكم المعلم - {{department}}",
+      "stats": {
+        "activeAssignments": "الواجبات النشطة",
+        "upcomingExams": "الامتحانات القادمة",
+        "myStudents": "طلابي",
+        "classesToday": "الحصص اليوم"
+      },
+      "tabs": {
+        "assignments": "الواجبات",
+        "exams": "الامتحانات",
+        "myStudents": "طلابي",
+        "schedule": "الجدول",
+        "announcements": "الإعلانات",
+        "events": "الأحداث"
+      },
+      "assignments": {
+        "management": "إدارة الواجبات",
+        "create": "إنشاء واجب",
+        "edit": "تعديل الواجب",
+        "title": "عنوان الواجب",
+        "description": "الوصف",
+        "dueDate": "تاريخ التسليم",
+        "totalMarks": "إجمالي العلامات",
+        "instructions": "التعليمات",
+        "active": "نشط",
+        "inactive": "غير نشط",
+        "due": "تاريخ التسليم: {{date}}",
+        "marks": "إجمالي العلامات: {{marks}}"
+      },
+      "exams": {
+        "management": "إدارة الامتحانات",
+        "schedule": "جدولة امتحان",
+        "edit": "تعديل الامتحان",
+        "title": "عنوان الامتحان",
+        "date": "التاريخ",
+        "duration": "المدة الزمنية",
+        "scheduled": "مجدول",
+        "examDate": "تاريخ الامتحان",
+        "durationMinutes": "{{duration}} دقيقة"
+      },
+      "students": {
+        "title": "طلابي",
+        "name": "اسم الطالب",
+        "id": "رقم الطالب",
+        "rollNumber": "رقم المتسلسل",
+        "email": "البريد الإلكتروني",
+        "attendance": "الحضور",
+        "viewProfile": "عرض الملف الشخصي",
+        "attendanceRate": "{{rate}}%"
+      },
+      "schedule": {
+        "title": "جدول الحصص",
+        "description": "سيتم عرض جدول حصصك ومواعيدك هنا.",
+        "noTimetable": "لا يوجد جدول زمني متاح"
+      },
+      "events": {
+        "title": "أحداث المدرسة",
+        "noEvents": "لم يتم العثور على أحداث.",
+        "date": "التاريخ: {{date}}",
+        "time": "الوقت: {{time}}",
+        "location": "المكان: {{location}}",
+        "createdBy": "أنشئ بواسطة: {{name}}"
+      },
+      "dialogs": {
+        "createAssignment": "إنشاء واجب جديد",
+        "editAssignment": "تعديل الواجب",
+        "createExam": "جدولة امتحان جديد",
+        "editExam": "تعديل الامتحان",
+        "cancel": "إلغاء",
+        "create": "إنشاء",
+        "update": "تحديث",
+        "schedule": "جدولة"
+      },
+      "errors": {
+        "fetchAssignments": "فشل في جلب الواجبات",
+        "fetchExams": "فشل في جلب الامتحانات",
+        "fetchStudents": "فشل في جلب الطلاب",
+        "fetchEvents": "فشل في جلب الأحداث",
+        "createAssignment": "فشل في إنشاء الواجب",
+        "updateAssignment": "فشل في تحديث الواجب",
+        "deleteAssignment": "فشل في حذف الواجب",
+        "createExam": "فشل في إنشاء الامتحان",
+        "updateExam": "فشل في تحديث الامتحان",
+        "deleteExam": "فشل في حذف الامتحان"
+      },
+      "placeholders": {
+        "unknown": "غير معروف",
+        "student": "طالب",
+        "notAvailable": "غير متوفر",
+        "noData": "؟"
+      }
+    }
   },
   "users": {
     "addUser": "إضافة مستخدم",
@@ -1293,6 +1388,7 @@
     "createdBy": "أنشأها",
     "createdAt": "تاريخ الإنشاء",
     "noAnnouncements": "لا توجد إعلانات متاحة",
+    "announcements": "الإعلانات",
     "createAnnouncement": "إنشاء إعلان",
     "editAnnouncement": "تعديل إعلان",
     "fetchError": "فشل في جلب الإعلانات",

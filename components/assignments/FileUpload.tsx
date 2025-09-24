@@ -20,13 +20,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
-interface AttachmentFile {
-  originalName: string;
-  fileName: string;
-  size: number;
-  type?: string;
-  url: string;
-}
+import { AttachmentFile } from '@/types/attachments';
 
 interface FileUploadProps {
   attachments?: AttachmentFile[];

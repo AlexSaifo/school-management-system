@@ -48,6 +48,7 @@
     "noResults": "No results found",
     "searchToFindResults": "Search to find results",
     "filters": "Filters",
+    "minutes": "min",
     "students": "students"
   },
   "navigation": {
@@ -460,7 +461,188 @@
     "errorCreateUser": "Failed to create user",
     "errorCreateEvent": "Failed to create event",
     "errorCreateAnnouncement": "Failed to create announcement",
-    "errorDeleteUser": "Failed to delete user"
+    "errorDeleteUser": "Failed to delete user",
+    "teacher": {
+      "welcome": "Welcome, {{name}}!",
+      "departmentTitle": "Teacher Dashboard - {{department}}",
+      "stats": {
+        "activeAssignments": "Active Assignments",
+        "upcomingExams": "Upcoming Exams",
+        "myStudents": "My Students",
+        "classesToday": "Classes Today"
+      },
+      "tabs": {
+        "assignments": "Assignments",
+        "exams": "Exams",
+        "myStudents": "My Students",
+        "schedule": "Schedule",
+        "announcements": "Announcements",
+        "events": "Events"
+      },
+      "assignments": {
+        "management": "Assignments Management",
+        "create": "Create Assignment",
+        "edit": "Edit Assignment",
+        "title": "Assignment Title",
+        "description": "Description",
+        "dueDate": "Due Date",
+        "totalMarks": "Total Marks",
+        "instructions": "Instructions",
+        "active": "Active",
+        "inactive": "Inactive",
+        "due": "Due: {{date}}",
+        "marks": "Total Marks: {{marks}}"
+      },
+      "exams": {
+        "management": "Exams Management",
+        "schedule": "Schedule Exam",
+        "edit": "Edit Exam",
+        "title": "Exam Title",
+        "date": "Date",
+        "duration": "Duration",
+        "scheduled": "Scheduled",
+        "examDate": "Exam Date",
+        "durationMinutes": "{{duration}} min"
+      },
+      "students": {
+        "title": "My Students",
+        "name": "Student Name",
+        "id": "Student ID",
+        "rollNumber": "Roll Number",
+        "email": "Email",
+        "attendance": "Attendance",
+        "viewProfile": "View Profile",
+        "attendanceRate": "{{rate}}%"
+      },
+      "schedule": {
+        "title": "Class Schedule",
+        "description": "Your class schedule and timetable will be displayed here.",
+        "noTimetable": "No timetable available"
+      },
+      "events": {
+        "title": "School Events",
+        "noEvents": "No events found.",
+        "date": "Date: {{date}}",
+        "time": "Time: {{time}}",
+        "location": "Location: {{location}}",
+        "createdBy": "Created by: {{name}}"
+      },
+      "dialogs": {
+        "createAssignment": "Create New Assignment",
+        "editAssignment": "Edit Assignment",
+        "createExam": "Schedule New Exam",
+        "editExam": "Edit Exam",
+        "cancel": "Cancel",
+        "create": "Create",
+        "update": "Update",
+        "schedule": "Schedule"
+      },
+      "errors": {
+        "fetchAssignments": "Failed to fetch assignments",
+        "fetchExams": "Failed to fetch exams",
+        "fetchStudents": "Failed to fetch students",
+        "fetchEvents": "Failed to fetch events",
+        "createAssignment": "Failed to create assignment",
+        "updateAssignment": "Failed to update assignment",
+        "deleteAssignment": "Failed to delete assignment",
+        "createExam": "Failed to create exam",
+        "updateExam": "Failed to update exam",
+        "deleteExam": "Failed to delete exam"
+      },
+      "placeholders": {
+        "unknown": "Unknown",
+        "student": "Student",
+        "notAvailable": "N/A",
+        "noData": "?"
+      }
+    }
+  },
+  "teacher": {
+    "welcome": "Welcome, {{name}}!",
+    "departmentTitle": "Teacher Dashboard - {{department}}",
+    "stats": {
+      "activeAssignments": "Active Assignments",
+      "upcomingExams": "Upcoming Exams",
+      "myStudents": "My Students",
+      "classesToday": "Classes Today"
+    },
+    "tabs": {
+      "assignments": "Assignments",
+      "exams": "Exams",
+      "myStudents": "My Students",
+      "schedule": "Schedule",
+      "announcements": "Announcements",
+      "events": "Events"
+    },
+    "assignments": {
+      "management": "Assignments Management",
+      "create": "Create Assignment",
+      "edit": "Edit Assignment",
+      "title": "Assignment Title",
+      "description": "Description",
+      "dueDate": "Due Date",
+      "totalMarks": "Total Marks",
+      "instructions": "Instructions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "due": "Due: {{date}}",
+      "marks": "Total Marks: {{marks}}"
+    },
+    "exams": {
+      "management": "Exams Management",
+      "schedule": "Schedule Exam",
+      "edit": "Edit Exam",
+      "title": "Exam Title",
+      "date": "Date",
+      "duration": "Duration",
+      "scheduled": "Scheduled",
+      "examDate": "Exam Date",
+      "durationMinutes": "{{duration}} min"
+    },
+    "students": {
+      "title": "My Students",
+      "name": "Student Name",
+      "id": "Student ID",
+      "rollNumber": "Roll Number",
+      "email": "Email",
+      "attendance": "Attendance",
+      "viewProfile": "View Profile",
+      "attendanceRate": "{{rate}}%"
+    },
+    "schedule": {
+      "title": "Class Schedule",
+      "description": "Your class schedule and timetable will be displayed here."
+    },
+    "events": {
+      "title": "School Events",
+      "noEvents": "No events found.",
+      "date": "Date: {{date}}",
+      "time": "Time: {{time}}",
+      "location": "Location: {{location}}",
+      "createdBy": "Created by: {{name}}"
+    },
+    "dialogs": {
+      "createAssignment": "Create New Assignment",
+      "editAssignment": "Edit Assignment",
+      "createExam": "Schedule New Exam",
+      "editExam": "Edit Exam",
+      "cancel": "Cancel",
+      "create": "Create",
+      "update": "Update",
+      "schedule": "Schedule"
+    },
+    "errors": {
+      "fetchAssignments": "Failed to fetch assignments",
+      "fetchExams": "Failed to fetch exams",
+      "fetchStudents": "Failed to fetch students",
+      "fetchEvents": "Failed to fetch events",
+      "createAssignment": "Failed to create assignment",
+      "updateAssignment": "Failed to update assignment",
+      "deleteAssignment": "Failed to delete assignment",
+      "createExam": "Failed to create exam",
+      "updateExam": "Failed to update exam",
+      "deleteExam": "Failed to delete exam"
+    }
   },
   "admins": {
     "title": "Admin Management",
@@ -533,6 +715,27 @@
       "canViewReports": "View Reports",
       "canManageSystem": "Manage System",
       "canManageClasses": "Manage Classes"
+    },
+    "table": {
+      "headers": {
+        "admin": "Admin",
+        "password": "Password",
+        "contact": "Contact",
+        "permissions": "Permissions",
+        "status": "Status",
+        "joined": "Joined",
+        "actions": "Actions"
+      }
+    },
+    "filters": {
+      "status": "Status",
+      "all": "All"
+    },
+    "pagination": {
+      "showing": "Showing",
+      "to": "to",
+      "of": "of",
+      "admins": "admins"
     }
   },
   "students": {
@@ -1290,6 +1493,7 @@
     "createdBy": "Created by",
     "createdAt": "Created at",
     "noAnnouncements": "No announcements available",
+    "announcements": "Announcements",
     "createAnnouncement": "Create Announcement",
     "editAnnouncement": "Edit Announcement",
     "fetchError": "Failed to fetch announcements",

@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Announcement {
   id: string;
@@ -58,6 +59,7 @@ export default function AnnouncementsWidget({
 }: AnnouncementsWidgetProps) {
   const { user, token } = useAuth();
   const { t, i18n } = useTranslation();
+  const { isRTL } = useLanguage();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -136,11 +138,11 @@ export default function AnnouncementsWidget({
 
   if (loading) {
     return (
-      <Card>
+      <Card sx={{ direction: isRTL ? 'rtl' : 'ltr' }}>
         <CardContent>
           <Box display="flex" justifyContent="center" alignItems="center" p={3}>
             <CircularProgress size={24} />
-            <Typography variant="body2" sx={{ ml: 1 }}>
+            <Typography variant="body2" sx={{ [isRTL ? 'mr' : 'ml']: 1 }}>
               {t('common.loading', 'Loading...')}
             </Typography>
           </Box>
@@ -151,7 +153,7 @@ export default function AnnouncementsWidget({
 
   if (error) {
     return (
-      <Card>
+      <Card sx={{ direction: isRTL ? 'rtl' : 'ltr' }}>
         <CardContent>
           <Alert severity="error">{error}</Alert>
         </CardContent>
@@ -162,18 +164,18 @@ export default function AnnouncementsWidget({
   const displayAnnouncements = showAll ? announcements : announcements.slice(0, maxItems);
 
   return (
-    <Card>
+    <Card sx={{ direction: isRTL ? 'rtl' : 'ltr' }}>
       <CardContent>
         <Box display="flex" alignItems="center" mb={2}>
-          <AnnouncementIcon color="primary" sx={{ mr: 1 }} />
+          <AnnouncementIcon color="primary" sx={{ [isRTL ? 'ml' : 'mr']: 1 }} />
           <Typography variant="h6" component="h2">
-            {t('announcements.announcements', 'Announcements')}
+            {t('announcementsSection.announcements', 'Announcements')}
           </Typography>
         </Box>
 
         {displayAnnouncements.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-            {t('announcements.noAnnouncements', 'No announcements available')}
+            {t('announcementsSection.noAnnouncements', 'No announcements available')}
           </Typography>
         ) : (
           <List>
@@ -191,9 +193,9 @@ export default function AnnouncementsWidget({
                       <Typography variant="subtitle2" component="h3" sx={{ mb: 0.5 }}>
                         {announcement.title}
                       </Typography>
-                      <Box display="flex" alignItems="center" gap={1} mb={1}>
+                      <Box display="flex" alignItems="center" gap={1} mb={1} flexDirection={isRTL ? 'row-reverse' : 'row'}>
                         <Chip
-                          label={t(`announcements.priority${announcement.priority}`, announcement.priority)}
+                          label={t(`announcementsSection.priority${announcement.priority.toUpperCase()}`, announcement.priority)}
                           color={getPriorityColor(announcement.priority)}
                           size="small"
                           icon={getPriorityIcon(announcement.priority)}
@@ -218,9 +220,9 @@ export default function AnnouncementsWidget({
                       {announcement.content}
                     </Typography>
                     <Box display="flex" justifyContent="space-between" alignItems="center">
-                      <Box display="flex" gap={0.5} flexWrap="wrap">
+                      <Box display="flex" gap={0.5} flexWrap="wrap" flexDirection={isRTL ? 'row-reverse' : 'row'}>
                         <Chip
-                          label={t(`announcements.priority.${announcement.priority}`, announcement.priority)}
+                          label={t(`announcementsSection.priority.${announcement.priority.toUpperCase()}`, announcement.priority)}
                           size="small"
                           variant="outlined"
                           color={getPriorityColor(announcement.priority.toUpperCase())}

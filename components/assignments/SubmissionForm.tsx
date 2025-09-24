@@ -24,13 +24,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import FileUpload from './FileUpload';
 
-interface AttachmentFile {
-  originalName: string;
-  fileName: string;
-  size: number;
-  type: string;
-  url: string;
-}
+import { AttachmentFile } from '@/types/attachments';
 
 interface Assignment {
   id: string;

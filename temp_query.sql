@@ -1,0 +1,1 @@
+SELECT * FROM "AcademicYear" ORDER BY "startDate" DESC;

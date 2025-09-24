@@ -140,6 +140,7 @@ export async function GET(request: NextRequest) {
     // Transform data for frontend
     const transformedStudents = students.map((student: any) => ({
       id: student.id,
+      studentRecordId: student.student?.id, // Add student record id
       user: {
         firstName: student.firstName || '',
         lastName: student.lastName || '',

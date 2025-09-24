@@ -79,7 +79,16 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 
-      if (pathname.startsWith('/academic') && userRole !== 'ADMIN' && userRole !== 'TEACHER') {
+      if (pathname.startsWith('/timetable')) {
+        // Allow teachers to access /timetable/teachers only
+        if (pathname === '/timetable/teachers' && userRole === 'TEACHER') {
+          return NextResponse.next();
+        }
+        // Allow admins to access all timetable routes
+        if (userRole === 'ADMIN') {
+          return NextResponse.next();
+        }
+        // Redirect others away from timetable routes
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 

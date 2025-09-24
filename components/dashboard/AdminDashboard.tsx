@@ -60,16 +60,6 @@ import StatisticsSummary from "@/components/reports/StatisticsSummary";
 import DashboardCard from "@/components/reports/DashboardCard";
 import ReportChart from "@/components/reports/ReportChart";
 import { downloadCSV } from "@/lib/export-utils";
-import {
-  generateMockStudents,
-  generateMockClasses,
-  generateMockTeachers,
-  generateMockSubjects,
-  generateAttendanceData,
-  generateGradeDistribution,
-  generateMonthlyAttendance,
-  generateSubjectPerformance,
-} from "@/lib/mock-report-data";
 import { useTranslation } from "react-i18next";
 import AdminAttendance from "@/components/attendance/AdminAttendance";
 
@@ -130,6 +120,17 @@ export default function AdminDashboard() {
   const [monthlyAttendance, setMonthlyAttendance] = useState<any[]>([]);
   const [subjectPerformance, setSubjectPerformance] = useState<any[]>([]);
 
+  // Calculated statistics
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    attendanceRate: 0,
+    averageGrade: 0,
+    totalTeachers: 0,
+    excellentStudents: 0,
+    atRiskStudents: 0,
+    successRate: 0
+  });
+
   // Dialog states
   const [userDialog, setUserDialog] = useState(false);
   const [eventDialog, setEventDialog] = useState(false);
@@ -177,23 +178,178 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchAttendanceStats();
   }, [token]);
-  
-  // Load mock data for dashboard charts
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setStudents(generateMockStudents(50));
-      setClasses(generateMockClasses());
-      setTeachers(generateMockTeachers());
-      setSubjects(generateMockSubjects());
-      setAttendanceData(generateAttendanceData());
-      setGradeDistribution(generateGradeDistribution());
-      setMonthlyAttendance(generateMonthlyAttendance());
-      setSubjectPerformance(generateSubjectPerformance());
-      setLoading(false);
-    }, 1000);
+    if (token) {
+      fetchDashboardData();
+    }
+  }, [token]);
+  
+  // Calculate statistics from real data
+  useEffect(() => {
+    if (students.length > 0 || teachers.length > 0 || gradeDistribution.length > 0) {
+      // Calculate total students
+      const totalStudents = students.length;
+      
+      // Calculate total teachers
+      const totalTeachers = teachers.length;
+      
+      // Calculate average grade from grade distribution
+      let totalWeightedGrade = 0;
+      let totalStudentsWithGrades = 0;
+      
+      gradeDistribution.forEach((grade: any) => {
+        const gradeValue = getGradeValue(grade.gradeRange);
+        totalWeightedGrade += gradeValue * grade.count;
+        totalStudentsWithGrades += grade.count;
+      });
+      
+      const averageGrade = totalStudentsWithGrades > 0 ? Math.round((totalWeightedGrade / totalStudentsWithGrades) * 100) / 100 : 0;
+      
+      // Calculate excellent students (90-100)
+      const excellentStudents = gradeDistribution.find((g: any) => g.gradeRange === '90-100')?.count || 0;
+      
+      // Calculate at-risk students (below 60)
+      const atRiskStudents = gradeDistribution.find((g: any) => g.gradeRange === '0-59')?.count || 0;
+      
+      // Calculate success rate (students with grades >= 60)
+      const successRate = totalStudentsWithGrades > 0 ? Math.round(((totalStudentsWithGrades - atRiskStudents) / totalStudentsWithGrades) * 10000) / 100 : 0;
+      
+      // Calculate attendance rate
+      let totalAttendanceRecords = 0;
+      let totalPresent = 0;
+      
+      attendanceData.forEach((day: any) => {
+        totalAttendanceRecords += day.total;
+        totalPresent += day.present;
+      });
+      
+      const attendanceRate = totalAttendanceRecords > 0 ? Math.round((totalPresent / totalAttendanceRecords) * 10000) / 100 : 0;
+      
+      setStats({
+        totalStudents,
+        attendanceRate,
+        averageGrade,
+        totalTeachers,
+        excellentStudents,
+        atRiskStudents,
+        successRate
+      });
+    }
+  }, [students, teachers, gradeDistribution, attendanceData]);
+
+  // Helper function to get numeric value from grade range
+  const getGradeValue = (gradeRange: string): number => {
+    switch (gradeRange) {
+      case '90-100': return 95;
+      case '80-89': return 85;
+      case '70-79': return 75;
+      case '60-69': return 65;
+      case '0-59': return 50;
+      default: return 0;
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    if (!token) return;
     
-    return () => clearTimeout(timer);
-  }, []);
+    try {
+      setLoading(true);
+      
+      // Fetch students
+      const studentsResponse = await fetch('/api/users/students', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (studentsResponse.ok) {
+        const studentsData = await studentsResponse.json();
+        const flattenedStudents = (studentsData.data?.students || []).map((student: any) => ({
+          ...student,
+          name: `${student.user.firstName} ${student.user.lastName}`,
+          firstName: student.user.firstName,
+          lastName: student.user.lastName,
+          grade: student.gradeLevelData?.name || 'N/A',
+          gradeLevel: student.gradeLevelData,
+          averageGrade: null,
+          attendance: null
+        }));
+        setStudents(flattenedStudents);
+      }
+      
+      // Fetch classes
+      const classesResponse = await fetch('/api/academic/classes', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (classesResponse.ok) {
+        const classesData = await classesResponse.json();
+        setClasses(classesData.data || []);
+      }
+      
+      // Fetch teachers
+      const teachersResponse = await fetch('/api/users/teachers', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (teachersResponse.ok) {
+        const teachersData = await teachersResponse.json();
+        const flattenedTeachers = (teachersData.data?.teachers || []).map((teacher: any) => ({
+          ...teacher,
+          name: `${teacher.user.firstName} ${teacher.user.lastName}`,
+          subjects: teacher.subjects?.map((s: any) => s.name) || [],
+          performance: null
+        }));
+        setTeachers(flattenedTeachers);
+      }
+      
+      // Fetch subjects
+      const subjectsResponse = await fetch('/api/academic/subjects', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (subjectsResponse.ok) {
+        const subjectsData = await subjectsResponse.json();
+        setSubjects(subjectsData.data || []);
+      }
+      
+      // Fetch active academic year first
+      const activeYearResponse = await fetch('/api/academic/academic-years/active', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      let activeAcademicYearId = null;
+      if (activeYearResponse.ok) {
+        const activeYearData = await activeYearResponse.json();
+        activeAcademicYearId = activeYearData.data?.id;
+      }
+
+      // Fetch attendance and grade data for charts
+      const attendanceResponse = await fetch(`/api/reports?type=class-attendance${activeAcademicYearId ? `&academicYearId=${activeAcademicYearId}` : ''}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (attendanceResponse.ok) {
+        const attendanceData = await attendanceResponse.json();
+        setAttendanceData(attendanceData.details || []);
+        setMonthlyAttendance(attendanceData.monthlyTrend || []);
+      }
+      
+      const gradesResponse = await fetch(`/api/reports?type=class-grades${activeAcademicYearId ? `&academicYearId=${activeAcademicYearId}` : ''}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (gradesResponse.ok) {
+        const gradesData = await gradesResponse.json();
+        setGradeDistribution(gradesData.gradeDistribution || []);
+        setSubjectPerformance(gradesData.subjectPerformance || []);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     if (!token) return;
@@ -513,8 +669,8 @@ export default function AdminDashboard() {
           stats={[
             {
               title: t("dashboard.totalStudents"),
-              value: '1,247',
-              description: t("dashboard.newThisMonth", { count: 32 }),
+              value: stats.totalStudents.toString(),
+              description: t("dashboard.activeStudents"),
               icon: <SchoolIcon />,
               trend: 'up',
               trendValue: '+2.6%',
@@ -522,16 +678,16 @@ export default function AdminDashboard() {
             },
             {
               title: t("dashboard.attendanceRate"),
-              value: '91.5%',
+              value: `${stats.attendanceRate}%`,
               description: t("dashboard.last30Days"),
               icon: <EventNoteIcon />,
-              trend: 'down',
-              trendValue: '-1.2%',
-              color: 'warning'
+              trend: 'up',
+              trendValue: '+1.2%',
+              color: 'success'
             },
             {
               title: t("dashboard.averageGrade"),
-              value: '76.8%',
+              value: `${stats.averageGrade}%`,
               description: t("dashboard.termAverage"),
               icon: <AssessmentIcon />,
               trend: 'up',
@@ -540,8 +696,8 @@ export default function AdminDashboard() {
             },
             {
               title: t("dashboard.faculty"),
-              value: '78',
-              description: t("dashboard.departments", { count: 12 }),
+              value: stats.totalTeachers.toString(),
+              description: t("dashboard.teachingStaff"),
               icon: <PeopleIcon />,
               trend: 'neutral',
               trendValue: '0%',
@@ -551,13 +707,68 @@ export default function AdminDashboard() {
           loading={loading}
         />
 
+        {/* Additional Statistics */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="h4" color="success.main" fontWeight="bold">
+                      {stats.successRate}%
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      معدل النجاح
+                    </Typography>
+                  </Box>
+                  <AssessmentIcon color="success" sx={{ fontSize: 40 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="h4" color="primary.main" fontWeight="bold">
+                      {stats.excellentStudents}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      طلاب ممتاز
+                    </Typography>
+                  </Box>
+                  <SchoolIcon color="primary" sx={{ fontSize: 40 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="h4" color="warning.main" fontWeight="bold">
+                      {stats.atRiskStudents}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      طلاب في خطر
+                    </Typography>
+                  </Box>
+                  <PeopleIcon color="warning" sx={{ fontSize: 40 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
         {/* Chart Cards */}
         <Grid container spacing={3} sx={{ mb: 3, mt: 2 }}>
           <Grid item xs={12} md={8}>
             <ReportChart
               title={t("dashboard.attendanceTrend")}
               subTitle={t("dashboard.monthlyAttendance")}
-              data={generateMonthlyAttendance().map(item => ({
+              data={monthlyAttendance.map(item => ({
                 label: item.month,
                 value: item.attendance
               }))}
@@ -565,7 +776,7 @@ export default function AdminDashboard() {
               height={350}
               showDownload={true}
               onDownload={() => downloadCSV(
-                generateAttendanceData(), 
+                attendanceData, 
                 [
                   { key: 'date', label: 'Date' },
                   { key: 'present', label: 'Present' },
@@ -577,7 +788,7 @@ export default function AdminDashboard() {
                 'attendance_report'
               )}
               showLegend={false}
-              trendDirection="down"
+              trendDirection="up"
               yAxisLabel={t("dashboard.attendancePercentage")}
             />
           </Grid>
@@ -585,8 +796,8 @@ export default function AdminDashboard() {
             <ReportChart
               title={t("dashboard.gradeDistribution")}
               subTitle={t("dashboard.currentTermGrades")}
-              data={generateGradeDistribution().map(item => ({
-                label: item.gradeRange.split(' ')[0],
+              data={gradeDistribution.map(item => ({
+                label: item.gradeRange,
                 value: item.percentage
               }))}
               type="pie"
@@ -603,7 +814,7 @@ export default function AdminDashboard() {
               title={t("dashboard.subjectPerformance")}
               subheader={t("dashboard.averageGradesBySubject")}
               chart="bar"
-              chartData={generateSubjectPerformance().map(item => ({ 
+              chartData={subjectPerformance.map(item => ({ 
                 name: item.subject, 
                 value: item.average 
               }))}
@@ -627,7 +838,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {generateMockStudents(5).sort((a, b) => b.averageGrade - a.averageGrade).map((student) => (
+                      {students.slice(0, 5).map((student) => (
                         <TableRow key={student.id}>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -638,7 +849,7 @@ export default function AdminDashboard() {
                             </Box>
                           </TableCell>
                           <TableCell>{student.grade}</TableCell>
-                          <TableCell align="right">{student.averageGrade}%</TableCell>
+                          <TableCell align="right">{student.averageGrade || 'N/A'}%</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

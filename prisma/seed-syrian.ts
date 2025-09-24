@@ -1725,7 +1725,7 @@ async function main() {
     console.log('📊 Creating attendance records...');
     const attendanceRecords = [];
     const startDate = new Date('2024-09-01');
-    const endDate = new Date('2024-12-31');
+    const endDate = new Date('2024-09-30'); // Just one month for testing
 
     for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
       // Skip weekends
@@ -1749,7 +1749,7 @@ async function main() {
             studentId: student.id,
             teacherId: classRoom.classTeacherId,
             classRoomId: classRoom.id,
-            timetableId: timetables[0].id, // Using first timetable entry
+            // timetableId: timetables[0].id, // Removed - causing issues
             date: new Date(date),
             status: status as any,
             remarks: status === 'LATE' ? 'متأخر' : status === 'ABSENT' ? 'غائب' : null

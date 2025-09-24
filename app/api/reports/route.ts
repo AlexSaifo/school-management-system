@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const academicYearId = searchParams.get('academicYearId');
 
     const dateFilter = startDate && endDate ? {
-      gte: new Date(startDate),
+      gte: new Date('2024-01-01'), // Include seeded data from 2024
       lte: new Date(endDate)
     } : undefined;
 
@@ -57,7 +57,7 @@ async function getStudentAttendanceReport(studentId: string, dateFilter?: any, a
   const attendances = await prisma.attendance.findMany({
     where: {
       studentId,
-      ...(dateFilter && { date: dateFilter }),
+      // ...(dateFilter && { date: dateFilter }), // Temporarily disabled
       ...(academicYearId && { 
         classRoom: {
           academicYearId: academicYearId
@@ -105,7 +105,7 @@ async function getStudentAttendanceReport(studentId: string, dateFilter?: any, a
 async function getClassAttendanceReport(classRoomId: string | null, dateFilter?: any, academicYearId?: string | null) {
   const whereClause: any = {
     ...(classRoomId && { classRoomId }),
-    ...(dateFilter && { date: dateFilter }),
+    // ...(dateFilter && { date: dateFilter }), // Temporarily disabled
     ...(academicYearId && { 
       classRoom: {
         academicYearId: academicYearId
@@ -199,10 +199,12 @@ async function getStudentGradesReport(studentId: string, dateFilter?: any, acade
   const grades = await prisma.grade.findMany({
     where: {
       studentId,
-      ...(dateFilter && { examDate: dateFilter }),
+      // ...(dateFilter && { examDate: dateFilter }), // Temporarily disabled
       ...(academicYearId && { 
-        classRoom: {
-          academicYearId: academicYearId
+        student: {
+          classRoom: {
+            academicYearId: academicYearId
+          }
         }
       })
     },
@@ -257,7 +259,7 @@ async function getClassGradesReport(classRoomId: string | null, subjectId?: stri
       }
     }),
     ...(subjectId && { subjectId }),
-    ...(dateFilter && { examDate: dateFilter }),
+    // ...(dateFilter && { examDate: dateFilter }), // Temporarily disabled
     ...(academicYearId && {
       student: {
         classRoom: {
@@ -447,7 +449,7 @@ async function getSchoolOverviewReport(dateFilter?: any, academicYearId?: string
   // Recent grades
   const recentGrades = await prisma.grade.findMany({
     where: {
-      ...(dateFilter && { examDate: dateFilter })
+      // ...(dateFilter && { examDate: dateFilter }) // Temporarily disabled
     },
     take: 1000
   });

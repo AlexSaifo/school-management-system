@@ -186,6 +186,36 @@ async function main() {
     console.log('📅 Creating academic years and semesters...');
     const academicYears = await Promise.all([
       prisma.academicYear.upsert({
+        where: { name: '2022-2023' },
+        update: {},
+        create: {
+          name: '2022-2023',
+          nameAr: '2022-2023',
+          startDate: new Date('2022-09-01'),
+          endDate: new Date('2023-06-30'),
+          status: 'COMPLETED',
+          isActive: false,
+          totalDays: 180,
+          completedDays: 180,
+          color: '#4caf50'
+        }
+      }),
+      prisma.academicYear.upsert({
+        where: { name: '2023-2024' },
+        update: {},
+        create: {
+          name: '2023-2024',
+          nameAr: '2023-2024',
+          startDate: new Date('2023-09-01'),
+          endDate: new Date('2024-06-30'),
+          status: 'COMPLETED',
+          isActive: false,
+          totalDays: 180,
+          completedDays: 180,
+          color: '#ff9800'
+        }
+      }),
+      prisma.academicYear.upsert({
         where: { name: '2024-2025' },
         update: {},
         create: {
@@ -203,6 +233,61 @@ async function main() {
     ]);
 
     const semesters = await Promise.all([
+      // 2022-2023 Semesters
+      prisma.semester.create({
+        data: {
+          name: 'First Semester 2022-2023',
+          nameAr: 'الفصل الدراسي الأول 2022-2023',
+          startDate: new Date('2022-09-01'),
+          endDate: new Date('2022-12-31'),
+          status: 'COMPLETED',
+          days: 90,
+          completedDays: 90,
+          isActive: false,
+          academicYearId: academicYears[0].id
+        }
+      }),
+      prisma.semester.create({
+        data: {
+          name: 'Second Semester 2022-2023',
+          nameAr: 'الفصل الدراسي الثاني 2022-2023',
+          startDate: new Date('2023-01-01'),
+          endDate: new Date('2023-06-30'),
+          status: 'COMPLETED',
+          days: 90,
+          completedDays: 90,
+          isActive: false,
+          academicYearId: academicYears[0].id
+        }
+      }),
+      // 2023-2024 Semesters
+      prisma.semester.create({
+        data: {
+          name: 'First Semester 2023-2024',
+          nameAr: 'الفصل الدراسي الأول 2023-2024',
+          startDate: new Date('2023-09-01'),
+          endDate: new Date('2023-12-31'),
+          status: 'COMPLETED',
+          days: 90,
+          completedDays: 90,
+          isActive: false,
+          academicYearId: academicYears[1].id
+        }
+      }),
+      prisma.semester.create({
+        data: {
+          name: 'Second Semester 2023-2024',
+          nameAr: 'الفصل الدراسي الثاني 2023-2024',
+          startDate: new Date('2024-01-01'),
+          endDate: new Date('2024-06-30'),
+          status: 'COMPLETED',
+          days: 90,
+          completedDays: 90,
+          isActive: false,
+          academicYearId: academicYears[1].id
+        }
+      }),
+      // 2024-2025 Semesters
       prisma.semester.create({
         data: {
           name: 'First Semester 2024-2025',
@@ -213,7 +298,7 @@ async function main() {
           days: 90,
           completedDays: 45,
           isActive: true,
-          academicYearId: academicYears[0].id
+          academicYearId: academicYears[2].id
         }
       }),
       prisma.semester.create({
@@ -226,7 +311,7 @@ async function main() {
           days: 90,
           completedDays: 0,
           isActive: false,
-          academicYearId: academicYears[0].id
+          academicYearId: academicYears[2].id
         }
       })
     ]);
@@ -622,7 +707,7 @@ async function main() {
           gradeLevelId_sectionNumber_academicYearId: {
             gradeLevelId: gradeLevels[0].id,
             sectionNumber: 1,
-            academicYearId: academicYears[0].id
+            academicYearId: academicYears[2].id
           }
         },
         update: {},
@@ -637,7 +722,7 @@ async function main() {
           floor: 1,
           capacity: 30,
           facilities: ['Whiteboard', 'Projector', 'Computers'],
-          academicYearId: academicYears[0].id,
+          academicYearId: academicYears[2].id,
           isActive: true
         }
       }),
@@ -646,7 +731,7 @@ async function main() {
           gradeLevelId_sectionNumber_academicYearId: {
             gradeLevelId: gradeLevels[0].id,
             sectionNumber: 2,
-            academicYearId: academicYears[0].id
+            academicYearId: academicYears[2].id
           }
         },
         update: {},
@@ -661,7 +746,7 @@ async function main() {
           floor: 1,
           capacity: 30,
           facilities: ['Whiteboard', 'Projector', 'Computers'],
-          academicYearId: academicYears[0].id,
+          academicYearId: academicYears[2].id,
           isActive: true
         }
       }),
@@ -670,7 +755,7 @@ async function main() {
           gradeLevelId_sectionNumber_academicYearId: {
             gradeLevelId: gradeLevels[1].id,
             sectionNumber: 1,
-            academicYearId: academicYears[0].id
+            academicYearId: academicYears[2].id
           }
         },
         update: {},
@@ -685,7 +770,7 @@ async function main() {
           floor: 2,
           capacity: 30,
           facilities: ['Whiteboard', 'Projector', 'Computers'],
-          academicYearId: academicYears[0].id,
+          academicYearId: academicYears[2].id,
           isActive: true
         }
       })
@@ -1056,9 +1141,11 @@ async function main() {
     ]);
 
     // 13. Create Attendance Records
-    console.log('📊 Skipping attendance records creation (temporarily disabled due to schema issues)...');
+    console.log('📊 Creating comprehensive attendance records...');
 
-    // 14. Create Assignments
+    // Clear existing attendance first
+    await prisma.attendance.deleteMany({});
+
     console.log('📝 Creating assignments...');
     const assignments = await Promise.all([
       prisma.assignment.create({
@@ -1207,34 +1294,57 @@ async function main() {
     ]);
 
     // 18. Create Grades
-    console.log('🎓 Creating grades...');
+    console.log('🎓 Creating comprehensive grades for all students...');
+
+    // Clear existing grades first
+    await prisma.grade.deleteMany({});
+
     const gradeRecords = [];
-    
-    // Create grades for all students in different subjects
-    for (const student of students.slice(0, 3)) { // Limit to first 3 students for demo
-      for (const subject of subjects.slice(0, 3)) { // Limit to first 3 subjects
-        // Create 2-3 grades per student per subject
-        const numGrades = Math.floor(Math.random() * 2) + 2;
+
+    // Create grades for ALL students in ALL subjects with realistic distribution
+    for (const student of students) {
+      for (const subject of subjects) {
+        // Create 2-4 grades per student per subject
+        const numGrades = Math.floor(Math.random() * 3) + 2;
+
         for (let i = 0; i < numGrades; i++) {
-          const marks = Math.floor(Math.random() * 40) + 60; // 60-100 range
+          // Realistic grade distribution:
+          // 20% A+ (90-100), 50% passing (60-89), 30% at risk (0-59)
+          let marks;
+          const rand = Math.random();
+
+          if (rand < 0.20) {
+            // A+ students: 90-100
+            marks = Math.floor(Math.random() * 11) + 90;
+          } else if (rand < 0.70) {
+            // Passing students: 60-89
+            marks = Math.floor(Math.random() * 30) + 60;
+          } else {
+            // At risk students: 0-59
+            marks = Math.floor(Math.random() * 60);
+          }
+
           gradeRecords.push({
             studentId: student.id,
             subjectId: subject.id,
             marks: marks,
             totalMarks: 100,
-            examType: i === 0 ? 'Midterm' : 'Quiz',
+            examType: i === 0 ? 'Midterm' : i === 1 ? 'Quiz' : 'Final',
             examDate: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000) // Random date in last 90 days
           });
         }
       }
     }
-    
+
+    console.log(`📊 Creating ${gradeRecords.length} grade records...`);
     await prisma.grade.createMany({
       data: gradeRecords
     });
 
     // 19. Create Attendance Records
     console.log('📊 Creating attendance records...');
+
+    // Clear existing attendance first (already done above)
     const attendanceRecords = [];
     
     // Create attendance for the last 30 days for all students

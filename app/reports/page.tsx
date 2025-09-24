@@ -454,11 +454,10 @@ export default function ReportsPage() {
               // Calculate average for each student
               setStudents(prevStudents =>
                 prevStudents.map(student => {
-                  const studentGrades = studentGradesMap.get(student.id) || [];
+                  const studentGrades = studentGradesMap.get(student.studentRecordId || student.id) || [];
                   if (studentGrades.length > 0) {
                     const totalMarks = studentGrades.reduce((sum: number, grade: any) => sum + Number(grade.marks), 0);
                     const average = totalMarks / studentGrades.length;
-                    console.log(`Calculated average for student ${student.id}: ${average}`);
                     return {
                       ...student,
                       averageGrade: Math.round(average * 100) / 100

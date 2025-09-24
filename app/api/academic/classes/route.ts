@@ -6,7 +6,7 @@ import { handleApiAuth } from '@/lib/api-auth';
 export async function GET(request: NextRequest) {
   try {
     // Use unified auth handler that checks both cookie and Authorization header
-    const authResult = await handleApiAuth(request);
+    const authResult = await handleApiAuth(request, true); // Require admin access
     if (!authResult.success) {
       return authResult.response!;
     }
