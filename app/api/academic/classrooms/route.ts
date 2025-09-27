@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     const classRooms = await prisma.classRoom.findMany({
       include: {
         gradeLevel: true,
+        academicYear: true,
         students: {
           select: { id: true }
         },
