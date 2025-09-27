@@ -286,6 +286,7 @@ model SpecialLocation {
   capacity    Int // Maximum students
   facilities  String[] // Special equipment/facilities
   description String? // Additional info
+  descriptionAr String? // Additional info in Arabic
   isActive    Boolean      @default(true)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
