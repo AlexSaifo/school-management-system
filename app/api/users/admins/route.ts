@@ -208,6 +208,22 @@ export async function PATCH(request: NextRequest) {
     // Validate request body
     const { action, userIds } = bulkActionSchema.parse(body);
     
+    // Get users to check for system administrator
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, email: true }
+    });
+    
+    // Filter out the system administrator
+    const filteredUserIds = users.filter(user => user.email !== 'admin@school.com').map(user => user.id);
+    
+    if (filteredUserIds.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot perform this action on the system administrator' },
+        { status: 403 }
+      );
+    }
+    
     let result;
     
     if (action === 'delete') {
@@ -216,14 +232,14 @@ export async function PATCH(request: NextRequest) {
         // Delete admin profiles
         await tx.admin.deleteMany({
           where: {
-            userId: { in: userIds },
+            userId: { in: filteredUserIds },
           },
         });
         
         // Delete users
         const deletedUsers = await tx.user.deleteMany({
           where: {
-            id: { in: userIds },
+            id: { in: filteredUserIds },
             role: 'ADMIN',
           },
         });
@@ -241,7 +257,7 @@ export async function PATCH(request: NextRequest) {
       
       result = await prisma.user.updateMany({
         where: {
-          id: { in: userIds },
+          id: { in: filteredUserIds },
           role: 'ADMIN',
         },
         data: {

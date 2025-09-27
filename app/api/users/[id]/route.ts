@@ -45,6 +45,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
+    // Prevent deactivating the system administrator
+    if (existingUser.email === 'admin@school.com' && userData.status && userData.status !== 'ACTIVE') {
+      return NextResponse.json({ error: 'Cannot deactivate the system administrator' }, { status: 403 });
+    }
+
     const result = await prisma.$transaction(async (tx: any) => {
       // Update base user
       const updatedUser = await tx.user.update({
@@ -138,6 +143,11 @@ export async function DELETE(
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Prevent deleting the system administrator
+    if (user.email === 'admin@school.com') {
+      return NextResponse.json({ error: 'Cannot delete the system administrator' }, { status: 403 });
     }
 
     // Don't allow deleting yourself

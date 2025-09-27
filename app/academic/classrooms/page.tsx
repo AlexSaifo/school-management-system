@@ -201,7 +201,7 @@ export default function ClassRoomManagementPage() {
         capacity: classRoom.capacity,
         facilities: classRoom.facilities,
         isActive: classRoom.isActive,
-        academicYearId: classRoom.academicYear.id
+        academicYearId: classRoom.academicYear
       });
     } else {
       setEditingClassRoom(null);

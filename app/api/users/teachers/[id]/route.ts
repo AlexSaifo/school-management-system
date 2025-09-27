@@ -136,6 +136,14 @@ export async function PATCH(
       );
     }
 
+    // Prevent deactivating the system administrator
+    if (existingUser.email === 'admin@school.com' && validatedData.status && validatedData.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot deactivate the system administrator' },
+        { status: 403 }
+      );
+    }
+
     // Check if email already exists (if trying to update email)
     if (validatedData.email && validatedData.email !== existingUser.email) {
       const emailExists = await prisma.user.findUnique({

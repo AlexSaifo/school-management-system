@@ -29,7 +29,7 @@ const updateAdminSchema = z.object({
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id } = params;
-    
+
     const admin = await prisma.user.findFirst({
       where: {
         id,
@@ -39,28 +39,25 @@ export async function GET(request: NextRequest, { params }: Params) {
         admin: true,
       },
     });
-    
+
     if (!admin) {
       return NextResponse.json(
         { success: false, error: 'Admin not found' },
         { status: 404 }
       );
     }
-    
+
     // Transform data for frontend
     const transformedAdmin = {
-      id: admin.id, // Use user.id for consistency
-      user: {
-        firstName: admin.firstName,
-        lastName: admin.lastName,
-        email: admin.email,
-        password: admin.password || '', // Include hashed password for admin display
-        phoneNumber: admin.phone || '',
-        address: admin.address || '',
-        isActive: admin.status === 'ACTIVE',
-        createdAt: admin.createdAt,
-        updatedAt: admin.updatedAt,
-      },
+      id: admin.id,
+      firstName: admin.firstName,
+      lastName: admin.lastName,
+      email: admin.email,
+      phoneNumber: admin.phone,
+      address: admin.address,
+      role: admin.role,
+      isActive: admin.status === 'ACTIVE',
+      createdAt: admin.createdAt,
       permissions: admin.admin?.permissions || {
         canManageUsers: false,
         canViewReports: false,
@@ -68,7 +65,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         canManageClasses: false,
       },
     };
-    
+
     return NextResponse.json({
       success: true,
       data: transformedAdmin,
@@ -82,14 +79,51 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const { id } = params;
     const body = await request.json();
-    
+
+    // Check if this is a toggle status request
+    if ('isActive' in body) {
+      const admin = await prisma.user.findFirst({
+        where: {
+          id,
+          role: 'ADMIN',
+        },
+      });
+
+      if (!admin) {
+        return NextResponse.json(
+          { success: false, error: 'Admin not found' },
+          { status: 404 }
+        );
+      }
+
+      // Prevent deactivating the system administrator
+      if (admin.email === 'admin@school.com' && !body.isActive) {
+        return NextResponse.json(
+          { success: false, error: 'Cannot deactivate the system administrator' },
+          { status: 403 }
+        );
+      }
+
+      const updatedAdmin = await prisma.user.update({
+        where: { id },
+        data: { status: body.isActive ? 'ACTIVE' : 'INACTIVE' },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Admin status updated successfully',
+        data: { id: updatedAdmin.id, isActive: updatedAdmin.status === 'ACTIVE' },
+      });
+    }
+
+    // Handle regular update using the existing logic
     // Validate request body
     const validatedData = updateAdminSchema.parse(body);
-    
+
     // Check if admin exists
     const existingAdmin = await prisma.user.findFirst({
       where: {
@@ -100,20 +134,28 @@ export async function PUT(request: NextRequest, { params }: Params) {
         admin: true,
       },
     });
-    
+
     if (!existingAdmin) {
       return NextResponse.json(
         { success: false, error: 'Admin not found' },
         { status: 404 }
       );
     }
-    
+
+    // Prevent deactivating the system administrator
+    if (existingAdmin.email === 'admin@school.com' && validatedData.isActive !== undefined && !validatedData.isActive) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot deactivate the system administrator' },
+        { status: 403 }
+      );
+    }
+
     // Check if email is being changed and already exists
     if (validatedData.email && validatedData.email !== existingAdmin.email) {
       const emailExists = await prisma.user.findUnique({
         where: { email: validatedData.email },
       });
-      
+
       if (emailExists) {
         return NextResponse.json(
           { success: false, error: 'Email already exists' },
@@ -121,11 +163,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
         );
       }
     }
-    
+
     // Prepare update data
     const userUpdateData: any = {};
     const adminUpdateData: any = {};
-    
+
     // User fields
     if (validatedData.firstName) userUpdateData.firstName = validatedData.firstName;
     if (validatedData.lastName) userUpdateData.lastName = validatedData.lastName;
@@ -140,41 +182,31 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     // Admin fields
-    if (validatedData.permissions) adminUpdateData.permissions = validatedData.permissions;    // Update with transaction
+    if (validatedData.permissions) adminUpdateData.permissions = validatedData.permissions;
+
+    // Update with transaction
     const result = await prisma.$transaction(async (tx: any) => {
       // Update user
       const updatedUser = await tx.user.update({
         where: { id },
         data: userUpdateData,
       });
-      
+
       // Update admin profile if admin data exists
-      let updatedAdmin = null;
-      if (Object.keys(adminUpdateData).length > 0) {
-        if (existingAdmin.admin) {
-          updatedAdmin = await tx.admin.update({
-            where: { userId: id },
-            data: adminUpdateData,
-          });
-        } else {
-          updatedAdmin = await tx.admin.create({
-            data: {
-              userId: id,
-              ...adminUpdateData,
-            },
-          });
-        }
+      if (existingAdmin.admin?.id && Object.keys(adminUpdateData).length > 0) {
+        await tx.admin.update({
+          where: { id: existingAdmin.admin.id },
+          data: adminUpdateData,
+        });
       }
-      
-      return { updatedUser, updatedAdmin };
+
+      return updatedUser;
     });
-    
+
     return NextResponse.json({
       success: true,
       message: 'Admin updated successfully',
-      data: {
-        id: result.updatedUser.id,
-      },
+      data: result,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -183,7 +215,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         { status: 400 }
       );
     }
-    
+
     console.error('Error updating admin:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to update admin' },
@@ -192,82 +224,51 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: Params) {
-  try {
-    const { id } = params;
-    const body = await request.json();
-    
-    // Check if this is a toggle status request
-    if ('isActive' in body) {
-      const admin = await prisma.user.findFirst({
-        where: {
-          id,
-          role: 'ADMIN',
-        },
-      });
-      
-      if (!admin) {
-        return NextResponse.json(
-          { success: false, error: 'Admin not found' },
-          { status: 404 }
-        );
-      }
-      
-      const updatedAdmin = await prisma.user.update({
-        where: { id },
-        data: { status: body.isActive ? 'ACTIVE' : 'INACTIVE' },
-      });
-      
-      return NextResponse.json({
-        success: true,
-        message: 'Admin status updated successfully',
-        data: { id: updatedAdmin.id, isActive: updatedAdmin.status === 'ACTIVE' },
-      });
-    }
-    
-    // Handle regular update using the existing PUT logic
-    return PUT(request, { params });
-  } catch (error) {
-    console.error('Error updating admin status:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update admin status' },
-      { status: 500 }
-    );
-  }
-}
-
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const { id } = params;
-    
+
     // Check if admin exists
-    const existingAdmin = await prisma.user.findFirst({
+    const admin = await prisma.user.findFirst({
       where: {
         id,
         role: 'ADMIN',
       },
+      include: {
+        admin: true,
+      },
     });
-    
-    if (!existingAdmin) {
+
+    if (!admin) {
       return NextResponse.json(
         { success: false, error: 'Admin not found' },
         { status: 404 }
       );
     }
-    
+
+    // Prevent deleting the system administrator
+    if (admin.email === 'admin@school.com') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot delete the system administrator' },
+        { status: 403 }
+      );
+    }
+
     // Delete admin with transaction
     await prisma.$transaction(async (tx: any) => {
       // Delete admin profile if exists
-      await tx.admin.deleteMany({
-        where: { userId: id },
-      });
-      
+      if (admin.admin?.id) {
+        await tx.admin.delete({
+          where: { id: admin.admin.id },
+        });
+      }
+
       // Delete user
       await tx.user.delete({
         where: { id },
       });
     });
-    
+
     return NextResponse.json({
       success: true,
       message: 'Admin deleted successfully',

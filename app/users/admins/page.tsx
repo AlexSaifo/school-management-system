@@ -45,6 +45,7 @@ import {
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import DataTable, { Column, Action } from '@/components/DataTable';
 import FilterPanel, { Filter, FilterOption, BulkAction } from '@/components/FilterPanel';
 import PageHeader from '@/components/PageHeader';
@@ -91,6 +92,7 @@ interface Admin {
 export default function AdminsPage() {
   const { user, token } = useAuth();
   const { isRTL, language } = useLanguage();
+  const { showSnackbar } = useSnackbar();
   const { t } = useTranslation();
   const locale = isRTL ? 'ar' : 'en-US'; // Use 'ar' instead of 'ar-SA' to avoid Hijri calendar as default
   // Define date format options to force Gregorian calendar
@@ -304,10 +306,12 @@ export default function AdminsPage() {
         if (response.ok) {
           fetchAdmins(pagination.current);
         } else {
-          console.error('Failed to delete admin');
+          const errorData = await response.json().catch(() => ({ error: t('admins.errors.deleteFailed') }));
+          showSnackbar(errorData.error || t('admins.errors.deleteFailed'), 'error');
         }
       } catch (error) {
         console.error('Error deleting admin:', error);
+        showSnackbar(t('admins.errors.deleteFailed'), 'error');
       }
     }
   };
@@ -325,11 +329,14 @@ export default function AdminsPage() {
 
       if (response.ok) {
         fetchAdmins(pagination.current);
+        showSnackbar(t('admins.success.statusUpdated'), 'success');
       } else {
-        console.error('Failed to toggle admin status');
+        const errorData = await response.json();
+        showSnackbar(errorData.error || t('admins.errors.statusUpdateFailed'), 'error');
       }
     } catch (error) {
       console.error('Error toggling admin status:', error);
+      showSnackbar(t('admins.errors.statusUpdateFailed'), 'error');
     }
   };
 
@@ -356,10 +363,12 @@ export default function AdminsPage() {
         setSelectedIds([]);
         fetchAdmins(pagination.current);
       } else {
-        console.error(`Failed to ${action} admins`);
+        const errorData = await response.json().catch(() => ({ error: t('admins.errors.bulkActionFailed') }));
+        showSnackbar(errorData.error || t('admins.errors.bulkActionFailed'), 'error');
       }
     } catch (error) {
       console.error(`Error ${action} admins:`, error);
+      showSnackbar(t('admins.errors.bulkActionFailed'), 'error');
     }
   };
 
