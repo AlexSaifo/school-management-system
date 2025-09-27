@@ -301,6 +301,37 @@ export default function AcademicYearPage() {
     }
   };
 
+  const handleDeleteSemester = async (semester: any) => {
+    if (!confirm(t('academic.confirmDeleteSemester', { name: semester.name }))) {
+      return;
+    }
+
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      const response = await fetch(`/api/academic/semesters/${semester.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        setError(err.error || t('Failed to delete semester'));
+        return;
+      }
+
+      await fetchAcademicYears();
+    } catch (e) {
+      console.error('Error deleting semester:', e);
+      setError(t('Failed to delete semester'));
+    }
+  };
+
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedYear(null);
@@ -602,6 +633,13 @@ export default function AcademicYearPage() {
                                   />
                                   <IconButton size="small" onClick={() => handleEdit(semester, 'semester')}>
                                     <Edit fontSize="inherit" />
+                                  </IconButton>
+                                  <IconButton 
+                                    size="small" 
+                                    color="error"
+                                    onClick={() => handleDeleteSemester(semester)}
+                                  >
+                                    <Delete fontSize="inherit" />
                                   </IconButton>
                                   <Chip 
                                     label={t(`academic.${semester.status.toLowerCase()}`)} 

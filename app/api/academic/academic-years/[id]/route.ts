@@ -176,6 +176,13 @@ export async function DELETE(
       include: {
         _count: {
           select: { classes: true, semesters: true }
+        },
+        semesters: {
+          include: {
+            _count: {
+              select: { assignments: true, exams: true, timetables: true, classes: true, subjects: true }
+            }
+          }
         }
       }
     });
@@ -187,9 +194,36 @@ export async function DELETE(
       );
     }
 
+    if (academicYear.isActive) {
+      return NextResponse.json(
+        { error: 'Cannot delete active academic year' },
+        { status: 400 }
+      );
+    }
+
     if (academicYear._count.classes > 0) {
       return NextResponse.json(
         { error: 'Cannot delete academic year with associated classes' },
+        { status: 400 }
+      );
+    }
+
+    // Check if any semester has associated data
+    const semesterWithData = academicYear.semesters.find(semester => 
+      semester._count.assignments > 0 || semester._count.exams > 0 || 
+      semester._count.timetables > 0 || semester._count.classes > 0 || semester._count.subjects > 0
+    );
+
+    if (semesterWithData) {
+      return NextResponse.json(
+        { error: 'Cannot delete academic year with semesters that have associated assignments, exams, timetables, classes, or subjects' },
+        { status: 400 }
+      );
+    }
+
+    if (academicYear.isActive) {
+      return NextResponse.json(
+        { error: 'Cannot delete active academic year' },
         { status: 400 }
       );
     }

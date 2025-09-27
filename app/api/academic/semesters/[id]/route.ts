@@ -78,8 +78,41 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const authResult = await handleApiAuth(request, true);
     if (!authResult.success) return authResult.response;
 
+    // Check if semester exists and get its details
+    const semester = await prisma.semester.findUnique({
+      where: { id: params.id },
+      include: {
+        _count: {
+          select: { assignments: true, exams: true, timetables: true, classes: true, subjects: true }
+        }
+      }
+    });
+
+    if (!semester) {
+      return NextResponse.json(
+        { error: 'Semester not found' },
+        { status: 404 }
+      );
+    }
+
+    if (semester.isActive) {
+      return NextResponse.json(
+        { error: 'Cannot delete active semester' },
+        { status: 400 }
+      );
+    }
+
+    // Check for associated data
+    if (semester._count.assignments > 0 || semester._count.exams > 0 || 
+        semester._count.timetables > 0 || semester._count.classes > 0 || semester._count.subjects > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete semester with associated assignments, exams, timetables, classes, or subjects' },
+        { status: 400 }
+      );
+    }
+
     await prisma.semester.delete({ where: { id: params.id } });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, message: 'Semester deleted successfully' });
   } catch (error) {
     console.error('Error deleting semester:', error);
     return NextResponse.json({ error: 'Failed to delete semester' }, { status: 500 });

@@ -181,6 +181,7 @@
     "first": "First",
     "second": "Second",
     "confirmDeleteYear": "Are you sure you want to delete this academic year?",
+    "confirmDeleteSemester": "Are you sure you want to delete this semester?",
     "classrooms": {
       "title": "Classroom Management",
       "subtitle": "Manage classroom sections and their rooms",
