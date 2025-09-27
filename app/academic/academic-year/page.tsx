@@ -270,6 +270,37 @@ export default function AcademicYearPage() {
     }
   };
 
+  const handleDelete = async (year: any) => {
+    if (!confirm(t('academic.confirmDeleteYear', { name: year.name }))) {
+      return;
+    }
+
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      const response = await fetch(`/api/academic/academic-years/${year.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        setError(err.error || t('Failed to delete academic year'));
+        return;
+      }
+
+      await fetchAcademicYears();
+    } catch (e) {
+      console.error('Error deleting academic year:', e);
+      setError(t('Failed to delete academic year'));
+    }
+  };
+
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedYear(null);
@@ -496,7 +527,11 @@ export default function AcademicYearPage() {
                           >
                             <Edit fontSize="small" />
                           </IconButton>
-                          <IconButton size="small" color="error">
+                          <IconButton 
+                            size="small" 
+                            color="error"
+                            onClick={() => handleDelete(year)}
+                          >
                             <Delete fontSize="small" />
                           </IconButton>
                         </Box>

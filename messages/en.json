@@ -180,6 +180,7 @@
     "currentSemester": "Current Semester",
     "first": "First",
     "second": "Second",
+    "confirmDeleteYear": "Are you sure you want to delete this academic year?",
     "classrooms": {
       "title": "Classroom Management",
       "subtitle": "Manage classroom sections and their rooms",

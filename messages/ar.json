@@ -180,6 +180,7 @@
     "currentSemester": "الفصل الحالي",
     "first": "الأول",
     "second": "الثاني",
+    "confirmDeleteYear": "هل أنت متأكد من حذف هذه السنة الأكاديمية؟",
     "classrooms": {
       "title": "إدارة الشعب",
       "subtitle": "إدارة الشعب الدراسية وغرفها",
