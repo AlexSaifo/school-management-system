@@ -195,29 +195,50 @@ export default function AssignmentsPage() {
 
   // Handle assignment submission (for students)
   const handleSubmitWork = async (assignment: Assignment, submissionData: any) => {
-    try {
-      const token = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('auth_token='))
-        ?.split('=')[1];
+    const token = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('auth_token='))
+      ?.split('=')[1];
 
-      const response = await fetch(`/api/assignments/submissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(submissionData),
-        credentials: 'include'
-      });
+    const response = await fetch(`/api/assignments/submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(submissionData),
+      credentials: 'include'
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit assignment');
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to submit assignment');
+    }
+
+    // Check if the response contains an error even with 200 status
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    await loadAssignments();
+    
+    // Refresh the selected assignment details if it's the same assignment
+    if (selectedAssignment && selectedAssignment.id === assignment.id) {
+      try {
+        const detailsResponse = await fetch(`/api/assignments/${assignment.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (detailsResponse.ok) {
+          const detailsData = await detailsResponse.json();
+          setSelectedAssignment(detailsData.assignment);
+        }
+      } catch (error) {
+        console.error('Error refreshing assignment details:', error);
       }
-
-      await loadAssignments();
-    } catch (error) {
-      console.error('Error submitting assignment:', error);
     }
   };
 

@@ -103,7 +103,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
   // Get submission status for students
   const submission = assignment.submissions?.[0];
   const hasSubmitted = !!submission;
-  const isGraded = submission?.marksObtained !== null;
+  const isGraded = hasSubmitted && submission?.marksObtained !== null;
   
   // Get submission count for teachers/admins
   const submissionCount = assignment._count?.submissions || assignment.submissions?.length || 0;

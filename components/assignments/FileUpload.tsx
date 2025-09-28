@@ -29,7 +29,7 @@ interface FileUploadProps {
   maxFileSize?: number; // in MB
   acceptedTypes?: string[];
   disabled?: boolean;
-  label?: string;
+  label: string;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
@@ -42,7 +42,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
     '.zip', '.rar', '.xlsx', '.xls', '.ppt', '.pptx'
   ],
   disabled = false,
-  label = 'Upload Files'
+  label
 }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,10 +53,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
     fileInputRef.current?.click();
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+  const formatFileSize = (bytes: number | undefined) => {
+    if (!bytes || bytes === 0) return `0 ${t('common.fileSize.B')}`;
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = [t('common.fileSize.B'), t('common.fileSize.KB'), t('common.fileSize.MB'), t('common.fileSize.GB')];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
@@ -65,13 +65,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
     // Check file size
     const fileSizeInMB = file.size / (1024 * 1024);
     if (fileSizeInMB > maxFileSize) {
-      return `File size must be less than ${maxFileSize}MB`;
+      return t('assignments.fileUpload.fileSizeTooLarge', 'File size must be less than {{size}}MB', { size: maxFileSize });
     }
 
     // Check file type
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!acceptedTypes.includes(fileExtension)) {
-      return `File type not allowed. Accepted types: ${acceptedTypes.join(', ')}`;
+      return t('assignments.fileUpload.fileTypeNotAllowed', 'File type not allowed. Accepted types: {{types}}', { types: acceptedTypes.join(', ') });
     }
 
     return null;
@@ -85,7 +85,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     // Check if adding these files would exceed max files limit
     if (attachments.length + files.length > maxFiles) {
-      setError(`Maximum ${maxFiles} files allowed`);
+      setError(t('assignments.fileUpload.maxFilesExceeded', 'Maximum {{max}} files allowed', { max: maxFiles }));
       return;
     }
 
@@ -120,7 +120,18 @@ const FileUpload: React.FC<FileUploadProps> = ({
       }
 
       const result = await response.json();
-      const newAttachments = [...attachments, ...result.files];
+      console.log('Upload result:', result);
+      
+      // Map API response to AttachmentFile format
+      const newAttachments = [...attachments, ...result.files.map((file: any) => ({
+        originalName: file.originalName,
+        fileName: file.fileName,
+        size: file.fileSize,
+        type: file.mimeType,
+        url: file.fileUrl
+      }))];
+      
+      console.log('New attachments:', newAttachments);
       onAttachmentsChange(newAttachments);
 
     } catch (error) {
@@ -153,7 +164,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     } catch (error) {
       console.error('Error deleting file:', error);
-      setError('Failed to delete file');
+      setError(t('assignments.fileUpload.deleteFile', 'Failed to delete file'));
     }
   };
 
@@ -201,7 +212,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         </Button>
 
         <Typography variant="caption" color="text.secondary">
-          {attachments.length}/{maxFiles} files • Max {maxFileSize}MB each
+          {t('assignments.fileUpload.filesCount', '{{current}}/{{max}} files', { current: attachments.length, max: maxFiles })} • {t('assignments.fileUpload.maxSizeEach', 'Max {{size}}MB each', { size: maxFileSize })}
         </Typography>
       </Box>
 
@@ -214,7 +225,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       {acceptedTypes.length > 0 && (
         <Box mb={2}>
           <Typography variant="caption" color="text.secondary">
-            Accepted types: {acceptedTypes.join(', ')}
+            {t('assignments.fileUpload.acceptedTypes', 'Accepted types')}: {acceptedTypes.join(', ')}
           </Typography>
         </Box>
       )}
@@ -251,7 +262,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     />
                   </Box>
                 }
-                secondary={attachment.type || 'Unknown type'}
+                secondary={attachment.type || t('assignments.fileUpload.unknownType', 'Unknown type')}
               />
               
               <ListItemSecondaryAction>
@@ -259,7 +270,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   edge="end"
                   onClick={() => handleDownloadFile(attachment)}
                   size="small"
-                  title="Download"
+                  title={t('assignments.fileUpload.downloadFile', 'Download file')}
                 >
                   <Download />
                 </IconButton>
@@ -269,7 +280,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     onClick={() => handleDeleteFile(attachment, index)}
                     size="small"
                     color="error"
-                    title="Delete"
+                    title={t('assignments.fileUpload.deleteFile', 'Delete file')}
                   >
                     <Delete />
                   </IconButton>

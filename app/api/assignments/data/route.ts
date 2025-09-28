@@ -18,6 +18,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    console.log('API request from user:', decoded);
+    console.log('User role:', decoded.role);
+    console.log('User ID:', decoded.userId);
+
     // Only teachers and admins can access this data
     if (decoded.role !== 'TEACHER' && decoded.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -203,9 +207,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (type === 'subjects') {
+      console.log('Fetching subjects for user:', decoded.userId, 'role:', decoded.role);
       let subjects;
 
       if (decoded.role === 'TEACHER') {
+        console.log('Looking up teacher with userId:', decoded.userId);
         const teacher = await prisma.teacher.findUnique({
           where: { userId: decoded.userId },
           include: {
@@ -217,19 +223,24 @@ export async function GET(request: NextRequest) {
           }
         });
 
-        if (!teacher) {
-          return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
+        console.log('Teacher found:', teacher ? 'YES' : 'NO');
+        if (teacher) {
+          console.log('Teacher subjects:', teacher.teacherSubjects.length);
+          subjects = teacher.teacherSubjects.map(ts => ts.subject);
+        } else {
+          console.log('No teacher record found for userId:', decoded.userId);
+          subjects = [];
         }
-
-        subjects = teacher.teacherSubjects.map(ts => ts.subject);
       } else {
         // Admins can see all subjects
+        console.log('User is admin, fetching all subjects');
         subjects = await prisma.subject.findMany({
           where: { isActive: true },
           orderBy: { name: 'asc' }
         });
       }
 
+      console.log('Returning subjects:', subjects.length);
       return NextResponse.json({ subjects });
     }
 

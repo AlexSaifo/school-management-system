@@ -168,7 +168,7 @@ export default function StudentDashboard() {
         setEvents(data.events || []);
       }
     } catch (error) {
-      setError('Failed to fetch dashboard data');
+      setError(t('studentDashboard.messages.failedToFetchData', 'Failed to fetch dashboard data'));
     } finally {
       setLoading(false);
     }
@@ -186,7 +186,7 @@ export default function StudentDashboard() {
         setTimetable(data.timetable || []);
       }
     } catch (error) {
-      setError('Failed to fetch timetable');
+      setError(t('studentDashboard.messages.failedToFetchTimetable', 'Failed to fetch timetable'));
     } finally {
       setLoading(false);
     }
@@ -204,7 +204,7 @@ export default function StudentDashboard() {
         setGrades(data.grades || []);
       }
     } catch (error) {
-      setError('Failed to fetch grades');
+      setError(t('studentDashboard.messages.failedToFetchGrades', 'Failed to fetch grades'));
     } finally {
       setLoading(false);
     }
@@ -222,7 +222,7 @@ export default function StudentDashboard() {
         setAttendance(data.attendance || []);
       }
     } catch (error) {
-      setError('Failed to fetch attendance');
+      setError(t('studentDashboard.messages.failedToFetchAttendance', 'Failed to fetch attendance'));
     } finally {
       setLoading(false);
     }
@@ -299,13 +299,13 @@ export default function StudentDashboard() {
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box>
             <Typography variant="h4" fontWeight="bold" gutterBottom>
-              Welcome, {user?.firstName}!
+              {t('studentDashboard.welcome', 'Welcome, {{name}}!', { name: user?.firstName })}
             </Typography>
             <Typography variant="h6" sx={{ opacity: 0.9 }}>
-              Student Dashboard - Grade 10-A
+              {t('studentDashboard.dashboardTitle', 'Student Dashboard')} - {t('studentDashboard.grade', 'Grade {{grade}}', { grade: '10-A' })}
             </Typography>
             <Typography variant="body1" sx={{ opacity: 0.8, mt: 1 }}>
-              Student ID: STU001 | Roll Number: 001
+              {t('studentDashboard.studentId', 'Student ID')}: STU001 | {t('studentDashboard.rollNumber', 'Roll Number')}: 001
             </Typography>
           </Box>
           <Avatar 
@@ -326,7 +326,7 @@ export default function StudentDashboard() {
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Overall Grade"
+            title={t('studentDashboard.stats.overallGrade', 'Overall Grade')}
             value={calculateOverallGrade()}
             icon={<Grade />}
             color="success"
@@ -335,29 +335,29 @@ export default function StudentDashboard() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Attendance"
+            title={t('studentDashboard.stats.attendance', 'Attendance')}
             value={`${calculateAttendancePercentage()}%`}
             icon={<CalendarToday />}
             color="primary"
-            subtitle="This semester"
+            subtitle={t('studentDashboard.stats.thisSemester', 'This semester')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Pending Assignments"
+            title={t('studentDashboard.stats.pendingAssignments', 'Pending Assignments')}
             value={getUpcomingAssignments().length}
             icon={<AssignmentIcon />}
             color="warning"
-            subtitle="Due this week"
+            subtitle={t('studentDashboard.stats.dueThisWeek', 'Due this week')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Notifications"
+            title={t('studentDashboard.stats.notifications', 'Notifications')}
             value="5"
             icon={<Notifications />}
             color="error"
-            subtitle="Unread messages"
+            subtitle={t('studentDashboard.stats.unreadMessages', 'Unread messages')}
           />
         </Grid>
       </Grid>
@@ -365,10 +365,10 @@ export default function StudentDashboard() {
       {/* Main Content */}
       <Paper sx={{ width: '100%' }}>
         <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tab label="Dashboard" />
-          <Tab label="Timetable" />
-          <Tab label="Grades" />
-          <Tab label="Attendance" />
+          <Tab label={t('studentDashboard.tabs.dashboard', 'Dashboard')} />
+          <Tab label={t('studentDashboard.tabs.timetable', 'Timetable')} />
+          <Tab label={t('studentDashboard.tabs.grades', 'Grades')} />
+          <Tab label={t('studentDashboard.tabs.attendance', 'Attendance')} />
         </Tabs>
 
         {/* Dashboard Tab */}
@@ -392,7 +392,7 @@ export default function StudentDashboard() {
               {/* Upcoming Assignments */}
               <Grid item xs={12} md={8}>
                 <Typography variant="h6" fontWeight="bold" mb={2}>
-                  Upcoming Assignments
+                  {t('studentDashboard.sections.upcomingAssignments', 'Upcoming Assignments')}
                 </Typography>
                 <List>
                   {getUpcomingAssignments().map((assignment) => (
@@ -415,18 +415,18 @@ export default function StudentDashboard() {
                               <Box display="flex" alignItems="center" gap={0.5}>
                                 <AccessTime fontSize="small" color="action" />
                                 <Typography variant="caption">
-                                  Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                                  {t('studentDashboard.assignments.due', 'Due: {{date}}', { date: new Date(assignment.dueDate).toLocaleDateString() })}
                                 </Typography>
                               </Box>
                               <Typography variant="caption">
-                                📊 {assignment.totalMarks} marks
+                                {t('studentDashboard.assignments.marks', '📊 {{marks}} marks', { marks: assignment.totalMarks })}
                               </Typography>
                             </Box>
                           </Box>
                         }
                       />
                       <Button variant="outlined" size="small">
-                        View Details
+                        {t('studentDashboard.actions.viewDetails', 'View Details')}
                       </Button>
                     </ListItem>
                   ))}
@@ -436,13 +436,13 @@ export default function StudentDashboard() {
               {/* Quick Stats */}
               <Grid item xs={12} md={4}>
                 <Typography variant="h6" fontWeight="bold" mb={2}>
-                  Quick Overview
+                  {t('studentDashboard.sections.quickOverview', 'Quick Overview')}
                 </Typography>
                 
                 <Card sx={{ mb: 2 }}>
                   <CardContent>
                     <Typography variant="subtitle2" gutterBottom>
-                      Attendance This Month
+                      {t('studentDashboard.sections.attendanceThisMonth', 'Attendance This Month')}
                     </Typography>
                     <Box display="flex" alignItems="center" gap={1} mb={1}>
                       <LinearProgress 
@@ -456,7 +456,7 @@ export default function StudentDashboard() {
                       </Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary">
-                      Excellent attendance record!
+                      {t('studentDashboard.sections.excellentAttendance', 'Excellent attendance record!')}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -464,7 +464,7 @@ export default function StudentDashboard() {
                 <Card>
                   <CardContent>
                     <Typography variant="subtitle2" gutterBottom>
-                      Recent Performance
+                      {t('studentDashboard.sections.recentPerformance', 'Recent Performance')}
                     </Typography>
                     {grades.slice(0, 3).map((grade) => (
                       <Box key={grade.id} display="flex" justifyContent="space-between" alignItems="center" mb={1}>
@@ -590,13 +590,13 @@ export default function StudentDashboard() {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Subject</TableCell>
-                    <TableCell>Exam Type</TableCell>
-                    <TableCell>Marks Obtained</TableCell>
-                    <TableCell>Total Marks</TableCell>
-                    <TableCell>Percentage</TableCell>
-                    <TableCell>Grade</TableCell>
-                    <TableCell>Date</TableCell>
+                    <TableCell>{t('common.subject', 'Subject')}</TableCell>
+                    <TableCell>{t('studentDashboard.grades.examType', 'Exam Type')}</TableCell>
+                    <TableCell>{t('studentDashboard.grades.marksObtained', 'Marks Obtained')}</TableCell>
+                    <TableCell>{t('studentDashboard.grades.totalMarks', 'Total Marks')}</TableCell>
+                    <TableCell>{t('common.percentage', 'Percentage')}</TableCell>
+                    <TableCell>{t('common.grade', 'Grade')}</TableCell>
+                    <TableCell>{t('common.date', 'Date')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

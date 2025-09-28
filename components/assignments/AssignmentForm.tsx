@@ -127,29 +127,15 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
 
   // Load data on mount
   useEffect(() => {
+    console.log('AssignmentForm open changed:', open);
     if (open) {
+      console.log('Loading form data...');
       loadFormData();
     }
   }, [open]);
 
-  // Initialize form when editing
-  useEffect(() => {
-    if (assignment) {
-      setFormData({
-        title: assignment.title || '',
-        description: assignment.description || '',
-        subjectId: assignment.subjectId || '',
-        classRoomIds: assignment.classRoomId ? [assignment.classRoomId] : [],
-        gradeId: '',
-        dueDate: assignment.dueDate ? dayjs(assignment.dueDate) : null,
-        totalMarks: assignment.totalMarks?.toString() || '',
-        instructions: assignment.instructions || '',
-        attachments: assignment.attachments || []
-      });
-    } else {
-      resetForm();
-    }
-  }, [assignment]);
+  console.log('Form data initialized:', formData);
+  console.log('Assignment prop:', assignment);
 
   // Reload classrooms when subject changes
   useEffect(() => {
@@ -196,12 +182,15 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
   }, [formData.gradeId, formData.subjectId, classrooms]);
 
   const loadFormData = async () => {
+    console.log('loadFormData called');
     setLoadingData(true);
     try {
       const token = document.cookie
         .split('; ')
         .find(row => row.startsWith('auth_token='))
         ?.split('=')[1];
+
+      console.log('Token found:', !!token);
 
       // Load subjects
       const subjectsRes = await fetch('/api/assignments/data?type=subjects', {
@@ -237,6 +226,7 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
     } catch (error) {
       console.error('Error loading form data:', error);
     } finally {
+      console.log('Data loading completed');
       setLoadingData(false);
     }
   };
@@ -428,7 +418,7 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
                     onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
                     label={t('assignments.form.subject')}
                   >
-                    {subjects.map((subject) => (
+                    {subjects.length > 0 ? subjects.map((subject) => (
                       <MenuItem key={subject.id} value={subject.id}>
                         <Box>
                           <Typography variant="body1">
@@ -439,7 +429,13 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
                           </Typography>
                         </Box>
                       </MenuItem>
-                    ))}
+                    )) : (
+                      <MenuItem disabled>
+                        <Typography color="error">
+                          No subjects available. User: {user?.role} (ID: {user?.id})
+                        </Typography>
+                      </MenuItem>
+                    )}
                   </Select>
                   {errors.subjectId && (
                     <Typography variant="caption" color="error" sx={{ mt: 1 }}>
@@ -511,7 +507,10 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
                       ))
                     ) : (
                       <MenuItem disabled>
-                        <ListItemText primary={t('common.noClassroomsAvailable') || 'No classrooms available'} />
+                        <ListItemText 
+                          primary={`No classrooms available. Filtered: ${filteredClassrooms.length}, Total: ${classrooms.length}`}
+                          secondary={`User: ${user?.role} (ID: ${user?.id})`}
+                        />
                       </MenuItem>
                     )}
                   </Select>

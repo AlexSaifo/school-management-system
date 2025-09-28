@@ -49,7 +49,13 @@
     "searchToFindResults": "Search to find results",
     "filters": "Filters",
     "minutes": "min",
-    "students": "students"
+    "students": "students",
+    "fileSize": {
+      "B": "B",
+      "KB": "KB",
+      "MB": "MB",
+      "GB": "GB"
+    }
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -646,6 +652,53 @@
       "deleteExam": "Failed to delete exam"
     }
   },
+  "studentDashboard": {
+    "welcome": "Welcome, {{name}}!",
+    "dashboardTitle": "Student Dashboard",
+    "grade": "Grade {{grade}}",
+    "studentId": "Student ID",
+    "rollNumber": "Roll Number",
+    "stats": {
+      "overallGrade": "Overall Grade",
+      "attendance": "Attendance",
+      "pendingAssignments": "Pending Assignments",
+      "notifications": "Notifications",
+      "thisSemester": "This semester",
+      "unreadMessages": "Unread messages",
+      "dueThisWeek": "Due this week"
+    },
+    "tabs": {
+      "dashboard": "Dashboard",
+      "timetable": "Timetable",
+      "grades": "Grades",
+      "attendance": "Attendance"
+    },
+    "sections": {
+      "upcomingAssignments": "Upcoming Assignments",
+      "quickOverview": "Quick Overview",
+      "attendanceThisMonth": "Attendance This Month",
+      "excellentAttendance": "Excellent attendance record!",
+      "recentPerformance": "Recent Performance"
+    },
+    "assignments": {
+      "due": "Due: {{date}}",
+      "marks": "📊 {{marks}} marks"
+    },
+    "grades": {
+      "marksObtained": "Marks Obtained",
+      "totalMarks": "Total Marks",
+      "examType": "Exam Type"
+    },
+    "actions": {
+      "viewDetails": "View Details"
+    },
+    "messages": {
+      "failedToFetchData": "Failed to fetch dashboard data",
+      "failedToFetchTimetable": "Failed to fetch timetable",
+      "failedToFetchGrades": "Failed to fetch grades",
+      "failedToFetchAttendance": "Failed to fetch attendance"
+    }
+  },
   "admins": {
     "title": "Admin Management",
     "subtitle": "Manage system administrators and their permissions",
@@ -1053,7 +1106,15 @@
     "marks": "Marks",
     "noDescription": "No description provided",
     "fileUploadComingSoon": "File upload functionality will be available soon",
-    "details": "Details",
+    "details": {
+      "title": "Title",
+      "subject": "Subject",
+      "teacher": "Teacher",
+      "dueDate": "Due Date",
+      "totalMarks": "Total Marks",
+      "instructions": "Instructions",
+      "attachments": "Attachments"
+    },
     "mySubmission": "My Submission",
     "gradeSubmissions": "Grade Submissions",
     "filter": {
@@ -1089,6 +1150,7 @@
       "attachmentsComingSoon": "File attachment functionality will be available soon"
     },
     "submission": {
+      "submit": "Submit",
       "submitAssignment": "Submit Assignment",
       "editSubmission": "Edit Submission",
       "updateSubmission": "Update Submission",
@@ -1111,7 +1173,9 @@
       "submissionFiles": "Submission Files",
       "studentSubmission": "Student Submission",
       "viewSubmission": "View Submission",
-      "enterText": "Enter your submission text here..."
+      "enterText": "Enter your submission text here...",
+      "submittedSuccessfully": "Assignment submitted successfully!",
+      "submitError": "Failed to submit assignment. Please try again."
     },
     "grading": {
       "gradeSubmission": "Grade Submission",
@@ -1134,7 +1198,20 @@
     },
     "studentDetails": "Student Details",
     "student": "Student",
-    "uploading": "Uploading..."
+    "uploading": "Uploading...",
+    "fileUpload": {
+      "uploadFiles": "Upload Files",
+      "viewFiles": "View Files",
+      "filesCount": "{{current}}/{{max}} files",
+      "maxSizeEach": "Max {{size}}MB each",
+      "acceptedTypes": "Accepted types",
+      "unknownType": "Unknown type",
+      "deleteFile": "Delete file",
+      "downloadFile": "Download file",
+      "maxFilesExceeded": "Maximum {{max}} files allowed",
+      "fileSizeTooLarge": "File size must be less than {{size}}MB",
+      "fileTypeNotAllowed": "File type not allowed. Accepted types: {{types}}"
+    }
   },
   "attendance": {
     "date": "Date",

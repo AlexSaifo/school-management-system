@@ -105,6 +105,7 @@ interface AssignmentDetailsProps {
   onGrade?: (submissionId: string, gradeData: any) => Promise<void>;
   userRole: string;
   loading?: boolean;
+  onSubmissionSuccess?: () => void;
 }
 
 interface TabPanelProps {
@@ -224,7 +225,7 @@ export const AssignmentDetails: React.FC<AssignmentDetailsProps> = ({
 
   const studentSubmission: SubmissionType | null = userRole === 'STUDENT' ? currentAssignment.submissions?.[0] || null : null;
   const hasSubmitted = !!studentSubmission;
-  const isGraded = studentSubmission?.marksObtained !== null;
+  const isGraded = hasSubmitted && studentSubmission?.marksObtained !== null;
 
   // Get status info
   const getStatusColor = () => {
@@ -346,7 +347,7 @@ export const AssignmentDetails: React.FC<AssignmentDetailsProps> = ({
             onChange={(e, newValue) => setTabValue(newValue)}
             aria-label="assignment tabs"
           >
-            <Tab label={t('assignments.details')} />
+            <Tab label={t('assignments.assignmentDetails')} />
             {userRole === 'STUDENT' && (
               <Tab label={t('assignments.mySubmission')} />
             )}
@@ -399,7 +400,7 @@ export const AssignmentDetails: React.FC<AssignmentDetailsProps> = ({
                         attachments={currentAssignment.attachments}
                         onAttachmentsChange={() => {}} // Read-only
                         disabled={true}
-                        label=""
+                        label={t('assignments.fileUpload.viewFiles')}
                       />
                     </Box>
                   )}
@@ -539,7 +540,7 @@ export const AssignmentDetails: React.FC<AssignmentDetailsProps> = ({
                         attachments={studentSubmission!.attachments}
                         onAttachmentsChange={() => {}} // Read-only
                         disabled={true}
-                        label=""
+                        label={t('assignments.fileUpload.viewFiles')}
                       />
                     </Box>
                   )}
@@ -582,7 +583,7 @@ export const AssignmentDetails: React.FC<AssignmentDetailsProps> = ({
                                 attachments={submission.attachments}
                                 onAttachmentsChange={() => {}} // Read-only
                                 disabled={true}
-                                label=""
+                                label={t('assignments.fileUpload.viewFiles')}
                               />
                             </Box>
                           )}
@@ -679,7 +680,7 @@ export const AssignmentDetails: React.FC<AssignmentDetailsProps> = ({
                           attachments={submission.attachments}
                           onAttachmentsChange={() => {}} // Read-only
                           disabled={true}
-                          label=""
+                          label={t('assignments.fileUpload.viewFiles')}
                         />
                       </Box>
                     )}

@@ -276,7 +276,7 @@ export const GradingForm: React.FC<GradingFormProps> = ({
               attachments={submission.attachments}
               onAttachmentsChange={() => {}} // Read-only
               disabled={true}
-              label=""
+              label={t('assignments.fileUpload.viewFiles')}
             />
           </Box>
         )}

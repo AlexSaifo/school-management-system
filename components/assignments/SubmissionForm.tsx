@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import FileUpload from './FileUpload';
 
 import { AttachmentFile } from '@/types/attachments';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 interface Assignment {
   id: string;
@@ -73,6 +74,15 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
   loading = false
 }) => {
   const { t } = useTranslation();
+  const { showSnackbar } = useSnackbar();
+  
+  const formatFileSize = (bytes: number) => {
+    if (!bytes || bytes === 0) return `0 ${t('common.fileSize.B')}`;
+    const k = 1024;
+    const sizes = [t('common.fileSize.B'), t('common.fileSize.KB'), t('common.fileSize.MB'), t('common.fileSize.GB')];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
   
   const [formData, setFormData] = useState({
     submissionText: existingSubmission?.content || '',
@@ -223,7 +233,7 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
                           {file.originalName}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {(file.size / 1024).toFixed(1)} KB
+                          {formatFileSize(file.size)}
                         </Typography>
                       </Box>
                       <Button
@@ -272,9 +282,17 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
         submissionText: formData.submissionText.trim() || null,
         attachments: formData.attachments
       });
-      handleClose();
-    } catch (error) {
+      
+      // Show success message and close modal after a short delay
+      showSnackbar(t('assignments.submission.submittedSuccessfully'), 'success');
+      setTimeout(() => {
+        handleClose();
+      }, 500);
+      
+    } catch (error: any) {
       console.error('Submission error:', error);
+      // Show error message
+      showSnackbar(error.message || t('assignments.submission.submitError'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -391,7 +409,7 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
                       {file.originalName}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {(file.size / 1024).toFixed(1)} KB
+                      {formatFileSize(file.size)}
                     </Typography>
                   </Box>
                   <Button
@@ -436,6 +454,7 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
               maxFiles={5}
               maxFileSize={10} // 10MB
               acceptedTypes={['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png']}
+              label={t('assignments.fileUpload.uploadFiles')}
             />
           </Box>
         </Box>

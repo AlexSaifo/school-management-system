@@ -175,7 +175,7 @@ const navigationItems: NavigationItem[] = [
     titleKey: "navigation.timetable",
     icon: <Schedule />,
     path: "/timetable",
-    roles: ["ADMIN", "TEACHER"],
+    roles: ["ADMIN", "TEACHER" , "STUDENT"],
     children: [
       {
         titleKey: "timetable.manage",
@@ -193,7 +193,7 @@ const navigationItems: NavigationItem[] = [
         titleKey: "timetable.classes",
         icon: <Class />,
         path: "/timetable/classes",
-        roles: ["ADMIN"],
+        roles: ["ADMIN" ],
       },
     ],
   },
