@@ -1769,7 +1769,8 @@
     "errorLoadingStudents": "Error loading students",
     "selectAtLeastOneStudent": "Please select at least one student",
     "selectTargetGradeAndYear": "Please select target grade and academic year",
-    "noStudentsFound": "No students found for the selected criteria"
+    "noStudentsFound": "No students found for the selected criteria",
+    "errorNoClassroomAvailable": "No available classroom found in target grade/year"
   },
   "language": {
     "switchLanguage": "Switch Language",

@@ -1664,7 +1664,8 @@
     "errorLoadingStudents": "خطأ في تحميل الطلاب",
     "selectAtLeastOneStudent": "يرجى اختيار طالب واحد على الأقل",
     "selectTargetGradeAndYear": "يرجى اختيار الصف والعام الدراسي المستهدف",
-    "noStudentsFound": "لم يتم العثور على طلاب للمعايير المحددة"
+    "noStudentsFound": "لم يتم العثور على طلاب للمعايير المحددة",
+    "errorNoClassroomAvailable": "لم يتم العثور على فصل متاح في الصف/العام الدراسي المستهدف"
   },
   "language": {
     "switchLanguage": "تغيير اللغة",

@@ -294,13 +294,35 @@ export default function StudentProgressionManager() {
         const data = await response.json();
         const successCount = data.results.filter((r: any) => r.success).length;
         const totalCount = data.results.length;
+        const failedResults = data.results.filter((r: any) => !r.success);
 
+        // Show success message
         showSnackbar(
           language === 'ar' 
             ? `تم معالجة ${successCount} من أصل ${totalCount} طالب بنجاح`
             : `Successfully processed ${successCount} out of ${totalCount} students`,
           successCount === totalCount ? 'success' : 'warning'
         );
+
+        // Show error messages for failed progressions
+        if (failedResults.length > 0) {
+          failedResults.forEach((result: any) => {
+            setTimeout(() => {
+              // Check if it's a known error and translate it
+              let errorMessage = result.error;
+              if (result.error.includes('No available classroom found')) {
+                errorMessage = t('studentProgression.errorNoClassroomAvailable');
+              }
+              
+              showSnackbar(
+                language === 'ar'
+                  ? `خطأ في معالجة الطالب: ${errorMessage}`
+                  : `Error processing student: ${errorMessage}`,
+                'error'
+              );
+            }, 1000); // Small delay to show after success message
+          });
+        }
 
         // Reload students to reflect changes
         loadStudents();
