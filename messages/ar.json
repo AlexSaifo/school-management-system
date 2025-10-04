@@ -1773,5 +1773,88 @@
     "switchLanguage": "تغيير اللغة",
     "arabic": "العربية",
     "english": "English"
+  },
+  "parentDashboard": {
+    "welcome": "مرحباً، {{name}}!",
+    "portalSubtitle": "بوابة أولياء الأمور - متابعة تقدم طفلك",
+    "childrenEnrolled_one": "{{count}} طفل مسجل",
+    "childrenEnrolled_other": "{{count}} أطفال مسجلون",
+    "selectChild": "اختر الطفل",
+    "rollNo": "رقم المتسلسل",
+    "overallPerformance": "الأداء العام",
+    "averageGrade": "متوسط التقدير: {{grade}}",
+    "attendanceRate": "معدل الحضور",
+    "thisMonth": "هذا الشهر",
+    "pendingTasks": "المهام المعلقة",
+    "assignmentsDue": "الواجبات المستحقة",
+    "newMessages": "رسائل جديدة",
+    "unreadCommunications": "اتصالات غير مقروءة",
+    "tabs": {
+      "overview": "نظرة عامة",
+      "performance": "الأداء",
+      "attendance": "الحضور",
+      "assignments": "الواجبات",
+      "communications": "الاتصالات",
+      "events": "الفعاليات"
+    },
+    "sendMessage": "إرسال رسالة",
+    "recentPerformance": "الأداء الأخير",
+    "recentActivity": "النشاط الأخير",
+    "due": "مستحق",
+    "score": "الدرجة",
+    "academicPerformance": "الأداء الأكاديمي",
+    "subject": "المادة",
+    "examType": "نوع الاختبار",
+    "marks": "العلامات",
+    "percentage": "النسبة",
+    "grade": "التقدير",
+    "date": "التاريخ",
+    "attendanceRecord": "سجل الحضور",
+    "overallAttendance": "الحضور الإجمالي",
+    "daysPresent": "أيام الحضور",
+    "daysAbsent": "أيام الغياب",
+    "classTeacher": "الفصل / المعلم",
+    "status": "الحالة",
+    "assignmentsTasks": "الواجبات والمهام",
+    "assignment": "الواجب",
+    "dueDate": "تاريخ الاستحقاق",
+    "messagesCommunications": "الرسائل والاتصالات",
+    "from": "من",
+    "reply": "رد",
+    "schoolEvents": "فعاليات المدرسة",
+    "noEvents": "لا توجد فعاليات.",
+    "eventDate": "التاريخ",
+    "eventTime": "الوقت",
+    "eventLocation": "الموقع",
+    "createdBy": "أنشئ بواسطة",
+    "cancel": "إلغاء",
+    "errors": {
+      "fetchChildren": "فشل في جلب بيانات الأطفال",
+      "fetchDashboard": "فشل في جلب بيانات لوحة التحكم",
+      "fetchCommunications": "فشل في جلب الاتصالات",
+      "fetchEvents": "فشل في جلب الفعاليات",
+      "sendMessage": "فشل في إرسال الرسالة"
+    },
+    "assignmentStatus": {
+      "PENDING": "قيد الانتظار",
+      "SUBMITTED": "تم التسليم",
+      "LATE": "متأخر"
+    },
+    "messageType": {
+      "TEACHER_MESSAGE": "رسالة من المعلم",
+      "SCHOOL_NOTICE": "إشعار المدرسة",
+      "FEE_REMINDER": "تذكير بالرسوم"
+    },
+    "to": {
+      "classTeacher": "معلم الفصل",
+      "subjectTeacher": "معلم المادة",
+      "principal": "المدير",
+      "admin": "الإدارة"
+    },
+    "form": {
+      "to": "إلى",
+      "subject": "الموضوع",
+      "message": "الرسالة"
+    }
   }
 }

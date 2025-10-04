@@ -207,13 +207,13 @@ const navigationItems: NavigationItem[] = [
     titleKey: "navigation.exams",
     icon: <Grade />,
     path: "/exams",
-    roles: ["TEACHER", "STUDENT", "PARENT"],
+    roles: ["TEACHER", "STUDENT"],
   },
   {
     titleKey: "navigation.attendance",
     icon: <CalendarMonth />,
     path: "/attendance",
-    roles: ["ADMIN", "TEACHER", "PARENT"],
+    roles: ["ADMIN", "TEACHER"],
   },
   {
     titleKey: "navigation.reports",

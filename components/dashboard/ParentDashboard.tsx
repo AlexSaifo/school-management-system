@@ -58,6 +58,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AnnouncementsWidget from '@/components/AnnouncementsWidget';
 import EventsWidget from '@/components/EventsWidget';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslation } from 'react-i18next';
 
 interface Child {
   id: string;
@@ -136,16 +137,16 @@ interface Event {
 export default function ParentDashboard() {
   const { user, token } = useAuth();
   const { language } = useLanguage();
+  const { t } = useTranslation();
   const [tabValue, setTabValue] = useState(0);
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [children, setChildren] = useState<Child[]>([]);
   const [performance, setPerformance] = useState<Performance[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [communications, setCommunications] = useState<Communication[]>([]);
+  // Communications removed per requirements
   const [events, setEvents] = useState<Event[]>([]);
-  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
-  const [newMessage, setNewMessage] = useState({ to: '', subject: '', message: '' });
+  // Messaging removed
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -155,12 +156,13 @@ export default function ParentDashboard() {
 
   useEffect(() => {
     if (selectedChild) {
-      if (tabValue === 0) fetchDashboardData();
-      else if (tabValue === 1) fetchPerformance();
+      if (tabValue === 0) {
+        // Overview: load all key datasets in parallel
+        fetchOverviewData();
+      } else if (tabValue === 1) fetchPerformance();
       else if (tabValue === 2) fetchAttendance();
       else if (tabValue === 3) fetchAssignments();
-      else if (tabValue === 4) fetchCommunications();
-      else if (tabValue === 5) fetchEvents();
+      else if (tabValue === 4) fetchEvents(); // Events tab index shifted after removing communications
     }
   }, [selectedChild, tabValue]);
 
@@ -179,97 +181,55 @@ export default function ParentDashboard() {
         }
       }
     } catch (error) {
-      setError('Failed to fetch children data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchDashboardData = async () => {
-    if (!token || !selectedChild) return;
-    setLoading(true);
-    try {
-      // Mock data - would fetch from actual API
-      setPerformance([
-        { subject: 'Mathematics', marks: 85, totalMarks: 100, examType: 'Mid-term', date: '2024-01-15', percentage: 85, grade: 'A' },
-        { subject: 'Science', marks: 92, totalMarks: 100, examType: 'Mid-term', date: '2024-01-15', percentage: 92, grade: 'A+' },
-        { subject: 'English', marks: 78, totalMarks: 100, examType: 'Mid-term', date: '2024-01-15', percentage: 78, grade: 'B+' },
-      ]);
-      setAttendance([
-        { 
-          date: '2024-01-22', 
-          status: 'PRESENT', 
-          teacher: { user: { firstName: 'John', lastName: 'Smith' } },
-          class: { name: 'Mathematics' }
-        },
-        { 
-          date: '2024-01-21', 
-          status: 'PRESENT', 
-          teacher: { user: { firstName: 'Sarah', lastName: 'Johnson' } },
-          class: { name: 'Science' }
-        },
-        { 
-          date: '2024-01-20', 
-          status: 'ABSENT', 
-          teacher: { user: { firstName: 'Mike', lastName: 'Davis' } },
-          class: { name: 'English' }
-        },
-      ]);
-      setAssignments([
-        { id: '1', title: 'Math Homework Chapter 5', subject: 'Mathematics', dueDate: '2024-01-25', status: 'PENDING', totalMarks: 20 },
-        { id: '2', title: 'Science Project', subject: 'Science', dueDate: '2024-01-28', status: 'SUBMITTED', marks: 18, totalMarks: 20 },
-      ]);
-    } catch (error) {
-      setError('Failed to fetch dashboard data');
+  setError(t('parentDashboard.errors.fetchChildren'));
     } finally {
       setLoading(false);
     }
   };
 
   const fetchPerformance = async () => {
-    // Mock implementation - would fetch actual performance data
-    fetchDashboardData();
+    if (!token || !selectedChild) return;
+    try {
+      const res = await fetch(`/api/parent/grades?studentId=${selectedChild}` , { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setPerformance(data.performance || []);
+      }
+    } catch (e) {
+      setError(t('parentDashboard.errors.fetchDashboard'));
+    }
   };
 
   const fetchAttendance = async () => {
-    // Mock implementation - would fetch actual attendance data
-    fetchDashboardData();
+    if (!token || !selectedChild) return;
+    try {
+      const res = await fetch(`/api/parent/attendance?studentId=${selectedChild}` , { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        const records = data.attendance?.records || [];
+        // Map API records to component shape
+        setAttendance(records.map((r: any) => ({
+          date: r.date,
+          status: r.status,
+          teacher: { user: { firstName: r.teacher?.firstName || '', lastName: r.teacher?.lastName || '' } },
+          class: { name: r.subject?.name || r.timeSlot?.name || 'Class' }
+        })));
+      }
+    } catch (e) {
+      setError(t('parentDashboard.errors.fetchDashboard'));
+    }
   };
 
   const fetchAssignments = async () => {
-    // Mock implementation - would fetch actual assignments data
-    fetchDashboardData();
-  };
-
-  const fetchCommunications = async () => {
-    if (!token) return;
-    setLoading(true);
+    if (!token || !selectedChild) return;
     try {
-      // Mock data - would fetch from actual API
-      setCommunications([
-        {
-          id: '1',
-          from: 'Ms. Johnson (Math Teacher)',
-          subject: 'Mid-term Exam Results',
-          message: 'Your child has performed excellently in the mid-term exam. Keep up the good work!',
-          date: '2024-01-20',
-          type: 'TEACHER_MESSAGE',
-          isRead: false,
-        },
-        {
-          id: '2',
-          from: 'School Administration',
-          subject: 'Parent-Teacher Meeting',
-          message: 'Parent-teacher meeting is scheduled for January 30th. Please confirm your attendance.',
-          date: '2024-01-18',
-          type: 'SCHOOL_NOTICE',
-          isRead: true,
-        },
-      ]);
-    } catch (error) {
-      setError('Failed to fetch communications');
-    } finally {
-      setLoading(false);
+      const res = await fetch(`/api/parent/assignments?studentId=${selectedChild}` , { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setAssignments(data.assignments || []);
+      }
+    } catch (e) {
+      setError(t('parentDashboard.errors.fetchDashboard'));
     }
   };
 
@@ -277,31 +237,29 @@ export default function ParentDashboard() {
     if (!token) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/events', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch('/api/events', { headers: { Authorization: `Bearer ${token}` } });
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events || []);
       }
     } catch (error) {
-      setError('Failed to fetch events');
+      setError(t('parentDashboard.errors.fetchEvents'));
     } finally {
       setLoading(false);
     }
   };
 
-  const sendMessage = async () => {
-    if (!token) return;
-    try {
-      // Mock implementation - would send actual message
-      setMessageDialogOpen(false);
-      setNewMessage({ to: '', subject: '', message: '' });
-      // Show success message
-    } catch (error) {
-      setError('Failed to send message');
-    }
+  const fetchOverviewData = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchPerformance(),
+      fetchAttendance(),
+      fetchAssignments(),
+      fetchEvents()
+    ]);
+    setLoading(false);
   };
+  // Communications & messaging removed
 
   const calculateOverallPerformance = () => {
     if (performance.length === 0) return 0;
@@ -364,13 +322,13 @@ export default function ParentDashboard() {
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box>
             <Typography variant="h4" fontWeight="bold" gutterBottom>
-              Welcome, {user?.firstName}!
+              {t('parentDashboard.welcome', { name: user?.firstName })}
             </Typography>
             <Typography variant="h6" sx={{ opacity: 0.9 }}>
-              Parent Portal - Monitoring Your Child's Progress
+              {t('parentDashboard.portalSubtitle')}
             </Typography>
             <Typography variant="body1" sx={{ opacity: 0.8, mt: 1 }}>
-              {children.length} {children.length === 1 ? 'child' : 'children'} enrolled
+              {t('parentDashboard.childrenEnrolled', { count: children.length })}
             </Typography>
           </Box>
           <Avatar 
@@ -393,11 +351,11 @@ export default function ParentDashboard() {
           <Box display="flex" alignItems="center" gap={2}>
             <FamilyRestroom color="primary" />
             <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel>Select Child</InputLabel>
+              <InputLabel>{t('parentDashboard.selectChild')}</InputLabel>
               <Select
                 value={selectedChild}
                 onChange={(e) => setSelectedChild(e.target.value)}
-                label="Select Child"
+                label={t('parentDashboard.selectChild')}
               >
                 {children.map((child) => (
                   <MenuItem key={child.id} value={child.id}>
@@ -409,7 +367,7 @@ export default function ParentDashboard() {
             {getCurrentChild() && (
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  Roll No: {getCurrentChild()?.rollNumber}
+                  {t('parentDashboard.rollNo')}: {getCurrentChild()?.rollNumber}
                 </Typography>
               </Box>
             )}
@@ -421,44 +379,34 @@ export default function ParentDashboard() {
         <>
           {/* Stats Overview */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <StatsCard
-                title="Overall Performance"
+                title={t('parentDashboard.overallPerformance')}
                 value={`${calculateOverallPerformance().toFixed(1)}%`}
                 icon={<TrendingUp />}
                 color="success"
-                subtitle="Average Grade: A-"
+                subtitle={t('parentDashboard.averageGrade', { grade: 'A-' })}
                 onClick={() => setTabValue(1)}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <StatsCard
-                title="Attendance Rate"
+                title={t('parentDashboard.attendanceRate')}
                 value={`${calculateAttendancePercentage()}%`}
                 icon={<CalendarToday />}
                 color="primary"
-                subtitle="This month"
+                subtitle={t('parentDashboard.thisMonth')}
                 onClick={() => setTabValue(2)}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <StatsCard
-                title="Pending Tasks"
+                title={t('parentDashboard.pendingTasks')}
                 value={assignments.filter(a => a.status === 'PENDING').length}
                 icon={<Assignment />}
                 color="warning"
-                subtitle="Assignments due"
+                subtitle={t('parentDashboard.assignmentsDue')}
                 onClick={() => setTabValue(3)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatsCard
-                title="New Messages"
-                value={communications.filter(c => !c.isRead).length}
-                icon={<Message />}
-                color="error"
-                subtitle="Unread communications"
-                onClick={() => setTabValue(4)}
               />
             </Grid>
           </Grid>
@@ -467,22 +415,12 @@ export default function ParentDashboard() {
           <Paper sx={{ width: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
               <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
-                <Tab label="Overview" />
-                <Tab label="Performance" />
-                <Tab label="Attendance" />
-                <Tab label="Assignments" />
-                <Tab label="Communications" />
-                <Tab label="Events" />
+                <Tab label={t('parentDashboard.tabs.overview')} />
+                <Tab label={t('parentDashboard.tabs.performance')} />
+                <Tab label={t('parentDashboard.tabs.attendance')} />
+                <Tab label={t('parentDashboard.tabs.assignments')} />
+                <Tab label={t('parentDashboard.tabs.events')} />
               </Tabs>
-              {tabValue === 4 && (
-                <Button
-                  variant="contained"
-                  startIcon={<Send />}
-                  onClick={() => setMessageDialogOpen(true)}
-                >
-                  Send Message
-                </Button>
-              )}
             </Box>
 
             {/* Overview Tab */}
@@ -506,7 +444,7 @@ export default function ParentDashboard() {
                   {/* Recent Performance */}
                   <Grid item xs={12} md={6}>
                     <Typography variant="h6" fontWeight="bold" mb={2}>
-                      Recent Performance
+                      {t('parentDashboard.recentPerformance')}
                     </Typography>
                     <Card>
                       <CardContent>
@@ -542,7 +480,7 @@ export default function ParentDashboard() {
                   {/* Recent Activity */}
                   <Grid item xs={12} md={6}>
                     <Typography variant="h6" fontWeight="bold" mb={2}>
-                      Recent Activity
+                      {t('parentDashboard.recentActivity')}
                     </Typography>
                     <List>
                       {assignments.slice(0, 3).map((assignment) => (
@@ -564,11 +502,11 @@ export default function ParentDashboard() {
                             secondary={
                               <Box>
                                 <Typography variant="caption" color="text.secondary">
-                                  {assignment.subject} • Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                                  {assignment.subject} • {t('parentDashboard.due')}: {new Date(assignment.dueDate).toLocaleDateString()}
                                 </Typography>
                                 {assignment.marks && (
                                   <Typography variant="caption" display="block">
-                                    Score: {assignment.marks}/{assignment.totalMarks}
+                                    {t('parentDashboard.score')}: {assignment.marks}/{assignment.totalMarks}
                                   </Typography>
                                 )}
                               </Box>
@@ -586,19 +524,19 @@ export default function ParentDashboard() {
             {tabValue === 1 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" fontWeight="bold" mb={3}>
-                  Academic Performance
+                  {t('parentDashboard.academicPerformance')}
                 </Typography>
                 
                 <TableContainer component={Paper} variant="outlined">
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Subject</TableCell>
-                        <TableCell>Exam Type</TableCell>
-                        <TableCell>Marks</TableCell>
-                        <TableCell>Percentage</TableCell>
-                        <TableCell>Grade</TableCell>
-                        <TableCell>Date</TableCell>
+                        <TableCell>{t('parentDashboard.subject')}</TableCell>
+                        <TableCell>{t('parentDashboard.examType')}</TableCell>
+                        <TableCell>{t('parentDashboard.marks')}</TableCell>
+                        <TableCell>{t('parentDashboard.percentage')}</TableCell>
+                        <TableCell>{t('parentDashboard.grade')}</TableCell>
+                        <TableCell>{t('parentDashboard.date')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -628,7 +566,7 @@ export default function ParentDashboard() {
             {tabValue === 2 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" fontWeight="bold" mb={3}>
-                  Attendance Record
+                  {t('parentDashboard.attendanceRecord')}
                 </Typography>
 
                 <Box mb={3}>
@@ -640,7 +578,7 @@ export default function ParentDashboard() {
                             {calculateAttendancePercentage()}%
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Overall Attendance
+                            {t('parentDashboard.overallAttendance')}
                           </Typography>
                         </CardContent>
                       </Card>
@@ -652,7 +590,7 @@ export default function ParentDashboard() {
                             {attendance.filter(a => a.status === 'PRESENT').length}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Days Present
+                            {t('parentDashboard.daysPresent')}
                           </Typography>
                         </CardContent>
                       </Card>
@@ -664,7 +602,7 @@ export default function ParentDashboard() {
                             {attendance.filter(a => a.status === 'ABSENT').length}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Days Absent
+                            {t('parentDashboard.daysAbsent')}
                           </Typography>
                         </CardContent>
                       </Card>
@@ -676,9 +614,9 @@ export default function ParentDashboard() {
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Class/Teacher</TableCell>
-                        <TableCell>Status</TableCell>
+                        <TableCell>{t('parentDashboard.date')}</TableCell>
+                        <TableCell>{t('parentDashboard.classTeacher')}</TableCell>
+                        <TableCell>{t('parentDashboard.status')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -706,18 +644,18 @@ export default function ParentDashboard() {
             {tabValue === 3 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" fontWeight="bold" mb={3}>
-                  Assignments & Tasks
+                  {t('parentDashboard.assignmentsTasks')}
                 </Typography>
                 
                 <TableContainer component={Paper} variant="outlined">
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Assignment</TableCell>
-                        <TableCell>Subject</TableCell>
-                        <TableCell>Due Date</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Score</TableCell>
+                        <TableCell>{t('parentDashboard.assignment')}</TableCell>
+                        <TableCell>{t('parentDashboard.subject')}</TableCell>
+                        <TableCell>{t('parentDashboard.dueDate')}</TableCell>
+                        <TableCell>{t('parentDashboard.status')}</TableCell>
+                        <TableCell>{t('parentDashboard.score')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -735,7 +673,7 @@ export default function ParentDashboard() {
                           </TableCell>
                           <TableCell>
                             <Chip 
-                              label={assignment.status}
+                              label={t(`parentDashboard.assignmentStatus.${assignment.status}`)}
                               color={assignment.status === 'SUBMITTED' ? 'success' : 
                                      assignment.status === 'PENDING' ? 'warning' : 'error'}
                               size="small"
@@ -755,65 +693,16 @@ export default function ParentDashboard() {
               </Box>
             )}
 
-            {/* Communications Tab */}
+            {/* Events Tab */}
             {tabValue === 4 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" fontWeight="bold" mb={3}>
-                  Messages & Communications
-                </Typography>
-                
-                <List>
-                  {communications.map((comm) => (
-                    <ListItem key={comm.id} divider sx={{ bgcolor: comm.isRead ? 'transparent' : 'action.hover' }}>
-                      <ListItemText
-                        primary={
-                          <Box display="flex" alignItems="center" gap={1} mb={1}>
-                            <Badge variant="dot" color="error" invisible={comm.isRead}>
-                              <Typography variant="subtitle1" fontWeight={comm.isRead ? 'normal' : 'bold'}>
-                                {comm.subject}
-                              </Typography>
-                            </Badge>
-                            <Chip 
-                              label={comm.type.replace('_', ' ')}
-                              size="small"
-                              color={comm.type === 'TEACHER_MESSAGE' ? 'primary' : 
-                                     comm.type === 'SCHOOL_NOTICE' ? 'info' : 'warning'}
-                            />
-                          </Box>
-                        }
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" gutterBottom>
-                              From: {comm.from}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" paragraph>
-                              {comm.message}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(comm.date).toLocaleDateString()} {new Date(comm.date).toLocaleTimeString()}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                      <Button variant="outlined" size="small">
-                        Reply
-                      </Button>
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-
-            {/* Events Tab */}
-            {tabValue === 5 && (
-              <Box sx={{ p: 3 }}>
-                <Typography variant="h5" fontWeight="bold" mb={3}>
-                  School Events
+                  {t('parentDashboard.schoolEvents')}
                 </Typography>
 
                 {events.length === 0 ? (
                   <Typography variant="body1" color="text.secondary" textAlign="center" py={4}>
-                    No events found.
+                    {t('parentDashboard.noEvents')}
                   </Typography>
                 ) : (
                   <Grid container spacing={2}>
@@ -836,18 +725,18 @@ export default function ParentDashboard() {
                             </Typography>
                             <Divider sx={{ my: 1 }} />
                             <Typography variant="body2">
-                              📅 Date: {new Date(event.eventDate).toLocaleDateString()}
+                              📅 {t('parentDashboard.eventDate')}: {new Date(event.eventDate).toLocaleDateString()}
                             </Typography>
                             <Typography variant="body2">
-                              🕐 Time: {event.eventTime}
+                              🕐 {t('parentDashboard.eventTime')}: {event.eventTime}
                             </Typography>
                             {event.location && (
                               <Typography variant="body2">
-                                📍 Location: {language === 'ar' && event.locationAr ? event.locationAr : event.location}
+                                📍 {t('parentDashboard.eventLocation')}: {language === 'ar' && event.locationAr ? event.locationAr : event.location}
                               </Typography>
                             )}
                             <Typography variant="body2" color="text.secondary">
-                              👤 Created by: {event.createdBy.firstName} {event.createdBy.lastName}
+                              👤 {t('parentDashboard.createdBy')}: {event.createdBy.firstName} {event.createdBy.lastName}
                             </Typography>
                           </CardContent>
                         </Card>
@@ -861,49 +750,7 @@ export default function ParentDashboard() {
         </>
       )}
 
-      {/* Send Message Dialog */}
-      <Dialog open={messageDialogOpen} onClose={() => setMessageDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Send Message</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>To</InputLabel>
-              <Select
-                value={newMessage.to}
-                onChange={(e) => setNewMessage({ ...newMessage, to: e.target.value })}
-                label="To"
-              >
-                <MenuItem value="class_teacher">Class Teacher</MenuItem>
-                <MenuItem value="subject_teacher">Subject Teacher</MenuItem>
-                <MenuItem value="principal">Principal</MenuItem>
-                <MenuItem value="admin">Administration</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              margin="normal"
-              label="Subject"
-              value={newMessage.subject}
-              onChange={(e) => setNewMessage({ ...newMessage, subject: e.target.value })}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              label="Message"
-              multiline
-              rows={4}
-              value={newMessage.message}
-              onChange={(e) => setNewMessage({ ...newMessage, message: e.target.value })}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setMessageDialogOpen(false)}>Cancel</Button>
-          <Button onClick={sendMessage} variant="contained" startIcon={<Send />}>
-            Send Message
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Messaging removed */}
     </Box>
   );
 }

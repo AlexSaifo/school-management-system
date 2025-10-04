@@ -1853,5 +1853,88 @@
     "switchLanguage": "Switch Language",
     "arabic": "العربية",
     "english": "English"
+  },
+  "parentDashboard": {
+    "welcome": "Welcome, {{name}}!",
+    "portalSubtitle": "Parent Portal - Monitoring Your Child's Progress",
+    "childrenEnrolled_one": "{{count}} child enrolled",
+    "childrenEnrolled_other": "{{count}} children enrolled",
+    "selectChild": "Select Child",
+    "rollNo": "Roll No",
+    "overallPerformance": "Overall Performance",
+    "averageGrade": "Average Grade: {{grade}}",
+    "attendanceRate": "Attendance Rate",
+    "thisMonth": "This month",
+    "pendingTasks": "Pending Tasks",
+    "assignmentsDue": "Assignments due",
+    "newMessages": "New Messages",
+    "unreadCommunications": "Unread communications",
+    "tabs": {
+      "overview": "Overview",
+      "performance": "Performance",
+      "attendance": "Attendance",
+      "assignments": "Assignments",
+      "communications": "Communications",
+      "events": "Events"
+    },
+    "sendMessage": "Send Message",
+    "recentPerformance": "Recent Performance",
+    "recentActivity": "Recent Activity",
+    "due": "Due",
+    "score": "Score",
+    "academicPerformance": "Academic Performance",
+    "subject": "Subject",
+    "examType": "Exam Type",
+    "marks": "Marks",
+    "percentage": "Percentage",
+    "grade": "Grade",
+    "date": "Date",
+    "attendanceRecord": "Attendance Record",
+    "overallAttendance": "Overall Attendance",
+    "daysPresent": "Days Present",
+    "daysAbsent": "Days Absent",
+    "classTeacher": "Class/Teacher",
+    "status": "Status",
+    "assignmentsTasks": "Assignments & Tasks",
+    "assignment": "Assignment",
+    "dueDate": "Due Date",
+    "messagesCommunications": "Messages & Communications",
+    "from": "From",
+    "reply": "Reply",
+    "schoolEvents": "School Events",
+    "noEvents": "No events found.",
+    "eventDate": "Date",
+    "eventTime": "Time",
+    "eventLocation": "Location",
+    "createdBy": "Created by",
+    "cancel": "Cancel",
+    "errors": {
+      "fetchChildren": "Failed to fetch children data",
+      "fetchDashboard": "Failed to fetch dashboard data",
+      "fetchCommunications": "Failed to fetch communications",
+      "fetchEvents": "Failed to fetch events",
+      "sendMessage": "Failed to send message"
+    },
+    "assignmentStatus": {
+      "PENDING": "Pending",
+      "SUBMITTED": "Submitted",
+      "LATE": "Late"
+    },
+    "messageType": {
+      "TEACHER_MESSAGE": "Teacher Message",
+      "SCHOOL_NOTICE": "School Notice",
+      "FEE_REMINDER": "Fee Reminder"
+    },
+    "to": {
+      "classTeacher": "Class Teacher",
+      "subjectTeacher": "Subject Teacher",
+      "principal": "Principal",
+      "admin": "Administration"
+    },
+    "form": {
+      "to": "To",
+      "subject": "Subject",
+      "message": "Message"
+    }
   }
 }
