@@ -1,14 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import CryptoJS from 'crypto-js';
+import { AES_SECRET_KEY } from '../lib/config';
 
 const prisma = new PrismaClient();
 
-// Static secret key for encryption (must match the one used in API)
-const SECRET_KEY = 'school-management-secret-key-2025';
-
-const encryptPassword = (password: string): string => {
-  return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
-};
+// Encryption utility (uses shared AES_SECRET_KEY)
+const encryptPassword = (password: string): string => CryptoJS.AES.encrypt(password, AES_SECRET_KEY).toString();
 
 async function main() {
   console.log('🔐 Setting default passwords for existing students...');

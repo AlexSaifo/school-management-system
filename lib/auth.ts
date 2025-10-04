@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import CryptoJS from 'crypto-js';
+import { JWT_SECRET, AES_SECRET_KEY } from './config';
 
 type Role = 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
-const AES_SECRET_KEY = process.env.AES_SECRET_KEY || 'your-secret-key-here';
+// Secrets now sourced from centralized config (lib/config.ts)
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
