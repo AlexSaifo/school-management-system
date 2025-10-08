@@ -230,6 +230,18 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Check if classRoomId exists
+    const classRoomExists = await prisma.classRoom.findUnique({
+      where: { id: validatedData.classRoomId },
+    });
+    
+    if (!classRoomExists) {
+      return NextResponse.json(
+        { success: false, error: 'Classroom not found' },
+        { status: 400 }
+      );
+    }
+    
     // Encrypt the provided password with static secret key
     const encryptedPassword = encryptPassword(validatedData.password);
     

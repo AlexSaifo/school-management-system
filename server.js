@@ -3,12 +3,40 @@ const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const os = require('os');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
+// HOST can be overridden (e.g., HOST=0.0.0.0) to allow LAN access
+const host = process.env.HOST || '0.0.0.0';
 const port = process.env.PORT || 3000;
 
-const app = next({ dev, hostname, port });
+function getLocalExternalIP() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return null;
+}
+
+function getAllExternalIPs() {
+  const nets = os.networkInterfaces();
+  const addrs = [];
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        addrs.push({ iface: name, address: net.address });
+      }
+    }
+  }
+  return addrs;
+}
+
+// Note: next()'s hostname option is optional; binding via httpServer.listen controls accessibility.
+const app = next({ dev, hostname: host, port });
 const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
@@ -23,9 +51,20 @@ app.prepare().then(() => {
     }
   });
 
+  // Allow multiple origins via env (comma separated) or relax in dev for easier LAN testing
+  const explicitOrigins = (process.env.SOCKET_CORS_ORIGIN || process.env.NEXTAUTH_URL || `http://localhost:${port}`)
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean);
+
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.NEXTAUTH_URL || `http://localhost:${port}`,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true); // Allow non-browser or same-origin requests
+        if (dev) return callback(null, true); // In dev, allow any origin (LAN convenience)
+        if (explicitOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+      },
       methods: ['GET', 'POST'],
       credentials: true
     }
@@ -39,7 +78,7 @@ app.prepare().then(() => {
         return next(new Error('Authentication token required'));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-jwt-secret');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
       socket.userId = decoded.userId;
       socket.userRole = decoded.role;
       next();
@@ -182,10 +221,12 @@ app.prepare().then(() => {
    * Broadcast a notification to target users based on roles and specific targeting
    */
   function broadcastNotification(notification) {
+    console.log('📢 Broadcasting notification:', notification.id, 'to roles:', notification.targetRoles, 'users:', notification.targetUsers);
     
     // Broadcast to role-based rooms
     notification.targetRoles.forEach(role => {
       const roomName = `notifications:${role}`;
+      console.log('📢 Broadcasting to room:', roomName);
       io.to(roomName).emit('new-notification', notification);
     });
 
@@ -193,6 +234,7 @@ app.prepare().then(() => {
     if (notification.targetUsers && notification.targetUsers.length > 0) {
       notification.targetUsers.forEach(userId => {
         const userRoom = `notifications:user:${userId}`;
+        console.log('📢 Broadcasting to user room:', userRoom);
         io.to(userRoom).emit('new-notification', notification);
       });
     }
@@ -243,7 +285,24 @@ app.prepare().then(() => {
       console.error(err);
       process.exit(1);
     })
-    .listen(port, () => {
-      console.log(`> Ready on http://${hostname}:${port}`);
+    .listen(port, host, () => {
+      const lanIP = getLocalExternalIP();
+      console.log('> Ready on:');
+      console.log(`   Local:    http://localhost:${port}`);
+      if (lanIP) {
+        console.log(`   Network:  http://${lanIP}:${port}`);
+        console.log('   (Use the Network URL from another device on the same LAN)');
+      }
+      const allIPs = getAllExternalIPs();
+      if (allIPs.length > 1) {
+        console.log('\nAll detected IPv4 interfaces:');
+        allIPs.forEach(ip => console.log(`   [${ip.iface}] http://${ip.address}:${port}`));
+        console.log('\nPick the Wi-Fi/Ethernet interface address (avoid Docker/WSL/Virtual adapters).');
+      }
+      if (dev) {
+        console.log('\nCORS: Development mode - all origins allowed for Socket.IO');
+      } else {
+        console.log(`\nCORS: Allowed origins => ${explicitOrigins.join(', ')}`);
+      }
     });
 });

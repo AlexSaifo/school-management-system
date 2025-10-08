@@ -61,16 +61,14 @@ export function useNotifications(): UseNotificationsReturn {
 
   // Handle new notification from socket
   useEffect(() => {
-    if (!isConnected) {
-      return;
-    }
-
     const unsubscribeNewNotification = onNewNotification((notification: Notification) => {
+      console.log('🔔 Received new notification:', notification.id, notification.title);
       
       setNotifications(prev => {
         // Check if notification already exists to avoid duplicates
         const exists = prev.some(n => n.id === notification.id);
         if (exists) {
+          console.log('🔔 Notification already exists, skipping');
           return prev;
         }
         
@@ -93,12 +91,10 @@ export function useNotifications(): UseNotificationsReturn {
     });
 
     return unsubscribeNewNotification;
-  }, [isConnected, onNewNotification]);
+  }, [onNewNotification]);
 
   // Handle notification read status updates
   useEffect(() => {
-    if (!isConnected) return;
-
     const unsubscribeNotificationRead = onNotificationRead((data: { notificationId: string; readBy: string }) => {
       if (data.readBy === user?.id) {
         // Mark notification as read locally
@@ -113,18 +109,16 @@ export function useNotifications(): UseNotificationsReturn {
     });
 
     return unsubscribeNotificationRead;
-  }, [isConnected, onNotificationRead, user?.id]);
+  }, [onNotificationRead, user?.id]);
 
   // Handle unread count updates
   useEffect(() => {
-    if (!isConnected) return;
-
     const unsubscribeUnreadCount = onUnreadCountUpdate((data: { count: number }) => {
       setUnreadCount(data.count);
     });
 
     return unsubscribeUnreadCount;
-  }, [isConnected, onUnreadCountUpdate]);
+  }, [onUnreadCountUpdate]);
 
   // Fetch initial notifications and unread count
   useEffect(() => {
@@ -152,13 +146,13 @@ export function useNotifications(): UseNotificationsReturn {
       // Decrease unread count
       setUnreadCount(prev => Math.max(0, prev - 1));
 
-      // Also call API to ensure persistence
-      await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
+      // TODO: Call API to ensure persistence when endpoint is available
+      // await fetch(`/api/notifications/${notificationId}/read`, {
+      //   method: 'PUT',
+      //   headers: {
+      //     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      //   },
+      // });
     } catch (err) {
       console.error('Error marking notification as read:', err);
       setError(err instanceof Error ? err.message : 'Failed to mark notification as read');

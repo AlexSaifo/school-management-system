@@ -336,6 +336,22 @@ async function main() {
         }
       }),
       // Teachers
+            prisma.user.upsert({
+        where: { email: 'teacher@school.com' },
+        update: {},
+        create: {
+          email: 'teacher@school.com',
+          password: hashedPassword,
+          role: 'TEACHER',
+          status: 'ACTIVE',
+          firstName: 'Khaled',
+          lastName: 'Mohammed',
+          phone: '+1234567891',
+          address: '123 Teacher Street, City, Country',
+          avatar: '/avatars/teacher.jpg'
+        }
+      }),
+
       prisma.user.upsert({
         where: { email: 'teacher1@school.com' },
         update: {},

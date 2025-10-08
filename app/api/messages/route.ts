@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-import { notificationService } from '@/lib/notification-service';
+import { NotificationService } from '@/lib/notification-service';
+
+// Initialize notification service with Prisma client
+const notificationService = new NotificationService(prisma);
 
 export async function POST(request: NextRequest) {
   try {
@@ -142,14 +145,20 @@ export async function POST(request: NextRequest) {
             // Set target users
             chatNotification.targetUsers = targetUsers;
 
+            // Save notification to database
+            await notificationService.saveNotification(chatNotification);
+
             // Broadcast notification
             if (global.socketNotifications) {
+              console.log('📢 Broadcasting chat notification to users:', targetUsers);
               global.socketNotifications.broadcastNotification(chatNotification);
               
               // Update unread counts for target users
               targetUsers.forEach(userId => {
                 global.socketNotifications?.updateUnreadCount(userId, 1);
               });
+            } else {
+              console.log('⚠️ socketNotifications not available for broadcasting');
             }
 
           }

@@ -75,10 +75,12 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   }
 
   return (
+    // @ts-ignore - Old react-intl version compatibility
     <IntlProvider
       locale={language}
       messages={messages}
       defaultLocale="ar"
+      key={language}
     >
       <LanguageContextProvider 
         language={language}

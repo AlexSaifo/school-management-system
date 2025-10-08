@@ -1,12 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 import CryptoJS from 'crypto-js';
+import { AES_SECRET_KEY, summarizeConfigForDebug } from '../lib/config';
 
 const prisma = new PrismaClient();
 
-// Static secret key for encryption (must match the one used in API)
-const SECRET_KEY = process.env.AES_SECRET_KEY || 'your-secret-key-here';
+// Use centralized AES secret to guarantee consistency with auth verification logic
+const SECRET_KEY = AES_SECRET_KEY;
 
-console.log('Using SECRET_KEY:', SECRET_KEY);
+console.log('Using AES_SECRET_KEY (preview):', SECRET_KEY.substring(0, 6) + '...');
+console.log('Config summary:', summarizeConfigForDebug());
 
 // Encryption utility
 const encryptPassword = (password: string): string => {

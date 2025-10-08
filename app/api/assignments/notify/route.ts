@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { notificationService } from '@/lib/notification-service';
+import { NotificationService } from '@/lib/notification-service';
 import jwt from 'jsonwebtoken';
+
+// Initialize notification service with Prisma client
+const notificationService = new NotificationService(prisma);
 
 // Helper to get user from token
 async function getUserFromToken(request: NextRequest) {
@@ -105,7 +108,7 @@ export async function POST(request: NextRequest) {
       global.socketNotifications.broadcastNotification(notification);
       
       // Update unread counts for target users
-      targetUsers.forEach(userId => {
+      targetUsers.forEach((userId: string) => {
         global.socketNotifications?.updateUnreadCount(userId, 1);
       });
     }

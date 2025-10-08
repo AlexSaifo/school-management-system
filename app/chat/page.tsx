@@ -155,8 +155,6 @@ const ChatPage: React.FC = () => {
 
   // WebSocket event handlers
   useEffect(() => {
-    if (!isConnected) return;
-
     // Handle new incoming messages
     const unsubscribeNewMessage = onNewMessage?.((message: Message) => {
       setMessages(prev => [...prev, message]);
@@ -167,7 +165,13 @@ const ChatPage: React.FC = () => {
 
     // Handle message confirmation (for sender)
     const unsubscribeMessageConfirmed = onMessageConfirmed?.((message: Message) => {
-      setMessages(prev => [...prev, message]);
+      setMessages(prev => {
+        // Check if message already exists to avoid duplication
+        if (prev.some(m => m.id === message.id)) {
+          return prev;
+        }
+        return [...prev, message];
+      });
       scrollToBottom();
     });
 
@@ -190,7 +194,7 @@ const ChatPage: React.FC = () => {
       unsubscribeUserTyping?.();
       unsubscribeUserStopTyping?.();
     };
-  }, [isConnected, selectedChatId, user?.id, onNewMessage, onMessageConfirmed, onUserTyping, onUserStopTyping]);
+  }, [selectedChatId, user?.id, onNewMessage, onMessageConfirmed, onUserTyping, onUserStopTyping]);
 
   // Join/leave chat rooms when selected chat changes
   useEffect(() => {
@@ -282,7 +286,7 @@ const ChatPage: React.FC = () => {
     replyToId?: string;
     attachments?: any[];
   }) => {
-    if (!selectedChatId || !isConnected) return;
+    if (!selectedChatId) return;
 
     try {
       // For WebSocket, we still need to send to API for persistence, but also emit via socket
@@ -306,8 +310,14 @@ const ChatPage: React.FC = () => {
       if (response.ok) {
         const result = await response.json();
         
-        // Send message via WebSocket to all participants
-        socketSendMessage(selectedChatId, result.data);
+        // Add message to local state immediately
+        setMessages(prev => [...prev, result.data]);
+        scrollToBottom();
+        
+        // Send message via WebSocket to all participants (only if connected)
+        if (isConnected) {
+          socketSendMessage(selectedChatId, result.data);
+        }
         
         setReplyTo(undefined);
         

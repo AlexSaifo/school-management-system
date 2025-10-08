@@ -198,6 +198,20 @@ export async function PATCH(
       }
     }
 
+    // Check if classRoomId exists (if trying to update classRoomId)
+    if (validatedData.classRoomId) {
+      const classRoomExists = await prisma.classRoom.findUnique({
+        where: { id: validatedData.classRoomId },
+      });
+
+      if (!classRoomExists) {
+        return NextResponse.json(
+          { success: false, error: 'Classroom not found' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update student with transaction
     const result = await prisma.$transaction(async (tx: any) => {
       // Update user data

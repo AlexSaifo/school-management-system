@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
 
     if (type === 'subjects') {
       console.log('Fetching subjects for user:', decoded.userId, 'role:', decoded.role);
-      let subjects;
+      let subjects: any[] = [];
 
       if (decoded.role === 'TEACHER') {
         console.log('Looking up teacher with userId:', decoded.userId);

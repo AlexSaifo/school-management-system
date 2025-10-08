@@ -51,6 +51,22 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const { user } = useAuth();
 
+  // Store callback functions to set up listeners when socket connects
+  const [chatCallbacks, setChatCallbacks] = useState<{
+    newMessage?: (message: any) => void;
+    messageConfirmed?: (message: any) => void;
+    messageReadUpdate?: (data: any) => void;
+    userTyping?: (data: any) => void;
+    userStopTyping?: (data: any) => void;
+    userStatusUpdate?: (data: any) => void;
+  }>({});
+
+  const [notificationCallbacks, setNotificationCallbacks] = useState<{
+    newNotification?: (notification: Notification) => void;
+    notificationRead?: (data: { notificationId: string; readBy: string }) => void;
+    unreadCountUpdate?: (data: { count: number }) => void;
+  }>({});
+
   useEffect(() => {
     if (!user) return;
 
@@ -83,6 +99,37 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         (window as any).socket = newSocket;
       }
       
+      // Set up chat event listeners if callbacks are registered
+      if (chatCallbacks.newMessage) {
+        newSocket.on('new-message', chatCallbacks.newMessage);
+      }
+      if (chatCallbacks.messageConfirmed) {
+        newSocket.on('message-confirmed', chatCallbacks.messageConfirmed);
+      }
+      if (chatCallbacks.messageReadUpdate) {
+        newSocket.on('message-read-update', chatCallbacks.messageReadUpdate);
+      }
+      if (chatCallbacks.userTyping) {
+        newSocket.on('user-typing', chatCallbacks.userTyping);
+      }
+      if (chatCallbacks.userStopTyping) {
+        newSocket.on('user-stop-typing', chatCallbacks.userStopTyping);
+      }
+      if (chatCallbacks.userStatusUpdate) {
+        newSocket.on('user-status-update', chatCallbacks.userStatusUpdate);
+      }
+
+      // Set up notification event listeners if callbacks are registered
+      if (notificationCallbacks.newNotification) {
+        newSocket.on('new-notification', notificationCallbacks.newNotification);
+      }
+      if (notificationCallbacks.notificationRead) {
+        newSocket.on('notification-read', notificationCallbacks.notificationRead);
+      }
+      if (notificationCallbacks.unreadCountUpdate) {
+        newSocket.on('unread-count', notificationCallbacks.unreadCountUpdate);
+      }
+      
       // Automatically join notification rooms based on user role
       if (user?.role) {
         const userRoles: TargetRole[] = [TargetRole.ALL];
@@ -113,6 +160,9 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       if (typeof window !== 'undefined' && (window as any).socket === newSocket) {
         delete (window as any).socket;
       }
+
+      // Remove all listeners when disconnected
+      newSocket.removeAllListeners();
     });
 
     newSocket.on('connect_error', (error) => {
@@ -166,46 +216,95 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   }, [socket, isConnected]);
 
   const onNewMessage = useCallback((callback: (message: any) => void) => {
-    if (socket) {
+    setChatCallbacks(prev => ({ ...prev, newMessage: callback }));
+    
+    // If socket is already connected, set up the listener immediately
+    if (socket && isConnected) {
       socket.on('new-message', callback);
-      return () => socket.off('new-message', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setChatCallbacks(prev => ({ ...prev, newMessage: undefined }));
+      if (socket) {
+        socket.off('new-message', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   const onMessageConfirmed = useCallback((callback: (message: any) => void) => {
-    if (socket) {
+    setChatCallbacks(prev => ({ ...prev, messageConfirmed: callback }));
+    
+    if (socket && isConnected) {
       socket.on('message-confirmed', callback);
-      return () => socket.off('message-confirmed', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setChatCallbacks(prev => ({ ...prev, messageConfirmed: undefined }));
+      if (socket) {
+        socket.off('message-confirmed', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   const onMessageReadUpdate = useCallback((callback: (data: any) => void) => {
-    if (socket) {
+    setChatCallbacks(prev => ({ ...prev, messageReadUpdate: callback }));
+    
+    if (socket && isConnected) {
       socket.on('message-read-update', callback);
-      return () => socket.off('message-read-update', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setChatCallbacks(prev => ({ ...prev, messageReadUpdate: undefined }));
+      if (socket) {
+        socket.off('message-read-update', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   const onUserTyping = useCallback((callback: (data: any) => void) => {
-    if (socket) {
+    setChatCallbacks(prev => ({ ...prev, userTyping: callback }));
+    
+    if (socket && isConnected) {
       socket.on('user-typing', callback);
-      return () => socket.off('user-typing', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setChatCallbacks(prev => ({ ...prev, userTyping: undefined }));
+      if (socket) {
+        socket.off('user-typing', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   const onUserStopTyping = useCallback((callback: (data: any) => void) => {
-    if (socket) {
+    setChatCallbacks(prev => ({ ...prev, userStopTyping: callback }));
+    
+    if (socket && isConnected) {
       socket.on('user-stop-typing', callback);
-      return () => socket.off('user-stop-typing', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setChatCallbacks(prev => ({ ...prev, userStopTyping: undefined }));
+      if (socket) {
+        socket.off('user-stop-typing', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   const onUserStatusUpdate = useCallback((callback: (data: any) => void) => {
-    if (socket) {
+    setChatCallbacks(prev => ({ ...prev, userStatusUpdate: callback }));
+    
+    if (socket && isConnected) {
       socket.on('user-status-update', callback);
-      return () => socket.off('user-status-update', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setChatCallbacks(prev => ({ ...prev, userStatusUpdate: undefined }));
+      if (socket) {
+        socket.off('user-status-update', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   // Notification methods
   const joinNotifications = useCallback((roles: TargetRole[]) => {
@@ -227,25 +326,49 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   }, [socket, isConnected]);
 
   const onNewNotification = useCallback((callback: (notification: Notification) => void) => {
-    if (socket) {
+    setNotificationCallbacks(prev => ({ ...prev, newNotification: callback }));
+    
+    if (socket && isConnected) {
       socket.on('new-notification', callback);
-      return () => socket.off('new-notification', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setNotificationCallbacks(prev => ({ ...prev, newNotification: undefined }));
+      if (socket) {
+        socket.off('new-notification', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   const onNotificationRead = useCallback((callback: (data: { notificationId: string; readBy: string }) => void) => {
-    if (socket) {
+    setNotificationCallbacks(prev => ({ ...prev, notificationRead: callback }));
+    
+    if (socket && isConnected) {
       socket.on('notification-read', callback);
-      return () => socket.off('notification-read', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setNotificationCallbacks(prev => ({ ...prev, notificationRead: undefined }));
+      if (socket) {
+        socket.off('notification-read', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   const onUnreadCountUpdate = useCallback((callback: (data: { count: number }) => void) => {
-    if (socket) {
+    setNotificationCallbacks(prev => ({ ...prev, unreadCountUpdate: callback }));
+    
+    if (socket && isConnected) {
       socket.on('unread-count', callback);
-      return () => socket.off('unread-count', callback);
     }
-  }, [socket]);
+    
+    return () => {
+      setNotificationCallbacks(prev => ({ ...prev, unreadCountUpdate: undefined }));
+      if (socket) {
+        socket.off('unread-count', callback);
+      }
+    };
+  }, [socket, isConnected]);
 
   const value: SocketContextType = {
     socket,

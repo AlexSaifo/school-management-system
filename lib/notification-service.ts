@@ -14,7 +14,7 @@ import {
   AttendanceAlertNotification,
   ChatMessageNotification
 } from '@/types/notifications';
-import { User, Event, Announcement, Assignment, Exam, Student, Teacher } from '@prisma/client';
+import { User, Event, Announcement, Assignment, Exam, Student, Teacher, PrismaClient } from '@prisma/client';
 
 interface NotificationData {
   user: User;
@@ -23,15 +23,53 @@ interface NotificationData {
 }
 
 export class NotificationService {
-  private static instance: NotificationService;
+  private prisma: PrismaClient;
 
-  private constructor() {}
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
+  }
 
-  public static getInstance(): NotificationService {
-    if (!NotificationService.instance) {
-      NotificationService.instance = new NotificationService();
+  /**
+   * Save a notification to the database and create user notifications
+   */
+  public async saveNotification(notification: Notification): Promise<void> {
+    // Get target users based on roles and specific users
+    const targetUsers = await this.getTargetUsers(notification, this.prisma);
+
+    if (targetUsers.length === 0) {
+      return; // No users to notify
     }
-    return NotificationService.instance;
+
+    // Save the notification
+    const savedNotification = await this.prisma.notification.create({
+      data: {
+        type: notification.type,
+        title: notification.title,
+        titleAr: notification.titleAr,
+        message: notification.message,
+        messageAr: notification.messageAr,
+        priority: notification.priority,
+        targetRoles: notification.targetRoles,
+        targetUsers: notification.targetUsers || [],
+        targetClasses: notification.targetClasses || [],
+        createdById: notification.createdById,
+        expiresAt: notification.expiresAt ? new Date(notification.expiresAt) : null,
+        metadata: notification.metadata || {},
+      },
+    });
+
+    // Create user notifications
+    const userNotificationData = targetUsers.map(userId => ({
+      userId,
+      notificationId: savedNotification.id,
+    }));
+
+    await this.prisma.userNotification.createMany({
+      data: userNotificationData,
+    });
+
+    // Update the notification object with the database ID
+    (notification as any).id = savedNotification.id;
   }
 
   /**
@@ -545,5 +583,3 @@ export class NotificationService {
     } as Notification;
   }
 }
-
-export const notificationService = NotificationService.getInstance();

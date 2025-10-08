@@ -79,14 +79,14 @@ export async function POST(request: NextRequest) {
     const existingClassRoom = await prisma.classRoom.findFirst({
       where: {
         gradeLevelId,
-        section,
+        sectionNumber: sectionNumber || 1,
         academicYearId
       }
     });
 
     if (existingClassRoom) {
       return NextResponse.json(
-        { error: 'A classroom with this grade level and section already exists for this academic year' },
+        { error: 'A classroom with this grade level and section number already exists for this academic year' },
         { status: 400 }
       );
     }
@@ -148,8 +148,25 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ classRoom }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating classroom:', error);
+    
+    // Handle unique constraint violations
+    if (error.code === 'P2002') {
+      if (error.meta?.target?.includes('gradeLevelId') && error.meta?.target?.includes('sectionNumber') && error.meta?.target?.includes('academicYearId')) {
+        return NextResponse.json(
+          { error: 'A classroom with this grade level and section number already exists for this academic year' },
+          { status: 400 }
+        );
+      }
+      if (error.meta?.target?.includes('roomNumber')) {
+        return NextResponse.json(
+          { error: 'This room number is already taken for this academic year' },
+          { status: 400 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

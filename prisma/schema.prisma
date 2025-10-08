@@ -66,12 +66,16 @@ model User {
   // Created content
   events        Event[]
   announcements Announcement[]
+  notifications Notification[] @relation("NotificationCreator")
 
   // Chat relationships
   createdChats        Chat[]               @relation("ChatCreator")
   chatParticipants    ChatParticipant[]    @relation("ChatParticipants")
   sentMessages        Message[]            @relation("MessageSender")
   messageReadReceipts MessageReadReceipt[] @relation("MessageReadReceipts")
+
+  // Notification relationships
+  userNotifications UserNotification[] @relation("UserNotifications")
 
   // Student progression relationships
   processedProgressions StudentAcademicProgression[]
@@ -816,4 +820,43 @@ model MessageReadReceipt {
 
   @@unique([messageId, userId])
   @@map("message_read_receipts")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String
+  title       String
+  titleAr     String?
+  message     String
+  messageAr   String?
+  priority    String   @default("NORMAL")
+  targetRoles String[] // JSON array of TargetRole enums
+  targetUsers String[] // JSON array of user IDs
+  targetClasses String[] // JSON array of class IDs
+  createdById String
+  createdBy   User     @relation("NotificationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  metadata    Json?    // JSON object for additional data
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+
+  // Relationships
+  userNotifications UserNotification[]
+
+  @@map("notifications")
+}
+
+model UserNotification {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, notificationId])
+  @@map("user_notifications")
 }

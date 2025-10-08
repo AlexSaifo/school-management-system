@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { notificationService } from '@/lib/notification-service';
+import { NotificationService } from '@/lib/notification-service';
 import { NotificationFilter, CreateNotificationRequest } from '@/types/notifications';
 import jwt from 'jsonwebtoken';
+
+// Initialize notification service with Prisma client
+const notificationSvc = new NotificationService(prisma);
 
 // Declare global types for socket functions
 declare global {
@@ -58,14 +61,54 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // In a real implementation, you would have a notifications table
-    // For now, we'll return an empty response structure
-    const notifications: any[] = [];
-    const total = 0;
-    const unreadCount = 0;
+    // Build filter conditions for notifications
+    const notificationFilters: any[] = [];
+    if (type && type.length > 0) {
+      notificationFilters.push({ type: { in: type } });
+    }
+    if (priority && priority.length > 0) {
+      notificationFilters.push({ priority: { in: priority } });
+    }
+
+    // Get notifications for this user with proper filtering
+    const userNotifications = await (prisma as any).userNotification.findMany({
+      where: {
+        userId: user.id,
+        ...(isRead !== undefined && { isRead }),
+        // Join with notification and apply filters
+        notification: {
+          AND: [
+            ...(type && type.length > 0 ? [{ type: { in: type } }] : []),
+            ...(priority && priority.length > 0 ? [{ priority: { in: priority } }] : []),
+          ],
+        },
+      },
+      include: {
+        notification: true,
+      },
+      orderBy: {
+        notification: {
+          createdAt: 'desc',
+        },
+      },
+      skip: offset,
+      take: limit,
+    });
+
+    // Map to the expected format
+    const filteredNotifications = userNotifications.map((un: any) => ({
+      ...un.notification,
+      isRead: un.isRead,
+      readAt: un.readAt,
+    }));
+
+    const total = filteredNotifications.length;
+
+    // Calculate unread count from the results
+    const unreadCount = filteredNotifications.filter((n: any) => !n.isRead).length;
 
     return NextResponse.json({
-      notifications,
+      notifications: filteredNotifications,
       total,
       unreadCount,
     });
@@ -92,10 +135,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as CreateNotificationRequest;
     
     // Create notification
-    const notification = notificationService.createCustomNotification(body, user);
+    const notification = notificationSvc.createCustomNotification(body, user);
 
     // Get target users
-    const targetUsers = await notificationService.getTargetUsers(notification, prisma);
+    const targetUsers = await notificationSvc.getTargetUsers(notification, prisma);
 
     // Broadcast notification if socket system is available
     if (global.socketNotifications) {

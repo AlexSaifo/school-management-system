@@ -71,7 +71,14 @@ interface ClassRoom {
   capacity: number;
   facilities: string[];
   isActive: boolean;
-  academicYear: string;
+  academicYear: {
+    id: string;
+    name: string;
+    nameAr: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  };
   gradeLevel: GradeLevel;
   students?: { id: string }[];
   _count?: {
@@ -201,7 +208,7 @@ export default function ClassRoomManagementPage() {
         capacity: classRoom.capacity,
         facilities: classRoom.facilities,
         isActive: classRoom.isActive,
-        academicYearId: classRoom.academicYear
+        academicYearId: classRoom.academicYear.id
       });
     } else {
       setEditingClassRoom(null);
@@ -287,7 +294,7 @@ export default function ClassRoomManagementPage() {
   const handleGradeLevelChange = (gradeLevelId: string) => {
     // Find the next available section number for this grade level and academic year
     const existingSections = classRooms
-      .filter(cr => cr.gradeLevel.id === gradeLevelId && cr.academicYear === '2024-2025')
+      .filter(cr => cr.gradeLevel.id === gradeLevelId && cr.academicYear.id === formData.academicYearId)
       .map(cr => cr.sectionNumber)
       .sort((a, b) => a - b);
     
