@@ -130,6 +130,17 @@ export async function PATCH(
       );
     }
 
+    let parentProfile = existingUser.parent;
+
+    if (!parentProfile) {
+      console.warn('Parent profile missing; creating new parent record for user:', parentId);
+      parentProfile = await prisma.parent.create({
+        data: {
+          userId: existingUser.id,
+        },
+      });
+    }
+
     // Prevent deactivating the system administrator
     if (existingUser.email === 'admin@school.com' && validatedData.status && validatedData.status !== 'ACTIVE') {
       return NextResponse.json(
@@ -177,34 +188,42 @@ export async function PATCH(
 
       const parent = Object.keys(parentData).length > 0
         ? await tx.parent.update({
-            where: { id: existingUser.parent?.id },
+            where: { id: parentProfile.id },
             data: parentData,
           })
-        : existingUser.parent;
+        : parentProfile;
 
-      // Update parent-student relationships if student relations provided
-      if (validatedData.studentRelations && validatedData.studentRelations.length > 0) {
-        // Delete existing relationships
+      // Update parent-student relationships if student relations provided (including empty array)
+      if (validatedData.studentRelations !== undefined) {
+        // Remove existing relationships first
         await tx.studentParent.deleteMany({
-          where: { parentId: existingUser.parent?.id },
+          where: { parentId: parentProfile.id },
         });
+
+        if (validatedData.studentRelations.length === 0) {
+          return { user, parent, studentRelations: [] };
+        }
 
         // Create new relationships with relationship types
         const studentRelations = await Promise.all(
           validatedData.studentRelations.map(async (relation: any) => {
-            // Find the student record by userId to get the actual studentId
-            const studentRecord = await tx.student.findUnique({
-              where: { userId: relation.studentId },
+            const studentRecord = await tx.student.findFirst({
+              where: {
+                OR: [
+                  { id: relation.studentId },
+                  { userId: relation.studentId }
+                ]
+              }
             });
 
             if (!studentRecord) {
-              throw new Error(`Student with user ID ${relation.studentId} not found`);
+              throw new Error(`Student with ID ${relation.studentId} not found`);
             }
 
             return tx.studentParent.create({
               data: {
-                studentId: studentRecord.id, // Use the actual student ID, not user ID
-                parentId: existingUser.parent?.id,
+                studentId: studentRecord.id,
+                parentId: parentProfile.id,
                 relationship: relation.relationship,
               },
             });
@@ -232,9 +251,16 @@ export async function PATCH(
       );
     }
 
+    if (error instanceof Error && error.message.startsWith('Student with ID')) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 400 }
+      );
+    }
+
     console.error('Error updating parent:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update parent' },
+      { success: false, error: error instanceof Error ? error.message : 'Failed to update parent' },
       { status: 500 }
     );
   }
