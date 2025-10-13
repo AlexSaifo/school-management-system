@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import {
   Box,
@@ -82,6 +82,7 @@ interface TeacherSubjectData {
 export default function TeacherSubjectGradeClassPage() {
   const { user, token } = useAuth();
   const { t } = useTranslation();
+  const router = useRouter();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,19 +93,21 @@ export default function TeacherSubjectGradeClassPage() {
 
   useEffect(() => {
     if (!user) {
-      redirect('/auth/login');
+      router.replace('/auth/login');
     }
-  }, [user]);
+  }, [user, router]);
 
   useEffect(() => {
-    if (user?.role !== 'TEACHER') {
-      redirect('/dashboard');
+    if (user && user.role !== 'TEACHER') {
+      router.replace('/dashboard');
     }
-  }, [user?.role]);
+  }, [user, router]);
 
   useEffect(() => {
-    fetchTeacherData();
-  }, [token]);
+    if (token && user && user.role === 'TEACHER') {
+      fetchTeacherData();
+    }
+  }, [token, user]);
 
   const fetchTeacherData = async () => {
     if (!token) return;
@@ -187,7 +190,11 @@ export default function TeacherSubjectGradeClassPage() {
   };
 
   if (!user) {
-    return <CircularProgress />;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (

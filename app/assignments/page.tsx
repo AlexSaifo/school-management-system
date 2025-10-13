@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import {
   Box,
@@ -68,6 +68,7 @@ interface Assignment {
 export default function AssignmentsPage() {
   const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
+  const router = useRouter();
 
   // State management
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -118,6 +119,12 @@ export default function AssignmentsPage() {
       loadAssignments();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/');
+    }
+  }, [authLoading, user, router]);
 
   // Filter assignments
   const filteredAssignments = assignments.filter(assignment => {
@@ -362,8 +369,11 @@ export default function AssignmentsPage() {
   }
 
   if (!user) {
-    redirect('/');
-    return null; // This line will never execute but prevents TypeScript errors
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (!['STUDENT', 'TEACHER', 'ADMIN'].includes(user.role)) {

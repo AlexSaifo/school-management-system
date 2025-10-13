@@ -119,6 +119,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Track occupied slots to avoid duplicate bookings within the class
+    const occupiedSlots = new Set<string>();
+    const makeSlotKey = (day: number, slotId: string) => `${day}-${slotId}`;
+
     // Schedule subjects across the week
     let timetableEntries: Array<{
       classRoomId: string;
@@ -143,6 +147,14 @@ export async function POST(request: NextRequest) {
         const dayOfWeek = daysOfWeek[dayIndex];
         const timeSlot = lessonTimeSlots[timeSlotIndex];
         
+        const slotKey = makeSlotKey(dayOfWeek, timeSlot.id);
+
+        // Skip if slot already filled for this class during generation
+        if (occupiedSlots.has(slotKey)) {
+          slotIndex++;
+          continue;
+        }
+
         // Check for teacher conflicts (both within this generation and globally)
         let hasConflict = timetableEntries.some(entry => 
           entry.teacherId === subjectData.teacher?.id &&
@@ -176,6 +188,8 @@ export async function POST(request: NextRequest) {
             semesterId: activeSemesterId,
             slotType: SlotType.LESSON
           });
+
+          occupiedSlots.add(slotKey);
           
           hoursToSchedule--;
           subjectData.scheduledHours++;
@@ -199,12 +213,9 @@ export async function POST(request: NextRequest) {
       const dayOfWeek = daysOfWeek[dayIndex];
       const timeSlot = lessonTimeSlots[timeSlotIndex];
       
-      // Check if this slot is already filled
-      const existingEntry = timetableEntries.find(entry =>
-        entry.dayOfWeek === dayOfWeek && entry.timeSlotId === timeSlot.id
-      );
+      const slotKey = makeSlotKey(dayOfWeek, timeSlot.id);
       
-      if (!existingEntry && popularSubjects.length > 0) {
+      if (!occupiedSlots.has(slotKey) && popularSubjects.length > 0) {
         const randomSubject = popularSubjects[Math.floor(Math.random() * popularSubjects.length)];
         
         // Check for teacher conflicts (both within this generation and globally)
@@ -240,6 +251,8 @@ export async function POST(request: NextRequest) {
             semesterId: activeSemesterId,
             slotType: SlotType.LESSON
           });
+
+          occupiedSlots.add(slotKey);
         }
       }
       

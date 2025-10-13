@@ -81,6 +81,19 @@ interface ProgressionData {
   toAcademicYearId: string;
   progressionType: 'PROMOTED' | 'RETAINED';
   reason?: string;
+  toClassRoomId?: string;
+}
+
+interface ClassRoomOption {
+  id: string;
+  name: string;
+  section: string;
+  capacity: number;
+  gradeLevelId: string;
+  academicYearId: string;
+  _count?: {
+    students: number;
+  };
 }
 
 export default function StudentProgressionManager() {
@@ -100,6 +113,9 @@ export default function StudentProgressionManager() {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [targetClassRooms, setTargetClassRooms] = useState<ClassRoomOption[]>([]);
+  const [targetClassRoomId, setTargetClassRoomId] = useState<string>('');
+  const [loadingClassRooms, setLoadingClassRooms] = useState<boolean>(false);
 
   // Helper function to get grade name based on language
   const getGradeName = (grade: GradeLevel) => {
@@ -133,6 +149,15 @@ export default function StudentProgressionManager() {
       loadStudents();
     }
   }, [selectedGradeLevelId, selectedAcademicYearId]);
+
+  useEffect(() => {
+    if (progressionType === 'PROMOTED' && targetGradeLevelId && targetAcademicYearId) {
+      loadTargetClassRooms(targetGradeLevelId, targetAcademicYearId);
+    } else {
+      setTargetClassRooms([]);
+      setTargetClassRoomId('');
+    }
+  }, [progressionType, targetGradeLevelId, targetAcademicYearId]);
 
   const loadGradeLevels = async () => {
     try {
@@ -216,10 +241,21 @@ export default function StudentProgressionManager() {
         const data = await response.json();
         setStudents(data.students || []);
         setSelectedStudents(new Set());
+        setTargetClassRooms([]);
+        setTargetClassRoomId('');
 
         // Set default target academic year (next year)
         if (data.nextAcademicYear) {
           setTargetAcademicYearId(data.nextAcademicYear.id);
+        }
+
+        if (progressionType === 'PROMOTED' && data.availableGrades) {
+          const currentLevel = data.currentGrade?.level ?? null;
+          const nextGrade = data.availableGrades.find((grade: GradeLevel) =>
+            currentLevel !== null ? grade.level > currentLevel : true
+          );
+
+          setTargetGradeLevelId(nextGrade ? nextGrade.id : '');
         }
       } else {
         showSnackbar(t('studentProgression.errorLoadingStudents'), 'error');
@@ -229,6 +265,53 @@ export default function StudentProgressionManager() {
       showSnackbar(t('studentProgression.errorLoadingStudents'), 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTargetClassRooms = async (gradeId: string, yearId: string) => {
+    setLoadingClassRooms(true);
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      const response = await fetch(
+        `/api/academic/classrooms?gradeLevelId=${gradeId}&academicYearId=${yearId}&onlyActive=true`,
+        {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to load classrooms');
+      }
+
+      const data = await response.json();
+      const classrooms: ClassRoomOption[] = data.classRooms || [];
+      setTargetClassRooms(classrooms);
+
+      const availableClassroom = classrooms.find((classroom) => {
+        const enrolled = classroom._count?.students ?? 0;
+        return enrolled < classroom.capacity;
+      });
+
+      setTargetClassRoomId(availableClassroom ? availableClassroom.id : '');
+
+      if (!availableClassroom && classrooms.length > 0) {
+        showSnackbar(t('studentProgression.errorNoClassroomAvailable'), 'warning');
+      }
+
+      if (classrooms.length === 0) {
+        showSnackbar(t('studentProgression.noClassroomsForSelection'), 'warning');
+      }
+    } catch (error) {
+      console.error('Error loading classrooms:', error);
+      showSnackbar(t('studentProgression.errorLoadingClassrooms'), 'error');
+      setTargetClassRooms([]);
+      setTargetClassRoomId('');
+    } finally {
+      setLoadingClassRooms(false);
     }
   };
 
@@ -261,6 +344,11 @@ export default function StudentProgressionManager() {
       return;
     }
 
+    if (progressionType === 'PROMOTED' && !targetClassRoomId) {
+      showSnackbar(t('studentProgression.selectTargetClassroom'), 'warning');
+      return;
+    }
+
     setConfirmDialogOpen(true);
   };
 
@@ -273,6 +361,7 @@ export default function StudentProgressionManager() {
         toAcademicYearId: targetAcademicYearId,
         progressionType,
         reason: reason.trim() || undefined,
+        toClassRoomId: progressionType === 'PROMOTED' ? targetClassRoomId : undefined,
       }));
 
       // Get auth token from cookie
@@ -350,6 +439,8 @@ export default function StudentProgressionManager() {
       date: new Date(latestProgression.effectiveDate).toLocaleDateString(),
     };
   };
+
+  const selectedTargetClassroom = targetClassRooms.find((room) => room.id === targetClassRoomId) || null;
 
   return (
     <Box sx={{ p: 3 }}>
@@ -469,6 +560,55 @@ export default function StudentProgressionManager() {
                 </Grid>
               )}
 
+              {progressionType === 'PROMOTED' && (
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>{t('studentProgression.targetClassroom')}</InputLabel>
+                    <Select
+                      value={targetClassRoomId}
+                      onChange={(e) => setTargetClassRoomId(e.target.value)}
+                      label={t('studentProgression.targetClassroom')}
+                      displayEmpty
+                      renderValue={(value) => {
+                        if (!value) {
+                          return loadingClassRooms
+                            ? t('common.loading')
+                            : t('studentProgression.selectClassroomPlaceholder');
+                        }
+                        const selected = targetClassRooms.find((room) => room.id === value);
+                        if (!selected) {
+                          return t('studentProgression.selectClassroomPlaceholder');
+                        }
+                        const enrolled = selected._count?.students ?? 0;
+                        return `${selected.name} (${enrolled}/${selected.capacity})`;
+                      }}
+                    >
+                      {loadingClassRooms && (
+                        <MenuItem value="" disabled>
+                          {t('common.loading')}
+                        </MenuItem>
+                      )}
+                      {!loadingClassRooms && targetClassRooms.length === 0 && (
+                        <MenuItem value="" disabled>
+                          {t('studentProgression.noClassroomsForSelection')}
+                        </MenuItem>
+                      )}
+                      {!loadingClassRooms &&
+                        targetClassRooms.map((classroom) => {
+                          const enrolled = classroom._count?.students ?? 0;
+                          const isFull = enrolled >= classroom.capacity;
+                          return (
+                            <MenuItem key={classroom.id} value={classroom.id} disabled={isFull}>
+                              {`${classroom.name} (${enrolled}/${classroom.capacity})`}
+                              {isFull && ` • ${t('studentProgression.classroomFull')}`}
+                            </MenuItem>
+                          );
+                        })}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+
               <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
@@ -485,7 +625,11 @@ export default function StudentProgressionManager() {
                 variant="contained"
                 color="primary"
                 onClick={handleProgressStudents}
-                disabled={selectedStudents.size === 0 || !targetAcademicYearId || (progressionType === 'PROMOTED' && !targetGradeLevelId)}
+                disabled={
+                  selectedStudents.size === 0 ||
+                  !targetAcademicYearId ||
+                  (progressionType === 'PROMOTED' && (!targetGradeLevelId || !targetClassRoomId))
+                }
               >
                 {language === 'ar' 
                   ? `معالجة ${selectedStudents.size} طالب(ين) مختار(ين)` 
@@ -591,6 +735,13 @@ export default function StudentProgressionManager() {
           {progressionType === 'PROMOTED' && (
             <Typography sx={{ mt: 1 }}>
               {t('studentProgression.promoteToNextGrade')} {gradeLevels.find(g => g.id === targetGradeLevelId) ? getGradeName(gradeLevels.find(g => g.id === targetGradeLevelId)!) : ''} {t('studentProgression.targetAcademicYear').toLowerCase()} {academicYears.find(y => y.id === targetAcademicYearId) ? getAcademicYearName(academicYears.find(y => y.id === targetAcademicYearId)!) : ''}.
+            </Typography>
+          )}
+          {progressionType === 'PROMOTED' && selectedTargetClassroom && (
+            <Typography sx={{ mt: 1 }}>
+              {t('studentProgression.targetClassroom')}: {selectedTargetClassroom.name} (
+              {(selectedTargetClassroom._count?.students ?? 0)}/{selectedTargetClassroom.capacity}
+              )
             </Typography>
           )}
           {progressionType === 'RETAINED' && (

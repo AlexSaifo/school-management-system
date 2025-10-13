@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import {
   Box,
@@ -30,6 +30,7 @@ import {
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -39,12 +40,18 @@ export default function ProfilePage() {
     address: '',
   });
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/');
+    }
+  }, [loading, user, router]);
+
   if (loading) {
     return <div>Loading...</div>;
   }
 
   if (!user) {
-    redirect('/');
+    return null;
   }
 
   const handleSave = () => {

@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
 
     // Validate all progressions
     for (const progression of progressions) {
-      const { studentId, toGradeLevelId, toAcademicYearId, progressionType, reason } = progression;
+      const { studentId, toGradeLevelId, toAcademicYearId, toClassRoomId, progressionType, reason } = progression;
 
       if (!studentId || !toGradeLevelId || !toAcademicYearId || !progressionType) {
         return NextResponse.json(
@@ -162,13 +162,20 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      if (progressionType === 'PROMOTED' && !toClassRoomId) {
+        return NextResponse.json(
+          { error: 'toClassRoomId is required when progressionType is PROMOTED' },
+          { status: 400 }
+        );
+      }
     }
 
     const results = [];
 
     // Process each progression in a transaction
     for (const progression of progressions) {
-      const { studentId, toGradeLevelId, toAcademicYearId, progressionType, reason } = progression;
+  const { studentId, toGradeLevelId, toAcademicYearId, toClassRoomId, progressionType, reason } = progression;
 
       try {
         const result = await prisma.$transaction(async (tx) => {
@@ -189,61 +196,71 @@ export async function POST(request: NextRequest) {
             throw new Error('Student not found');
           }
 
-          // Create progression record
-          const progressionRecord = await tx.studentAcademicProgression.create({
-            data: {
-              studentId,
-              fromAcademicYearId: student.classRoom?.academicYearId,
-              fromGradeLevelId: student.classRoom?.gradeLevelId,
-              fromClassRoomId: student.classRoomId,
-              toAcademicYearId,
-              toGradeLevelId,
-              progressionType: progressionType as any,
-              reason,
-              effectiveDate: new Date(),
-              processedById: decoded.userId
-            }
-          });
+          let assignedClassRoomId: string | null = null;
 
           // If promoted, assign student to a classroom in the new grade/year
           if (progressionType === 'PROMOTED') {
-            // Find an available classroom in the target grade/year
-            const targetClassrooms = await tx.classRoom.findMany({
-              where: {
-                gradeLevelId: toGradeLevelId,
-                academicYearId: toAcademicYearId,
-                isActive: true
-              },
-              include: {
-                _count: {
-                  select: {
-                    students: true
+            let targetClassroom = null;
+
+            if (toClassRoomId) {
+              targetClassroom = await tx.classRoom.findUnique({
+                where: { id: toClassRoomId },
+                include: {
+                  _count: {
+                    select: { students: true }
                   }
                 }
+              });
+
+              if (!targetClassroom) {
+                throw new Error(`Selected classroom ${toClassRoomId} not found`);
               }
-            });
 
-            // Find the first classroom that has available capacity
-            const availableClassroom = targetClassrooms.find(classroom =>
-              classroom._count.students < classroom.capacity
-            );
+              if (targetClassroom.gradeLevelId !== toGradeLevelId || targetClassroom.academicYearId !== toAcademicYearId) {
+                throw new Error('Selected classroom does not match target grade or academic year');
+              }
 
-            if (!availableClassroom) {
+              if (targetClassroom._count.students >= targetClassroom.capacity) {
+                throw new Error(`Selected classroom ${targetClassroom.name} is at capacity`);
+              }
+            }
+
+            if (!targetClassroom) {
+              const fallbackClassroom = await tx.classRoom.findMany({
+                where: {
+                  gradeLevelId: toGradeLevelId,
+                  academicYearId: toAcademicYearId,
+                  isActive: true
+                },
+                include: {
+                  _count: {
+                    select: {
+                      students: true
+                    }
+                  }
+                }
+              });
+
+              targetClassroom = fallbackClassroom.find(classroom => classroom._count.students < classroom.capacity) ?? null;
+            }
+
+            if (!targetClassroom) {
               throw new Error(`No available classroom found in target grade/year for student ${studentId}`);
             }
 
-            // Assign student to the available classroom
             await tx.student.update({
               where: { id: studentId },
               data: {
-                classRoomId: availableClassroom.id
+                classRoomId: targetClassroom.id
               }
             });
+
+            assignedClassRoomId = targetClassroom.id;
           }
           // If retained, check if current classroom exists in target academic year
           if (progressionType === 'RETAINED') {
             // Check if the student's current classroom exists in the target academic year
-            const targetClassroom = await tx.classRoom.findFirst({
+            let retainedClassroom = await tx.classRoom.findFirst({
               where: {
                 gradeLevelId: toGradeLevelId,
                 academicYearId: toAcademicYearId,
@@ -253,14 +270,16 @@ export async function POST(request: NextRequest) {
               }
             });
 
-            if (targetClassroom) {
+            if (retainedClassroom) {
               // Move to equivalent classroom in new academic year
               await tx.student.update({
                 where: { id: studentId },
                 data: {
-                  classRoomId: targetClassroom.id
+                  classRoomId: retainedClassroom.id
                 }
               });
+
+              assignedClassRoomId = retainedClassroom.id;
             } else {
               // If no equivalent classroom, find any available classroom in the grade/year
               const availableClassroom = await tx.classRoom.findFirst({
@@ -285,11 +304,30 @@ export async function POST(request: NextRequest) {
                     classRoomId: availableClassroom.id
                   }
                 });
+
+                assignedClassRoomId = availableClassroom.id;
               } else {
                 throw new Error(`No available classroom found for retained student ${studentId}`);
               }
             }
           }
+
+          // Create progression record after assigning classroom
+          const progressionRecord = await tx.studentAcademicProgression.create({
+            data: {
+              studentId,
+              fromAcademicYearId: student.classRoom?.academicYearId,
+              fromGradeLevelId: student.classRoom?.gradeLevelId,
+              fromClassRoomId: student.classRoomId,
+              toAcademicYearId,
+              toGradeLevelId,
+              toClassRoomId: assignedClassRoomId ?? undefined,
+              progressionType: progressionType as any,
+              reason,
+              effectiveDate: new Date(),
+              processedById: decoded.userId
+            }
+          });
 
           return {
             studentId,

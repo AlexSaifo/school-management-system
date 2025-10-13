@@ -10,10 +10,98 @@ export async function GET(request: NextRequest) {
       return authResult.response;
     }
 
+    const { searchParams } = new URL(request.url);
+    const gradeLevelId = searchParams.get('gradeLevelId') || undefined;
+    const academicYearId = searchParams.get('academicYearId') || undefined;
+    const onlyActive = searchParams.get('onlyActive') === 'true';
+
+    const activeSemesterCookie = request.cookies.get('active_semester_id')?.value;
+
+    let semesterFilter: { OR?: any[] } | null = null;
+
+    if (activeSemesterCookie) {
+      const activeSemester = await prisma.semester.findUnique({
+        where: { id: activeSemesterCookie },
+        select: { id: true, isActive: true, academicYearId: true }
+      });
+
+      if (activeSemester?.isActive) {
+        semesterFilter = {
+          OR: [
+            { semesterId: activeSemester.id },
+            {
+              AND: [
+                { semesterId: null },
+                { academicYearId: activeSemester.academicYearId }
+              ]
+            }
+          ]
+        };
+      }
+    }
+
+    if (!semesterFilter) {
+      const fallbackSemester = await prisma.semester.findFirst({
+        where: { isActive: true },
+        select: { id: true, academicYearId: true }
+      });
+
+      if (fallbackSemester) {
+        semesterFilter = {
+          OR: [
+            { semesterId: fallbackSemester.id },
+            {
+              AND: [
+                { semesterId: null },
+                { academicYearId: fallbackSemester.academicYearId }
+              ]
+            }
+          ]
+        };
+      }
+    }
+
+    const whereClause: any = {};
+
+    if (gradeLevelId) {
+      whereClause.gradeLevelId = gradeLevelId;
+    }
+
+    if (academicYearId) {
+      whereClause.academicYearId = academicYearId;
+    }
+
+    if (onlyActive) {
+      whereClause.isActive = true;
+    }
+
+    const andFilters: any[] = [];
+
+    if (semesterFilter) {
+      andFilters.push(semesterFilter);
+    }
+
+    if (!academicYearId && !semesterFilter) {
+      const activeAcademicYear = await prisma.academicYear.findFirst({
+        where: { isActive: true },
+        select: { id: true }
+      });
+
+      if (activeAcademicYear) {
+        whereClause.academicYearId = activeAcademicYear.id;
+      }
+    }
+
+    if (andFilters.length) {
+      whereClause.AND = andFilters;
+    }
+
     const classRooms = await prisma.classRoom.findMany({
+      where: Object.keys(whereClause).length ? whereClause : undefined,
       include: {
         gradeLevel: true,
         academicYear: true,
+        semester: true,
         students: {
           select: { id: true }
         },

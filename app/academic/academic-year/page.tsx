@@ -94,13 +94,21 @@ export default function AcademicYearPage() {
         const cookieActive = document.cookie
           .split('; ')
           .find(r => r.startsWith('active_academic_year_id='))?.split('=')[1];
-        const active = years.find((y: any) => y.id === cookieActive) || years.find((y: any) => y.isActive) || years[0];
+
+        const activeYearFromCookie = years.find((y: any) => y.id === cookieActive && y.isActive);
+        const active = activeYearFromCookie || years.find((y: any) => y.isActive);
+
         if (active) {
           document.cookie = `active_academic_year_id=${active.id}; path=/`;
-          const activeSem = active.semesters?.find((s: any) => s.isActive) || active.semesters?.[0];
+          const activeSem = active.semesters?.find((s: any) => s.isActive);
           if (activeSem) {
             document.cookie = `active_semester_id=${activeSem.id}; path=/`;
+          } else {
+            document.cookie = `active_semester_id=; path=/; Max-Age=0`;
           }
+        } else {
+          document.cookie = `active_academic_year_id=; path=/; Max-Age=0`;
+          document.cookie = `active_semester_id=; path=/; Max-Age=0`;
         }
       } else {
         setError(t('Failed to load academic years'));

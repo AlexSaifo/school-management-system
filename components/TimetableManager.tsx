@@ -29,7 +29,8 @@ import {
   TableHead,
   TableRow,
   Tabs,
-  Tab
+  Tab,
+  Stack
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -136,6 +137,7 @@ const TimetableManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<{[key: string]: any[]}>({});
+  const [clearing, setClearing] = useState(false);
   
   // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -267,6 +269,40 @@ const TimetableManager: React.FC = () => {
     } catch (error) {
       console.error("Error fetching classes:", error);
       setError(t('timetable.failedToFetchClasses'));
+    }
+  };
+  
+  const handleClearTimetable = async () => {
+    if (!selectedClass) {
+      return;
+    }
+
+    if (!confirm(t('timetable.clearAllConfirm', 'Are you sure you want to clear this timetable?'))) {
+      return;
+    }
+
+    setClearing(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await fetch(`/api/timetable/${selectedClass}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        setError(data.error || t('timetable.clearAllFailed', 'Failed to clear the timetable. Please try again.'));
+        return;
+      }
+
+      setSuccess(t('timetable.clearAllSuccess', 'Timetable cleared successfully.'));
+      await fetchTimetable(selectedClass);
+    } catch (error) {
+      console.error('Error clearing timetable:', error);
+      setError(t('timetable.clearAllFailed', 'Failed to clear the timetable. Please try again.'));
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -1181,16 +1217,26 @@ const TimetableManager: React.FC = () => {
           
           {selectedClass && (
             <Grid item xs={12} md={2}>
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={handleGenerateAutomaticTimetable}
-                disabled={loading}
-                fullWidth
-                startIcon={<ScheduleIcon />}
-              >
-                {t('timetable.generateAuto')}
-              </Button>
+              <Stack spacing={1}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={handleGenerateAutomaticTimetable}
+                  disabled={loading || clearing}
+                  startIcon={<ScheduleIcon />}
+                >
+                  {t('timetable.generateAuto')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={handleClearTimetable}
+                  disabled={loading || clearing}
+                  startIcon={<DeleteIcon />}
+                >
+                  {t('timetable.clearAll', 'Clear timetable')}
+                </Button>
+              </Stack>
             </Grid>
           )}
         </Grid>

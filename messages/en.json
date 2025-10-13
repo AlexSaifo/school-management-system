@@ -1402,6 +1402,9 @@
     "failedToFetchRooms": "Failed to fetch rooms",
     "failedToGenerateAutoTimetable": "Failed to generate automatic timetable",
     "autoTimetableGenerated": "Automatic timetable generated successfully! {{count}} entries created.",
+  "clearAllConfirm": "Are you sure you want to clear this timetable?",
+  "clearAllFailed": "Failed to clear the timetable. Please try again.",
+  "clearAllSuccess": "Timetable cleared successfully.",
     "teacherBusy": "Teacher is busy at the same time in",
     "roomBooked": "Room is booked at the same time for",
     "conflict": "Conflict",
@@ -1868,6 +1871,10 @@
     "retainInSameGrade": "Retain in Same Grade",
     "targetAcademicYear": "Target Academic Year",
     "targetGradeLevel": "Target Grade Level",
+  "targetClassroom": "Target Classroom",
+  "selectClassroomPlaceholder": "Select a classroom",
+  "noClassroomsForSelection": "No classrooms available for the selected grade and year",
+  "classroomFull": "Full",
     "reason": "Reason (Optional)",
     "reasonPlaceholder": "e.g., Academic performance, parental request",
     "processStudents": "Process {count} Selected Student(s)",
@@ -1893,8 +1900,10 @@
     "errorLoadingStudents": "Error loading students",
     "selectAtLeastOneStudent": "Please select at least one student",
     "selectTargetGradeAndYear": "Please select target grade and academic year",
+    "selectTargetClassroom": "Please select a target classroom",
     "noStudentsFound": "No students found for the selected criteria",
-    "errorNoClassroomAvailable": "No available classroom found in target grade/year"
+    "errorNoClassroomAvailable": "No available classroom found in target grade/year",
+    "errorLoadingClassrooms": "Error loading classrooms"
   },
   "language": {
     "switchLanguage": "Switch Language",

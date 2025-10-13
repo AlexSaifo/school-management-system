@@ -80,6 +80,13 @@ interface ClassRoom {
     isActive: boolean;
   };
   gradeLevel: GradeLevel;
+  semester?: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+  } | null;
   students?: { id: string }[];
   _count?: {
     students: number;

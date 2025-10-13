@@ -61,18 +61,56 @@ export async function PUT(
     // Special-case: toggle isActive only
     if (Object.prototype.hasOwnProperty.call(body, 'isActive')) {
       const nextActive = Boolean(body.isActive);
+      let activatedSemesterId: string | null = null;
+
       if (nextActive) {
-        // Ensure a single active year: deactivate others, activate this one
-        await prisma.$transaction([
-          prisma.academicYear.updateMany({
-            data: { isActive: false },
-            where: { NOT: { id: params.id } }
-          }),
-          prisma.academicYear.update({
+        // Ensure a single active year: deactivate others (and their semesters), activate this one
+        await prisma.$transaction(async (tx) => {
+          const otherActiveYears = await tx.academicYear.findMany({
+            where: { NOT: { id: params.id }, isActive: true },
+            select: { id: true }
+          });
+
+          if (otherActiveYears.length) {
+            const otherYearIds = otherActiveYears.map(y => y.id);
+            await tx.academicYear.updateMany({
+              data: { isActive: false },
+              where: { id: { in: otherYearIds } }
+            });
+            await tx.semester.updateMany({
+              data: { isActive: false },
+              where: { academicYearId: { in: otherYearIds } }
+            });
+          }
+
+          await tx.academicYear.update({
             where: { id: params.id },
             data: { isActive: true }
-          })
-        ]);
+          });
+
+          const targetSemesters = await tx.semester.findMany({
+            where: { academicYearId: params.id },
+            orderBy: { startDate: 'asc' },
+            select: { id: true }
+          });
+
+          if (targetSemesters.length) {
+            activatedSemesterId = targetSemesters[0].id;
+            await tx.semester.updateMany({
+              data: { isActive: false },
+              where: { academicYearId: params.id }
+            });
+            await tx.semester.update({
+              where: { id: activatedSemesterId },
+              data: { isActive: true }
+            });
+          } else {
+            await tx.semester.updateMany({
+              data: { isActive: false },
+              where: { academicYearId: params.id }
+            });
+          }
+        });
       } else {
         // Prevent deactivating the last active year
         const activeCount = await prisma.academicYear.count({ where: { isActive: true } });
@@ -82,7 +120,11 @@ export async function PUT(
             { status: 400 }
           );
         }
-        await prisma.academicYear.update({ where: { id: params.id }, data: { isActive: false } });
+
+        await prisma.$transaction(async (tx) => {
+          await tx.academicYear.update({ where: { id: params.id }, data: { isActive: false } });
+          await tx.semester.updateMany({ where: { academicYearId: params.id }, data: { isActive: false } });
+        });
       }
 
       const updated = await prisma.academicYear.findUnique({
@@ -90,9 +132,22 @@ export async function PUT(
         include: { semesters: true, _count: { select: { classes: true } } }
       });
       const res = NextResponse.json({ success: true, data: updated });
-      // If activating, set cookie for client-side filtering; if deactivating, preserve current cookie
+      const currentYearCookie = request.cookies.get('active_academic_year_id')?.value;
+      const currentSemesterCookie = request.cookies.get('active_semester_id')?.value;
       if (nextActive) {
         res.cookies.set('active_academic_year_id', params.id, { httpOnly: false, path: '/' });
+        if (activatedSemesterId) {
+          res.cookies.set('active_semester_id', activatedSemesterId, { httpOnly: false, path: '/' });
+        } else if (currentSemesterCookie) {
+          res.cookies.set('active_semester_id', '', { httpOnly: false, path: '/', maxAge: 0 });
+        }
+      } else {
+        if (currentYearCookie === params.id) {
+          res.cookies.set('active_academic_year_id', '', { httpOnly: false, path: '/', maxAge: 0 });
+        }
+        if (currentSemesterCookie) {
+          res.cookies.set('active_semester_id', '', { httpOnly: false, path: '/', maxAge: 0 });
+        }
       }
       return res;
     }

@@ -272,6 +272,39 @@ export async function POST(
         );
       }
     }
+
+    // Prevent room conflicts when using special locations
+    if (roomId) {
+      const conflictingRoomUsage = await prisma.timetable.findFirst({
+        where: {
+          specialLocationId: roomId,
+          timeSlotId,
+          dayOfWeek,
+          semesterId: activeSemesterId,
+          isActive: true,
+          classRoomId: { not: classId }
+        },
+        include: {
+          classRoom: {
+            select: {
+              name: true,
+              nameAr: true
+            }
+          }
+        }
+      });
+
+      if (conflictingRoomUsage) {
+        const roomName = conflictingRoomUsage.classRoom?.name || conflictingRoomUsage.classRoom?.nameAr || 'another class';
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Room already booked at this time by ${roomName}`
+          },
+          { status: 400 }
+        );
+      }
+    }
     
     // If roomId is provided, check if it's a valid special location ID
     if (roomId) {
@@ -420,17 +453,30 @@ export async function DELETE(
   { params }: { params: { classId: string } }
 ) {
   try {
+    // Check for authorization header first, then cookie
+    let token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
+      token = request.cookies.get('auth_token')?.value;
+    }
+
+    if (!token) {
+      return NextResponse.json({ error: 'No token provided' }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Only admins and teachers can modify timetables
+    if (decoded.role !== 'ADMIN' && decoded.role !== 'TEACHER') {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
     const { classId } = params;
     const { searchParams } = new URL(request.url);
     const timeSlotId = searchParams.get('timeSlotId');
     const dayOfWeek = searchParams.get('dayOfWeek');
-
-    if (!timeSlotId || !dayOfWeek) {
-      return NextResponse.json(
-        { success: false, error: 'Time slot ID and day of week are required' },
-        { status: 400 }
-      );
-    }
 
     // Get active semester from cookies
     const activeSemesterId = request.cookies.get('active_semester_id')?.value;
@@ -438,21 +484,45 @@ export async function DELETE(
       return NextResponse.json({ error: 'No active semester selected' }, { status: 400 });
     }
 
-    const deletedEntry = await prisma.timetable.delete({
-      where: {
-        classRoomId_timeSlotId_dayOfWeek_semesterId: {
-          classRoomId: classId,
-          timeSlotId: timeSlotId,
-          dayOfWeek: parseInt(dayOfWeek),
-          semesterId: activeSemesterId
+    // If both timeSlotId and dayOfWeek are provided, delete a single entry
+    if (timeSlotId && dayOfWeek) {
+      const deletedEntry = await prisma.timetable.delete({
+        where: {
+          classRoomId_timeSlotId_dayOfWeek_semesterId: {
+            classRoomId: classId,
+            timeSlotId: timeSlotId,
+            dayOfWeek: parseInt(dayOfWeek),
+            semesterId: activeSemesterId
+          }
         }
-      }
-    });
+      });
 
-    return NextResponse.json({
-      success: true,
-      data: deletedEntry
-    });
+      return NextResponse.json({
+        success: true,
+        data: deletedEntry
+      });
+    }
+
+    // If no specific slot provided, clear the entire timetable for the class/semester
+    if (!timeSlotId && !dayOfWeek) {
+      const result = await prisma.timetable.deleteMany({
+        where: {
+          classRoomId: classId,
+          semesterId: activeSemesterId,
+          isActive: true
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: { deletedCount: result.count }
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Both time slot ID and day of week are required to delete a specific entry.' },
+      { status: 400 }
+    );
   } catch (error) {
     console.error('Error deleting timetable entry:', error);
     return NextResponse.json(
