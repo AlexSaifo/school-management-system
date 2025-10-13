@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: Params) {
+async function processAdminUpdate(request: NextRequest, params: Params['params']) {
   try {
     const { id } = params;
     const body = await request.json();
@@ -222,6 +222,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       { status: 500 }
     );
   }
+}
+
+export async function PATCH(request: NextRequest, { params }: Params) {
+  return processAdminUpdate(request, params);
+}
+
+export async function PUT(request: NextRequest, { params }: Params) {
+  return processAdminUpdate(request, params);
 }
 
 export async function DELETE(request: NextRequest, { params }: Params) {

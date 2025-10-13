@@ -36,7 +36,6 @@
     "selected": "Selected",
     "manage": "Manage",
     "update": "Update",
-    "actions": "Actions",
     "active": "Active",
     "inactive": "Inactive",
     "available": "Available",
@@ -709,13 +708,24 @@
     "adminDetails": "Admin Details",
     "adminsList": "Administrators List",
     "searchPlaceholder": "Search admins...",
+    "search": {
+      "placeholder": "Search admins...",
+      "button": "Search"
+    },
     "noAdminsFound": "No admins found",
     "loading": "Loading...",
     "showingAdmins": "Showing {{from}} to {{to}} of {{total}} admins",
     "perPage": "Per page",
     "exportCSV": "Export CSV",
+    "export": {
+      "csv": "Export CSV"
+    },
     "confirmDelete": "Are you sure you want to delete this admin?",
     "confirmBulkAction": "Are you sure you want to {{action}} {{count}} admin(s)?",
+    "confirmations": {
+      "deleteSingle": "Are you sure you want to delete this admin?",
+      "bulkAction": "Are you sure you want to {{action}} {{count}} admin(s)?"
+    },
     "noPermission": "You don't have permission to access this page.",
     "adminId": "Admin ID",
     "firstName": "First Name",
@@ -731,7 +741,6 @@
     "active": "Active",
     "inactive": "Inactive",
     "joined": "Joined",
-    "actions": "Actions",
     "permissions": "Permissions",
     "contact": "Contact",
     "noPhone": "No phone",
@@ -747,7 +756,6 @@
     "phone": "Phone",
     "admin": "Admin",
     "allStatus": "All Status",
-    "search": "Search",
     "activate": "Activate",
     "deactivate": "Deactivate",
     "delete": "Delete",
@@ -756,7 +764,6 @@
     "create": "Create",
     "close": "Close",
     "edit": "Edit",
-    "view": "View",
     "bulkActions": "Bulk Actions",
     "selectAll": "Select All",
     "selectedCount": "({{count}})",
@@ -784,13 +791,53 @@
     },
     "filters": {
       "status": "Status",
+      "allStatus": "All Status",
       "all": "All"
     },
     "pagination": {
       "showing": "Showing",
       "to": "to",
       "of": "of",
-      "admins": "admins"
+      "admins": "admins",
+      "perPage": "Per page"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "activate": "Activate",
+      "deactivate": "Deactivate"
+    },
+    "dialog": {
+      "editTitle": "Edit Admin",
+      "viewTitle": "Admin Details",
+      "cancel": "Cancel",
+      "update": "Update",
+      "create": "Create",
+      "close": "Close"
+    },
+    "form": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "passwordHelper": "Password must be at least 6 characters long",
+      "passwordMismatch": "Passwords do not match",
+      "phoneNumber": "Phone Number",
+      "address": "Address",
+      "permissions": "Permissions"
+    },
+    "view": {
+      "basicInfo": "Basic Information",
+      "contactInfo": "Contact Information",
+      "permissions": "Permissions & Access Rights",
+      "accountInfo": "Account Information",
+      "emailAddress": "Email Address",
+      "accountCreated": "Account Created",
+      "lastUpdated": "Last Updated",
+      "adminId": "Admin ID",
+      "notProvided": "Not provided"
     }
   },
   "students": {
