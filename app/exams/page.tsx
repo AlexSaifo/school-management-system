@@ -122,22 +122,22 @@ interface ExamStatistics {
   gradeDistribution: Record<string, number>;
 }
 
-const EXAM_TYPES = [
-  { value: 'امتحان نصفي', label: 'امتحان نصفي (Midterm)' },
-  { value: 'امتحان نهائي', label: 'امتحان نهائي (Final)' },
-  { value: 'امتحان شهري', label: 'امتحان شهري (Monthly)' },
-  { value: 'مذاكرة', label: 'مذاكرة (Quiz)' },
-  { value: 'امتحان شفوي', label: 'امتحان شفوي (Oral)' },
-  { value: 'امتحان عملي', label: 'امتحان عملي (Practical)' }
-];
-
-const TERMS = [
-  { value: 'الفصل الأول', label: 'الفصل الأول (First Term)' },
-  { value: 'الفصل الثاني', label: 'الفصل الثاني (Second Term)' }
-];
-
 export default function ExamsPage() {
   const { t } = useTranslation();
+  
+  const EXAM_TYPES = [
+    { value: 'امتحان نصفي', label: t('exams.types.MIDTERM', 'امتحان نصفي') },
+    { value: 'امتحان نهائي', label: t('exams.types.FINAL', 'امتحان نهائي') },
+    { value: 'امتحان شهري', label: t('exams.types.MONTHLY', 'امتحان شهري') },
+    { value: 'مذاكرة', label: t('exams.types.QUIZ', 'مذاكرة') },
+    { value: 'امتحان شفوي', label: t('exams.types.ORAL', 'امتحان شفوي') },
+    { value: 'امتحان عملي', label: t('exams.types.PRACTICAL', 'امتحان عملي') }
+  ];
+
+  const TERMS = [
+    { value: 'الفصل الأول', label: t('exams.terms.FIRST', 'الفصل الأول') },
+    { value: 'الفصل الثاني', label: t('exams.terms.SECOND', 'الفصل الثاني') }
+  ];
   const { user } = useAuth();
   
   const [exams, setExams] = useState<Exam[]>([]);
@@ -206,11 +206,11 @@ export default function ExamsPage() {
         const data = await response.json();
         setExams(data.exams);
       } else {
-        throw new Error('Failed to load exams');
+        throw new Error(t('exams.errors.loadFailed', 'Failed to load exams'));
       }
     } catch (error) {
       console.error('Error loading exams:', error);
-      setError('فشل في تحميل الامتحانات');
+      setError(t('exams.errors.loadFailed', 'فشل في تحميل الامتحانات'));
     } finally {
       setLoading(false);
     }
@@ -340,11 +340,11 @@ export default function ExamsPage() {
         loadExams();
       } else {
         const error = await response.json();
-        setError(error.error || 'فشل في إنشاء الامتحان');
+        setError(error.error || t('exams.errors.createFailed', 'فشل في إنشاء الامتحان'));
       }
     } catch (error) {
       console.error('Error creating exam:', error);
-      setError('فشل في إنشاء الامتحان');
+      setError(t('exams.errors.createFailed', 'فشل في إنشاء الامتحان'));
     }
   };
 
@@ -368,11 +368,11 @@ export default function ExamsPage() {
         setSelectedExam(exam);
         setViewResultsOpen(true);
       } else {
-        throw new Error('Failed to load results');
+        throw new Error(t('exams.errors.resultsFailed', 'Failed to load results'));
       }
     } catch (error) {
       console.error('Error loading results:', error);
-      setError('فشل في تحميل النتائج');
+      setError(t('exams.errors.resultsFailed', 'فشل في تحميل النتائج'));
     }
   };
 
@@ -508,15 +508,15 @@ export default function ExamsPage() {
     const now = new Date();
     const examDate = new Date(exam.examDate);
     
-    if (!exam.isActive) return 'غير نشط';
-    if (examDate < now) return exam._count.results > 0 ? 'تم التصحيح' : 'في انتظار التصحيح';
-    return 'مجدول';
+    if (!exam.isActive) return t('exams.statusChip.inactive', 'غير نشط');
+    if (examDate < now) return exam._count.results > 0 ? t('exams.statusChip.graded', 'تم التصحيح') : t('exams.statusChip.pending', 'في انتظار التصحيح');
+    return t('exams.statusChip.upcoming', 'مجدول');
   };
 
   if (!user) {
     return (
       <SidebarLayout>
-        <Alert severity="error">يرجى تسجيل الدخول للوصول إلى الامتحانات</Alert>
+        <Alert severity="error">{t('exams.errors.loginRequired', 'يرجى تسجيل الدخول للوصول إلى الامتحانات')}</Alert>
       </SidebarLayout>
     );
   }
@@ -529,12 +529,12 @@ export default function ExamsPage() {
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
               <ExamIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              نظام الامتحانات والدرجات
+              {t('exams.title', 'نظام الامتحانات والدرجات')}
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
-              {user.role === 'STUDENT' ? 'عرض امتحاناتك ونتائجك' : 
-               user.role === 'TEACHER' ? 'إدارة امتحاناتك وتسجيل النتائج' : 
-               'إدارة جميع الامتحانات في النظام'}
+              {user.role === 'STUDENT' ? t('exams.studentView.subtitle', 'عرض امتحاناتك ونتائجك') : 
+               user.role === 'TEACHER' ? t('exams.teacherView.subtitle', 'إدارة امتحاناتك وتسجيل النتائج') : 
+               t('exams.adminView.subtitle', 'إدارة جميع الامتحانات في النظام')}
             </Typography>
           </Box>
           
@@ -545,7 +545,7 @@ export default function ExamsPage() {
               onClick={() => setCreateExamOpen(true)}
               size="large"
             >
-              إنشاء امتحان جديد
+              {t('exams.createNewExam', 'إنشاء امتحان جديد')}
             </Button>
           )}
         </Box>
@@ -557,7 +557,7 @@ export default function ExamsPage() {
               <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
-                  label="البحث في الامتحانات"
+                  label={t('common.search', 'البحث في الامتحانات')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   size="small"
@@ -566,13 +566,13 @@ export default function ExamsPage() {
               
               <Grid item xs={12} md={2}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>نوع الامتحان</InputLabel>
+                  <InputLabel>{t('exams.examType', 'نوع الامتحان')}</InputLabel>
                   <Select
                     value={examTypeFilter}
-                    label="نوع الامتحان"
+                    label={t('exams.examType', 'نوع الامتحان')}
                     onChange={(e) => setExamTypeFilter(e.target.value)}
                   >
-                    <MenuItem value="">الكل</MenuItem>
+                    <MenuItem value="">{t('common.all', 'الكل')}</MenuItem>
                     {EXAM_TYPES.map(type => (
                       <MenuItem key={type.value} value={type.value}>
                         {type.label}
@@ -584,13 +584,13 @@ export default function ExamsPage() {
 
               <Grid item xs={12} md={2}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>المادة</InputLabel>
+                  <InputLabel>{t('exams.subject', 'المادة')}</InputLabel>
                   <Select
                     value={subjectFilter}
-                    label="المادة"
+                    label={t('exams.subject', 'المادة')}
                     onChange={(e) => setSubjectFilter(e.target.value)}
                   >
-                    <MenuItem value="">جميع المواد</MenuItem>
+                    <MenuItem value="">{t('exams.allSubjects', 'جميع المواد')}</MenuItem>
                     {subjects?.map(subject => (
                       <MenuItem key={subject.id} value={subject.id}>
                         {subject.nameAr || subject.name}
@@ -602,13 +602,13 @@ export default function ExamsPage() {
 
               <Grid item xs={12} md={2}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>الفصل</InputLabel>
+                  <InputLabel>{t('exams.term', 'الفصل')}</InputLabel>
                   <Select
                     value={termFilter}
-                    label="الفصل"
+                    label={t('exams.term', 'الفصل')}
                     onChange={(e) => setTermFilter(e.target.value)}
                   >
-                    <MenuItem value="">جميع الفصول</MenuItem>
+                    <MenuItem value="">{t('exams.allTerms', 'جميع الفصول')}</MenuItem>
                     {TERMS.map(term => (
                       <MenuItem key={term.value} value={term.value}>
                         {term.label}
@@ -620,12 +620,12 @@ export default function ExamsPage() {
 
               <Grid item xs={12} md={3}>
                 <Box display="flex" gap={1}>
-                  <Tooltip title="تحديث">
+                  <Tooltip title={t('exams.refresh', 'تحديث')}>
                     <IconButton onClick={loadExams}>
                       <Refresh />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="فلترة">
+                  <Tooltip title={t('exams.filter', 'فلترة')}>
                     <IconButton>
                       <FilterList />
                     </IconButton>
@@ -652,12 +652,12 @@ export default function ExamsPage() {
             <CardContent sx={{ textAlign: 'center', py: 6 }}>
               <ExamIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
-                لا توجد امتحانات
+                {t('exams.noExamsFound', 'لا توجد امتحانات')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {user.role === 'STUDENT' ? 
-                  'لا توجد امتحانات مجدولة حالياً' :
-                  'لم يتم إنشاء أي امتحانات بعد. اضغط على "إنشاء امتحان جديد" للبدء!'
+                  t('exams.noExamsScheduled', 'لا توجد امتحانات مجدولة حالياً') :
+                  t('exams.noExamsCreated', 'لم يتم إنشاء أي امتحانات بعد. اضغط على "إنشاء امتحان جديد" للبدء!')
                 }
               </Typography>
             </CardContent>
@@ -719,14 +719,14 @@ export default function ExamsPage() {
                       <Box display="flex" alignItems="center" gap={1}>
                         <Schedule fontSize="small" color="action" />
                         <Typography variant="body2" color="text.secondary">
-                          {exam.duration} دقيقة
+                          {exam.duration} {t('exams.minutes', 'دقيقة')}
                         </Typography>
                       </Box>
                       
                       <Box display="flex" alignItems="center" gap={1}>
                         <Grade fontSize="small" color="action" />
                         <Typography variant="body2" color="text.secondary">
-                          {exam.totalMarks} درجة
+                          {exam.totalMarks} {t('exams.marks', 'درجة')}
                         </Typography>
                       </Box>
                     </Stack>
@@ -746,7 +746,7 @@ export default function ExamsPage() {
                     {user.role !== 'STUDENT' && (
                       <Box mt={1}>
                         <Typography variant="body2" color="text.secondary">
-                          النتائج: {exam._count.results} طالب
+                          {t('exams.results', 'النتائج')}: {exam._count.results} {t('common.students', 'طالب')}
                         </Typography>
                       </Box>
                     )}
@@ -760,7 +760,7 @@ export default function ExamsPage() {
                         startIcon={<Visibility />}
                         onClick={() => viewExamResults(exam)}
                       >
-                        عرض النتائج
+                        {t('exams.viewResults', 'عرض النتائج')}
                       </Button>
                       {(user.role === 'TEACHER' || user.role === 'ADMIN') && (
                         <Button
@@ -769,24 +769,24 @@ export default function ExamsPage() {
                           onClick={() => openGradeEntry(exam)}
                           variant="outlined"
                         >
-                          إدخال الدرجات
+                          {t('exams.enterGrades', 'إدخال الدرجات')}
                         </Button>
                       )}
                     </Box>
 
                     {(user.role === 'TEACHER' || user.role === 'ADMIN') && (
                       <Box display="flex" gap={1}>
-                        <Tooltip title="النتائج والإحصائيات">
+                        <Tooltip title={t('exams.resultsAndStatistics', 'النتائج والإحصائيات')}>
                           <IconButton size="small" onClick={() => viewExamResults(exam)}>
                             <Assessment fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="تعديل">
+                        <Tooltip title={t('common.edit', 'تعديل')}>
                           <IconButton size="small">
                             <Edit fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="حذف">
+                        <Tooltip title={t('common.delete', 'حذف')}>
                           <IconButton size="small" color="error">
                             <Delete fontSize="small" />
                           </IconButton>
@@ -807,13 +807,13 @@ export default function ExamsPage() {
           maxWidth="md"
           fullWidth
         >
-          <DialogTitle>إنشاء امتحان جديد</DialogTitle>
+          <DialogTitle>{t('exams.createNewExam', 'إنشاء امتحان جديد')}</DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="عنوان الامتحان"
+                  label={t('exams.examName', 'عنوان الامتحان')}
                   value={examForm.title}
                   onChange={(e) => setExamForm(prev => ({ ...prev, title: e.target.value }))}
                   required
@@ -822,10 +822,10 @@ export default function ExamsPage() {
               
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>نوع الامتحان</InputLabel>
+                  <InputLabel>{t('exams.examType', 'نوع الامتحان')}</InputLabel>
                   <Select
                     value={examForm.examType}
-                    label="نوع الامتحان"
+                    label={t('exams.examType', 'نوع الامتحان')}
                     onChange={(e) => setExamForm(prev => ({ ...prev, examType: e.target.value }))}
                   >
                     {EXAM_TYPES.map(type => (
@@ -842,7 +842,7 @@ export default function ExamsPage() {
                   fullWidth
                   multiline
                   rows={2}
-                  label="وصف الامتحان"
+                  label={t('exams.examDescription', 'وصف الامتحان')}
                   value={examForm.description}
                   onChange={(e) => setExamForm(prev => ({ ...prev, description: e.target.value }))}
                 />
@@ -850,10 +850,10 @@ export default function ExamsPage() {
 
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>المادة</InputLabel>
+                  <InputLabel>{t('exams.subject', 'المادة')}</InputLabel>
                   <Select
                     value={examForm.subjectId}
-                    label="المادة"
+                    label={t('exams.subject', 'المادة')}
                     onChange={(e) => setExamForm(prev => ({ ...prev, subjectId: e.target.value }))}
                     required
                   >
@@ -868,10 +868,10 @@ export default function ExamsPage() {
 
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>الصف</InputLabel>
+                  <InputLabel>{t('exams.classroom', 'الصف')}</InputLabel>
                   <Select
                     value={examForm.classRoomId}
-                    label="الصف"
+                    label={t('exams.classroom', 'الصف')}
                     onChange={(e) => setExamForm(prev => ({ ...prev, classRoomId: e.target.value }))}
                     required
                   >
@@ -888,7 +888,7 @@ export default function ExamsPage() {
                 <TextField
                   fullWidth
                   type="date"
-                  label="تاريخ الامتحان"
+                  label={t('exams.examDate', 'تاريخ الامتحان')}
                   value={examForm.examDate}
                   onChange={(e) => setExamForm(prev => ({ ...prev, examDate: e.target.value }))}
                   InputLabelProps={{ shrink: true }}
@@ -900,7 +900,7 @@ export default function ExamsPage() {
                 <TextField
                   fullWidth
                   type="time"
-                  label="وقت الامتحان"
+                  label={t('exams.examTime', 'وقت الامتحان')}
                   value={examForm.examTime}
                   onChange={(e) => setExamForm(prev => ({ ...prev, examTime: e.target.value }))}
                   InputLabelProps={{ shrink: true }}
@@ -911,7 +911,7 @@ export default function ExamsPage() {
                 <TextField
                   fullWidth
                   type="number"
-                  label="مدة الامتحان (دقيقة)"
+                  label={t('exams.durationMinutes', 'مدة الامتحان (دقيقة)')}
                   value={examForm.duration}
                   onChange={(e) => setExamForm(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
                   required
@@ -922,7 +922,7 @@ export default function ExamsPage() {
                 <TextField
                   fullWidth
                   type="number"
-                  label="الدرجة الكاملة"
+                  label={t('exams.totalMarks', 'الدرجة الكاملة')}
                   value={examForm.totalMarks}
                   onChange={(e) => setExamForm(prev => ({ ...prev, totalMarks: parseInt(e.target.value) }))}
                   required
@@ -934,22 +934,22 @@ export default function ExamsPage() {
                   fullWidth
                   multiline
                   rows={3}
-                  label="تعليمات الامتحان"
+                  label={t('exams.examInstructions', 'تعليمات الامتحان')}
                   value={examForm.instructions}
                   onChange={(e) => setExamForm(prev => ({ ...prev, instructions: e.target.value }))}
-                  placeholder="أدخل التعليمات الخاصة بالامتحان..."
+                  placeholder={t('exams.instructionsPlaceholder', 'أدخل التعليمات الخاصة بالامتحان...')}
                 />
               </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setCreateExamOpen(false)}>إلغاء</Button>
+            <Button onClick={() => setCreateExamOpen(false)}>{t('common.cancel', 'إلغاء')}</Button>
             <Button 
               variant="contained" 
               onClick={handleCreateExam}
               disabled={!examForm.title || !examForm.subjectId || !examForm.classRoomId || !examForm.examDate}
             >
-              إنشاء الامتحان
+              {t('exams.createExam', 'إنشاء الامتحان')}
             </Button>
           </DialogActions>
         </Dialog>
@@ -962,12 +962,12 @@ export default function ExamsPage() {
           fullWidth
         >
           <DialogTitle>
-            {selectedExam ? `نتائج ${selectedExam.title}` : 'نتائج الامتحان'}
+            {selectedExam ? `${t('exams.results', 'نتائج')} ${selectedExam.title}` : t('exams.examResults', 'نتائج الامتحان')}
           </DialogTitle>
           <DialogContent>
             {statistics && (
               <Box mb={3}>
-                <Typography variant="h6" gutterBottom>إحصائيات الامتحان</Typography>
+                <Typography variant="h6" gutterBottom>{t('exams.statisticsTitle', 'إحصائيات الامتحان')}</Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={6} md={3}>
                     <Card variant="outlined">
@@ -975,7 +975,7 @@ export default function ExamsPage() {
                         <Typography variant="h4" color="primary">
                           {statistics.totalStudents}
                         </Typography>
-                        <Typography variant="body2">إجمالي الطلاب</Typography>
+                        <Typography variant="body2">{t('exams.statistics.totalStudents', 'إجمالي الطلاب')}</Typography>
                       </CardContent>
                     </Card>
                   </Grid>
@@ -985,7 +985,7 @@ export default function ExamsPage() {
                         <Typography variant="h4" color="success.main">
                           {statistics.averagePercentage.toFixed(1)}%
                         </Typography>
-                        <Typography variant="body2">المعدل العام</Typography>
+                        <Typography variant="body2">{t('exams.statistics.averageScore', 'المعدل العام')}</Typography>
                       </CardContent>
                     </Card>
                   </Grid>
@@ -995,7 +995,7 @@ export default function ExamsPage() {
                         <Typography variant="h4" color="success.main">
                           {statistics.passedStudents}
                         </Typography>
-                        <Typography variant="body2">ناجح</Typography>
+                        <Typography variant="body2">{t('exams.statusChip.passed', 'ناجح')}</Typography>
                       </CardContent>
                     </Card>
                   </Grid>
@@ -1005,7 +1005,7 @@ export default function ExamsPage() {
                         <Typography variant="h4" color="error.main">
                           {statistics.failedStudents}
                         </Typography>
-                        <Typography variant="body2">راسب</Typography>
+                        <Typography variant="body2">{t('exams.statusChip.failed', 'راسب')}</Typography>
                       </CardContent>
                     </Card>
                   </Grid>
@@ -1017,12 +1017,12 @@ export default function ExamsPage() {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>الطالب</TableCell>
-                    <TableCell align="center">الرقم</TableCell>
-                    <TableCell align="center">الدرجة</TableCell>
-                    <TableCell align="center">النسبة</TableCell>
-                    <TableCell align="center">التقدير</TableCell>
-                    <TableCell>ملاحظات</TableCell>
+                    <TableCell>{t('exams.student', 'الطالب')}</TableCell>
+                    <TableCell align="center">{t('exams.rollNumber', 'الرقم')}</TableCell>
+                    <TableCell align="center">{t('exams.marksObtained', 'الدرجة')}</TableCell>
+                    <TableCell align="center">{t('exams.percentage', 'النسبة')}</TableCell>
+                    <TableCell align="center">{t('exams.grade', 'التقدير')}</TableCell>
+                    <TableCell>{t('exams.remarks', 'ملاحظات')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1058,7 +1058,7 @@ export default function ExamsPage() {
             </TableContainer>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setViewResultsOpen(false)}>إغلاق</Button>
+            <Button onClick={() => setViewResultsOpen(false)}>{t('common.close', 'إغلاق')}</Button>
           </DialogActions>
         </Dialog>
 
@@ -1070,9 +1070,9 @@ export default function ExamsPage() {
           fullWidth
         >
           <DialogTitle>
-            إدخال درجات الامتحان: {selectedExam?.title}
+            {t('exams.grading.gradeEntry', 'إدخال درجات الامتحان:')} {selectedExam?.title}
             <Typography variant="subtitle2" color="text.secondary">
-              الدرجة الكاملة: {selectedExam?.totalMarks} درجة
+              {t('exams.totalMarks', 'الدرجة الكاملة')}: {selectedExam?.totalMarks} {t('exams.marks', 'درجة')}
             </Typography>
             {studentsForGrading.length > 0 && (() => {
               const gradedCount = Object.keys(gradeEntryForm).filter(id => gradeEntryForm[id]?.marks !== '').length;
@@ -1082,10 +1082,10 @@ export default function ExamsPage() {
                 <Box sx={{ mt: 2 }}>
                   <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                     <Typography variant="body2" color="primary">
-                      تم تقييم {gradedCount} من {totalCount} طلاب
+                      {t('exams.grading.gradedStudents', 'تم تقييم {{graded}} من {{total}} طلاب', { graded: gradedCount, total: totalCount })}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {progress.toFixed(0)}%
+                      {t('exams.grading.progressPercentage', '{{percentage}}%', { percentage: progress.toFixed(0) })}
                     </Typography>
                   </Box>
                   <LinearProgress 
@@ -1108,12 +1108,12 @@ export default function ExamsPage() {
           <DialogContent>
             <Box sx={{ mt: 2 }}>
               {studentsForGrading.length === 0 ? (
-                <Typography>لا توجد طلاب مسجلون في هذا الفصل</Typography>
+                <Typography>{t('exams.noStudentsInClass', 'لا توجد طلاب مسجلون في هذا الفصل')}</Typography>
               ) : (
                 <>
                   <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                     <Typography variant="h6" component="h3">
-                      قائمة الطلاب
+                      {t('exams.grading.studentsList', 'قائمة الطلاب')}
                     </Typography>
                     <Box display="flex" gap={1}>
                       <Button
@@ -1131,7 +1131,7 @@ export default function ExamsPage() {
                           setStudentsForGrading(sorted);
                         }}
                       >
-                        إظهار غير المُقيّمين أولاً
+                        {t('exams.grading.showUngradedFirst', 'إظهار غير المُقيّمين أولاً')}
                       </Button>
                     </Box>
                   </Box>
@@ -1139,11 +1139,11 @@ export default function ExamsPage() {
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>الحالة</TableCell>
-                        <TableCell>الطالب</TableCell>
-                        <TableCell>الرقم</TableCell>
-                        <TableCell>الدرجة المحصلة</TableCell>
-                        <TableCell>ملاحظات</TableCell>
+                        <TableCell>{t('exams.status', 'الحالة')}</TableCell>
+                        <TableCell>{t('exams.student', 'الطالب')}</TableCell>
+                        <TableCell>{t('exams.rollNumber', 'الرقم')}</TableCell>
+                        <TableCell>{t('exams.marksObtained', 'الدرجة المحصلة')}</TableCell>
+                        <TableCell>{t('exams.remarks', 'ملاحظات')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1154,7 +1154,7 @@ export default function ExamsPage() {
                           <TableCell>
                             <Chip 
                               icon={hasGrade ? <TrendingUp /> : <Schedule />}
-                              label={hasGrade ? 'مُقيّم' : 'معلق'}
+                              label={hasGrade ? t('exams.grading.graded', 'مُقيّم') : t('exams.grading.pending', 'معلق')}
                               size="small"
                               color={hasGrade ? 'success' : 'default'}
                             />
@@ -1184,7 +1184,7 @@ export default function ExamsPage() {
                                   }
                                 }));
                               }}
-                              placeholder={`من ${selectedExam?.totalMarks}`}
+                              placeholder={t('exams.grading.outOf', 'من {{total}}', { total: selectedExam?.totalMarks })}
                             />
                           </TableCell>
                           <TableCell>
@@ -1202,7 +1202,7 @@ export default function ExamsPage() {
                                   }
                                 }));
                               }}
-                              placeholder="ملاحظات إضافية"
+                              placeholder={t('exams.additionalRemarks', 'ملاحظات إضافية')}
                             />
                           </TableCell>
                         </TableRow>
@@ -1216,13 +1216,13 @@ export default function ExamsPage() {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setGradeEntryOpen(false)}>إلغاء</Button>
+            <Button onClick={() => setGradeEntryOpen(false)}>{t('common.cancel', 'إلغاء')}</Button>
             <Button 
               onClick={submitGrades}
               variant="contained"
               disabled={Object.keys(gradeEntryForm).length === 0}
             >
-              حفظ الدرجات
+              {t('exams.saveGrades', 'حفظ الدرجات')}
             </Button>
           </DialogActions>
         </Dialog>

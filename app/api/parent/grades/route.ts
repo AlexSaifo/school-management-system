@@ -43,13 +43,27 @@ export async function GET(req: NextRequest) {
     });
     if (!relation) return NextResponse.json({ error: 'Student not found or access denied' }, { status: 404 });
 
-    const grades = await prisma.grade.findMany({
+    // Query both legacy Grade table and ExamResult table
+    const legacyGrades = await prisma.grade.findMany({
       where: { studentId },
       include: { subject: true },
       orderBy: { examDate: 'desc' }
     });
 
-    const performance = grades.map(g => {
+    const examResults = await prisma.examResult.findMany({
+      where: { studentId },
+      include: { 
+        exam: { 
+          include: { 
+            subject: true 
+          } 
+        } 
+      },
+      orderBy: { exam: { examDate: 'desc' } }
+    });
+
+    // Map legacy grades
+    const legacyPerformance = legacyGrades.map(g => {
       const marks = Number(g.marks);
       const total = Number(g.totalMarks);
       const percentage = total > 0 ? Math.round((marks / total) * 10000) / 100 : 0;
@@ -62,6 +76,26 @@ export async function GET(req: NextRequest) {
         grade: letterGrade(percentage)
       };
     });
+
+    // Map exam results
+    const examPerformance = examResults.map(r => {
+      const marks = Number(r.marksObtained);
+      const total = Number(r.exam.totalMarks);
+      const percentage = total > 0 ? Math.round((marks / total) * 10000) / 100 : 0;
+      return {
+        subject: r.exam.subject?.name || 'Unknown',
+        marks, 
+        totalMarks: total,
+        examType: r.exam.title, // Using exam title as exam type
+        date: r.exam.examDate.toISOString().split('T')[0],
+        percentage,
+        grade: r.grade || letterGrade(percentage) // Use stored grade if available, otherwise calculate
+      };
+    });
+
+    // Combine both sources and sort by date
+    const performance = [...legacyPerformance, ...examPerformance]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return NextResponse.json({ success: true, performance });
   } catch (error) {

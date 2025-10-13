@@ -18,58 +18,36 @@ import {
   Alert,
   Tabs,
   Tab,
-  List,
-  ListItem,
-  ListItemText,
   Avatar,
-  LinearProgress,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  IconButton,
-  Badge,
   Divider,
 } from '@mui/material';
 import {
   FamilyRestroom,
-  School,
   TrendingUp,
   CalendarToday,
-  Message,
   Assignment,
-  Quiz,
-  Grade,
   AccessTime,
   CheckCircle,
   Warning,
-  Send,
-  Refresh,
-  Schedule,
-  Notifications,
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
-import AnnouncementsWidget from '@/components/AnnouncementsWidget';
-import EventsWidget from '@/components/EventsWidget';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
 
 interface Child {
   id: string;
-  rollNumber: string;
-  class: string;
-  section: string;
-  user: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
+  rollNumber?: string;
+  class?: string;
+  section?: string;
+  user?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | null;
 }
 
 interface Performance {
@@ -85,15 +63,15 @@ interface Performance {
 interface Attendance {
   date: string;
   status: string;
-  teacher: {
-    user: {
-      firstName: string;
-      lastName: string;
+  teacher?: {
+    user?: {
+      firstName?: string;
+      lastName?: string;
     };
-  };
-  class: {
-    name: string;
-  };
+  } | null;
+  class?: {
+    name?: string;
+  } | null;
 }
 
 interface Assignment {
@@ -106,32 +84,22 @@ interface Assignment {
   totalMarks: number;
 }
 
-interface Communication {
-  id: string;
-  from: string;
-  subject: string;
-  message: string;
-  date: string;
-  type: 'TEACHER_MESSAGE' | 'SCHOOL_NOTICE' | 'FEE_REMINDER';
-  isRead: boolean;
-}
-
 interface Event {
   id: string;
-  title: string;
+  title?: string;
   titleAr?: string;
   description?: string;
   descriptionAr?: string;
-  eventDate: string;
-  eventTime: string;
+  eventDate?: string;
+  eventTime?: string;
   location?: string;
   locationAr?: string;
-  type: string;
-  createdBy: {
-    firstName: string;
-    lastName: string;
-  };
-  createdAt: string;
+  type?: string;
+  createdBy?: {
+    firstName?: string;
+    lastName?: string;
+  } | null;
+  createdAt?: string;
 }
 
 export default function ParentDashboard() {
@@ -155,16 +123,17 @@ export default function ParentDashboard() {
   }, []);
 
   useEffect(() => {
-    if (selectedChild) {
-      if (tabValue === 0) {
-        // Overview: load all key datasets in parallel
-        fetchOverviewData();
-      } else if (tabValue === 1) fetchPerformance();
-      else if (tabValue === 2) fetchAttendance();
-      else if (tabValue === 3) fetchAssignments();
-      else if (tabValue === 4) fetchEvents(); // Events tab index shifted after removing communications
+    if (!selectedChild) return;
+    fetchPerformance();
+    fetchAttendance();
+    fetchAssignments();
+  }, [selectedChild]);
+
+  useEffect(() => {
+    if (tabValue === 3) {
+      fetchEvents();
     }
-  }, [selectedChild, tabValue]);
+  }, [tabValue]);
 
   const fetchChildren = async () => {
     if (!token) return;
@@ -249,16 +218,6 @@ export default function ParentDashboard() {
     }
   };
 
-  const fetchOverviewData = async () => {
-    setLoading(true);
-    await Promise.all([
-      fetchPerformance(),
-      fetchAttendance(),
-      fetchAssignments(),
-      fetchEvents()
-    ]);
-    setLoading(false);
-  };
   // Communications & messaging removed
 
   const calculateOverallPerformance = () => {
@@ -340,7 +299,7 @@ export default function ParentDashboard() {
               fontWeight: 'bold'
             }}
           >
-            {user?.firstName[0]}{user?.lastName[0]}
+            {user?.firstName?.[0]?.toUpperCase() ?? ''}{user?.lastName?.[0]?.toUpperCase() ?? ''}
           </Avatar>
         </Box>
       </Paper>
@@ -359,7 +318,7 @@ export default function ParentDashboard() {
               >
                 {children.map((child) => (
                   <MenuItem key={child.id} value={child.id}>
-                    {child.user.firstName} {child.user.lastName} - {child.class}{child.section}
+                    {`${child.user?.firstName || t('parentDashboard.unknownName', { defaultValue: 'N/A' })} ${child.user?.lastName || ''}`.trim()} - {(child.class || '')}${child.section || ''}
                   </MenuItem>
                 ))}
               </Select>
@@ -367,7 +326,7 @@ export default function ParentDashboard() {
             {getCurrentChild() && (
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  {t('parentDashboard.rollNo')}: {getCurrentChild()?.rollNumber}
+                  {t('parentDashboard.rollNo')}: {getCurrentChild()?.rollNumber || t('parentDashboard.notAvailable', { defaultValue: 'N/A' })}
                 </Typography>
               </Box>
             )}
@@ -386,7 +345,7 @@ export default function ParentDashboard() {
                 icon={<TrendingUp />}
                 color="success"
                 subtitle={t('parentDashboard.averageGrade', { grade: 'A-' })}
-                onClick={() => setTabValue(1)}
+                onClick={() => setTabValue(0)}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
@@ -396,7 +355,7 @@ export default function ParentDashboard() {
                 icon={<CalendarToday />}
                 color="primary"
                 subtitle={t('parentDashboard.thisMonth')}
-                onClick={() => setTabValue(2)}
+                onClick={() => setTabValue(1)}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
@@ -406,7 +365,7 @@ export default function ParentDashboard() {
                 icon={<Assignment />}
                 color="warning"
                 subtitle={t('parentDashboard.assignmentsDue')}
-                onClick={() => setTabValue(3)}
+                onClick={() => setTabValue(2)}
               />
             </Grid>
           </Grid>
@@ -415,113 +374,14 @@ export default function ParentDashboard() {
           <Paper sx={{ width: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
               <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
-                <Tab label={t('parentDashboard.tabs.overview')} />
                 <Tab label={t('parentDashboard.tabs.performance')} />
                 <Tab label={t('parentDashboard.tabs.attendance')} />
                 <Tab label={t('parentDashboard.tabs.assignments')} />
                 <Tab label={t('parentDashboard.tabs.events')} />
               </Tabs>
             </Box>
-
-            {/* Overview Tab */}
-            {tabValue === 0 && (
-              <Box sx={{ p: 3 }}>
-                {/* Announcements Section */}
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                  <Grid item xs={12}>
-                    <AnnouncementsWidget maxItems={3} />
-                  </Grid>
-                </Grid>
-
-                {/* Events Section */}
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                  <Grid item xs={12}>
-                    <EventsWidget maxItems={3} />
-                  </Grid>
-                </Grid>
-
-                <Grid container spacing={3}>
-                  {/* Recent Performance */}
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="h6" fontWeight="bold" mb={2}>
-                      {t('parentDashboard.recentPerformance')}
-                    </Typography>
-                    <Card>
-                      <CardContent>
-                        {performance.map((perf, index) => (
-                          <Box key={index} mb={2}>
-                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                              <Typography variant="subtitle1" fontWeight="medium">
-                                {perf.subject}
-                              </Typography>
-                              <Chip 
-                                label={perf.grade}
-                                color={perf.percentage >= 80 ? 'success' : perf.percentage >= 60 ? 'warning' : 'error'}
-                                size="small"
-                              />
-                            </Box>
-                            <Box display="flex" alignItems="center" gap={1}>
-                              <LinearProgress
-                                variant="determinate"
-                                value={perf.percentage}
-                                sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
-                                color={perf.percentage >= 80 ? 'success' : perf.percentage >= 60 ? 'warning' : 'error'}
-                              />
-                              <Typography variant="caption">
-                                {perf.marks}/{perf.totalMarks}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        ))}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  {/* Recent Activity */}
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="h6" fontWeight="bold" mb={2}>
-                      {t('parentDashboard.recentActivity')}
-                    </Typography>
-                    <List>
-                      {assignments.slice(0, 3).map((assignment) => (
-                        <ListItem key={assignment.id} divider>
-                          <ListItemText
-                            primary={
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <Typography variant="subtitle2">
-                                  {assignment.title}
-                                </Typography>
-                                <Chip 
-                                  label={assignment.status}
-                                  size="small"
-                                  color={assignment.status === 'SUBMITTED' ? 'success' : 
-                                         assignment.status === 'PENDING' ? 'warning' : 'error'}
-                                />
-                              </Box>
-                            }
-                            secondary={
-                              <Box>
-                                <Typography variant="caption" color="text.secondary">
-                                  {assignment.subject} • {t('parentDashboard.due')}: {new Date(assignment.dueDate).toLocaleDateString()}
-                                </Typography>
-                                {assignment.marks && (
-                                  <Typography variant="caption" display="block">
-                                    {t('parentDashboard.score')}: {assignment.marks}/{assignment.totalMarks}
-                                  </Typography>
-                                )}
-                              </Box>
-                            }
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Grid>
-                </Grid>
-              </Box>
-            )}
-
             {/* Performance Tab */}
-            {tabValue === 1 && (
+            {tabValue === 0 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" fontWeight="bold" mb={3}>
                   {t('parentDashboard.academicPerformance')}
@@ -563,7 +423,7 @@ export default function ParentDashboard() {
             )}
 
             {/* Attendance Tab */}
-            {tabValue === 2 && (
+            {tabValue === 1 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" fontWeight="bold" mb={3}>
                   {t('parentDashboard.attendanceRecord')}
@@ -623,7 +483,11 @@ export default function ParentDashboard() {
                       {attendance.slice().reverse().map((record, index) => (
                         <TableRow key={index}>
                           <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                          <TableCell>{record.class.name} - {record.teacher.user.firstName} {record.teacher.user.lastName}</TableCell>
+                          <TableCell>
+                            {record.class?.name || t('parentDashboard.unknownClass', { defaultValue: 'Class' })}
+                            {' - '}
+                            {`${record.teacher?.user?.firstName || t('parentDashboard.unknownName', { defaultValue: 'N/A' })} ${record.teacher?.user?.lastName || ''}`.trim()}
+                          </TableCell>
                           <TableCell>
                             <Chip 
                               label={record.status}
@@ -641,7 +505,7 @@ export default function ParentDashboard() {
             )}
 
             {/* Assignments Tab */}
-            {tabValue === 3 && (
+            {tabValue === 2 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" fontWeight="bold" mb={3}>
                   {t('parentDashboard.assignmentsTasks')}
@@ -694,7 +558,7 @@ export default function ParentDashboard() {
             )}
 
             {/* Events Tab */}
-            {tabValue === 4 && (
+            {tabValue === 3 && (
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" fontWeight="bold" mb={3}>
                   {t('parentDashboard.schoolEvents')}
@@ -712,23 +576,23 @@ export default function ParentDashboard() {
                           <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
                               <Typography variant="h6" gutterBottom>
-                                {language === 'ar' && event.titleAr ? event.titleAr : event.title}
+                                {language === 'ar' && event.titleAr ? event.titleAr : event.title || t('parentDashboard.untitledEvent', { defaultValue: 'Untitled Event' })}
                               </Typography>
                               <Chip
-                                label={event.type}
+                                label={event.type || t('parentDashboard.eventTypeUnknown', { defaultValue: 'General' })}
                                 color="primary"
                                 size="small"
                               />
                             </Box>
                             <Typography variant="body2" color="text.secondary" gutterBottom>
-                              {language === 'ar' && event.descriptionAr ? event.descriptionAr : event.description}
+                              {language === 'ar' && event.descriptionAr ? event.descriptionAr : event.description || t('parentDashboard.noDescription', { defaultValue: 'No description provided.' })}
                             </Typography>
                             <Divider sx={{ my: 1 }} />
                             <Typography variant="body2">
-                              📅 {t('parentDashboard.eventDate')}: {new Date(event.eventDate).toLocaleDateString()}
+                              📅 {t('parentDashboard.eventDate')}: {event.eventDate ? new Date(event.eventDate).toLocaleDateString() : t('parentDashboard.notAvailable', { defaultValue: 'N/A' })}
                             </Typography>
                             <Typography variant="body2">
-                              🕐 {t('parentDashboard.eventTime')}: {event.eventTime}
+                              🕐 {t('parentDashboard.eventTime')}: {event.eventTime || t('parentDashboard.notAvailable', { defaultValue: 'N/A' })}
                             </Typography>
                             {event.location && (
                               <Typography variant="body2">
@@ -736,7 +600,7 @@ export default function ParentDashboard() {
                               </Typography>
                             )}
                             <Typography variant="body2" color="text.secondary">
-                              👤 {t('parentDashboard.createdBy')}: {event.createdBy.firstName} {event.createdBy.lastName}
+                              👤 {t('parentDashboard.createdBy')}: {`${event.createdBy?.firstName || t('parentDashboard.unknownName', { defaultValue: 'N/A' })} ${event.createdBy?.lastName || ''}`.trim()}
                             </Typography>
                           </CardContent>
                         </Card>

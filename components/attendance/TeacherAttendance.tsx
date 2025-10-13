@@ -258,6 +258,11 @@ export default function TeacherAttendance() {
       return;
     }
 
+    const previousStudent = students.find((student) => student.id === studentId);
+    const previousAttendance = previousStudent?.attendance
+      ? { ...previousStudent.attendance }
+      : null;
+
     // Update local state immediately for UI responsiveness
     setStudents(prevStudents =>
       prevStudents.map(student =>
@@ -265,9 +270,9 @@ export default function TeacherAttendance() {
           ? {
               ...student,
               attendance: {
-                id: student.attendance?.id || '',
+                id: previousAttendance?.id || '',
                 status,
-                remarks: student.attendance?.remarks || '',
+                remarks: previousAttendance?.remarks || '',
               },
             }
           : student
@@ -301,11 +306,7 @@ export default function TeacherAttendance() {
             student.id === studentId
               ? {
                   ...student,
-                  attendance: {
-                    id: student.attendance?.id || '',
-                    status: student.attendance?.status || 'PRESENT',
-                    remarks: student.attendance?.remarks || '',
-                  },
+                  attendance: previousAttendance ? { ...previousAttendance } : null,
                 }
               : student
           )
@@ -321,11 +322,7 @@ export default function TeacherAttendance() {
           student.id === studentId
             ? {
                 ...student,
-                attendance: {
-                  id: student.attendance?.id || '',
-                  status: student.attendance?.status || 'PRESENT',
-                  remarks: student.attendance?.remarks || '',
-                },
+                attendance: previousAttendance ? { ...previousAttendance } : null,
               }
             : student
         )
@@ -339,18 +336,19 @@ export default function TeacherAttendance() {
         student.id === studentId
           ? {
               ...student,
-              attendance: {
-                id: student.attendance?.id || '',
-                status: student.attendance?.status || 'PRESENT',
-                remarks,
-              },
+              attendance: student.attendance
+                ? {
+                    ...student.attendance,
+                    remarks,
+                  }
+                : null,
             }
           : student
       )
     );
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string | null) => {
     switch (status) {
       case 'PRESENT':
         return 'success';
@@ -365,7 +363,7 @@ export default function TeacherAttendance() {
     }
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status?: string | null) => {
     switch (status) {
       case 'PRESENT':
         return t('attendance.present', 'Present');
@@ -473,16 +471,17 @@ export default function TeacherAttendance() {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={getStatusLabel(student.attendance?.status || 'PRESENT')}
-                            color={getStatusColor(student.attendance?.status || 'PRESENT')}
+                            label={getStatusLabel(student.attendance?.status)}
+                            color={getStatusColor(student.attendance?.status)}
                             size="small"
+                            variant={student.attendance?.status ? 'filled' : 'outlined'}
                           />
                         </TableCell>
                         <TableCell>{student.attendance?.remarks || '-'}</TableCell>
                         <TableCell>
                           <RadioGroup
                             row
-                            value={student.attendance?.status || 'PRESENT'}
+                            value={student.attendance?.status ?? ''}
                             onChange={(e) => handleAttendanceChange(student.id, e.target.value as any)}
                           >
                             <FormControlLabel value="PRESENT" control={<Radio />} label={t('attendance.present', 'Present')} />
