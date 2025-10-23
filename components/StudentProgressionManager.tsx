@@ -151,13 +151,20 @@ export default function StudentProgressionManager() {
   }, [selectedGradeLevelId, selectedAcademicYearId]);
 
   useEffect(() => {
-    if (progressionType === 'PROMOTED' && targetGradeLevelId && targetAcademicYearId) {
-      loadTargetClassRooms(targetGradeLevelId, targetAcademicYearId);
+    if (progressionType === 'RETAINED') {
+      setTargetGradeLevelId(selectedGradeLevelId);
+    }
+  }, [progressionType, selectedGradeLevelId]);
+
+  useEffect(() => {
+    const gradeId = progressionType === 'PROMOTED' ? targetGradeLevelId : selectedGradeLevelId;
+    if (gradeId && targetAcademicYearId) {
+      loadTargetClassRooms(gradeId, targetAcademicYearId);
     } else {
       setTargetClassRooms([]);
       setTargetClassRoomId('');
     }
-  }, [progressionType, targetGradeLevelId, targetAcademicYearId]);
+  }, [progressionType, targetGradeLevelId, targetAcademicYearId, selectedGradeLevelId]);
 
   const loadGradeLevels = async () => {
     try {
@@ -344,7 +351,7 @@ export default function StudentProgressionManager() {
       return;
     }
 
-    if (progressionType === 'PROMOTED' && !targetClassRoomId) {
+    if (!targetClassRoomId) {
       showSnackbar(t('studentProgression.selectTargetClassroom'), 'warning');
       return;
     }
@@ -361,7 +368,7 @@ export default function StudentProgressionManager() {
         toAcademicYearId: targetAcademicYearId,
         progressionType,
         reason: reason.trim() || undefined,
-        toClassRoomId: progressionType === 'PROMOTED' ? targetClassRoomId : undefined,
+        toClassRoomId: targetClassRoomId,
       }));
 
       // Get auth token from cookie
@@ -560,10 +567,9 @@ export default function StudentProgressionManager() {
                 </Grid>
               )}
 
-              {progressionType === 'PROMOTED' && (
-                <Grid item xs={12} md={3}>
-                  <FormControl fullWidth>
-                    <InputLabel>{t('studentProgression.targetClassroom')}</InputLabel>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>{t('studentProgression.targetClassroom')}</InputLabel>
                     <Select
                       value={targetClassRoomId}
                       onChange={(e) => setTargetClassRoomId(e.target.value)}
@@ -607,7 +613,6 @@ export default function StudentProgressionManager() {
                     </Select>
                   </FormControl>
                 </Grid>
-              )}
 
               <Grid item xs={12} md={3}>
                 <TextField
@@ -628,7 +633,8 @@ export default function StudentProgressionManager() {
                 disabled={
                   selectedStudents.size === 0 ||
                   !targetAcademicYearId ||
-                  (progressionType === 'PROMOTED' && (!targetGradeLevelId || !targetClassRoomId))
+                  !targetClassRoomId ||
+                  (progressionType === 'PROMOTED' && !targetGradeLevelId)
                 }
               >
                 {language === 'ar' 
@@ -737,7 +743,7 @@ export default function StudentProgressionManager() {
               {t('studentProgression.promoteToNextGrade')} {gradeLevels.find(g => g.id === targetGradeLevelId) ? getGradeName(gradeLevels.find(g => g.id === targetGradeLevelId)!) : ''} {t('studentProgression.targetAcademicYear').toLowerCase()} {academicYears.find(y => y.id === targetAcademicYearId) ? getAcademicYearName(academicYears.find(y => y.id === targetAcademicYearId)!) : ''}.
             </Typography>
           )}
-          {progressionType === 'PROMOTED' && selectedTargetClassroom && (
+          {selectedTargetClassroom && (
             <Typography sx={{ mt: 1 }}>
               {t('studentProgression.targetClassroom')}: {selectedTargetClassroom.name} (
               {(selectedTargetClassroom._count?.students ?? 0)}/{selectedTargetClassroom.capacity}
