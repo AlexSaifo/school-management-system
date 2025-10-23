@@ -33,7 +33,10 @@ import {
   AccordionDetails,
   CircularProgress,
   Alert,
-  Divider
+  Divider,
+  Checkbox,
+  FormControlLabel,
+  Autocomplete
 } from '@mui/material';
 import { 
   MenuBook, 
@@ -56,6 +59,19 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import SidebarLayout from '@/components/layout/SidebarLayout';
+
+interface GradeLevel {
+  id: string;
+  name: string;
+  nameAr: string;
+  level: number;
+}
+
+interface GradeAssignment {
+  gradeLevelId: string;
+  weeklyHours: number;
+  isRequired: boolean;
+}
 
 interface Subject {
   id: string;
@@ -98,6 +114,9 @@ export default function SubjectsPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
+  const [gradeAssignments, setGradeAssignments] = useState<GradeAssignment[]>([]);
+  const [loadingGradeLevels, setLoadingGradeLevels] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(t('academic.all'));
   const [formData, setFormData] = useState({
     name: '',
@@ -133,8 +152,32 @@ export default function SubjectsPage() {
     }
   };
 
+  // Fetch grade levels from API
+  const fetchGradeLevels = async () => {
+    try {
+      setLoadingGradeLevels(true);
+      const response = await fetch('/api/academic/grade-levels', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGradeLevels(data.gradeLevels || data.data || []);
+      } else {
+        console.error('Failed to fetch grade levels');
+      }
+    } catch (error) {
+      console.error('Error fetching grade levels:', error);
+    } finally {
+      setLoadingGradeLevels(false);
+    }
+  };
+
   useEffect(() => {
     fetchSubjects();
+    fetchGradeLevels();
   }, []);
 
   // Group subjects by category based on their name/code patterns
@@ -189,6 +232,14 @@ export default function SubjectsPage() {
       description: subject.description || '',
       color: subject.color
     });
+    // Set grade assignments for editing
+    setGradeAssignments(
+      subject.grades.map(grade => ({
+        gradeLevelId: grade.id,
+        weeklyHours: grade.weeklyHours,
+        isRequired: grade.isRequired
+      }))
+    );
     setOpenDialog(true);
   };
 
@@ -202,14 +253,15 @@ export default function SubjectsPage() {
       description: '',
       color: '#1976d2'
     });
+    setGradeAssignments([]);
   };
 
   const handleSubmit = async () => {
     try {
-      const url = selectedSubject 
-        ? `/api/academic/subjects/${selectedSubject.id}` 
+      const url = selectedSubject
+        ? `/api/academic/subjects/${selectedSubject.id}`
         : '/api/academic/subjects';
-      
+
       const method = selectedSubject ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -222,6 +274,43 @@ export default function SubjectsPage() {
       });
 
       if (response.ok) {
+        const subjectData = await response.json();
+        const subjectId = selectedSubject ? selectedSubject.id : subjectData.data.id;
+
+        // Update grade assignments if any
+        if (gradeAssignments.length > 0) {
+          const gradesResponse = await fetch(`/api/academic/subjects/${subjectId}/grades`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ gradeAssignments }),
+          });
+
+          if (!gradesResponse.ok) {
+            const errorData = await gradesResponse.json();
+            setError(errorData.error || 'Failed to update grade assignments');
+            return;
+          }
+        } else if (selectedSubject) {
+          // If editing and no grade assignments, clear existing ones
+          const gradesResponse = await fetch(`/api/academic/subjects/${subjectId}/grades`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ gradeAssignments: [] }),
+          });
+
+          if (!gradesResponse.ok) {
+            const errorData = await gradesResponse.json();
+            setError(errorData.error || 'Failed to clear grade assignments');
+            return;
+          }
+        }
+
         await fetchSubjects(); // Refresh the list
         handleCloseDialog();
       } else {
@@ -255,6 +344,31 @@ export default function SubjectsPage() {
         setError('Network error occurred');
       }
     }
+  };
+
+  const handleAddGradeAssignment = (gradeLevelId: string) => {
+    // Check if already assigned
+    if (gradeAssignments.some(ga => ga.gradeLevelId === gradeLevelId)) {
+      return;
+    }
+
+    setGradeAssignments(prev => [...prev, {
+      gradeLevelId,
+      weeklyHours: 1,
+      isRequired: false
+    }]);
+  };
+
+  const handleRemoveGradeAssignment = (gradeLevelId: string) => {
+    setGradeAssignments(prev => prev.filter(ga => ga.gradeLevelId !== gradeLevelId));
+  };
+
+  const handleUpdateGradeAssignment = (gradeLevelId: string, field: 'weeklyHours' | 'isRequired', value: number | boolean) => {
+    setGradeAssignments(prev => prev.map(ga =>
+      ga.gradeLevelId === gradeLevelId
+        ? { ...ga, [field]: value }
+        : ga
+    ));
   };
 
   return (
@@ -539,6 +653,129 @@ export default function SubjectsPage() {
                   />
                 </Grid>
               </Grid>
+
+              {/* Grade Assignments Section */}
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  {t('academic.gradeAssignments')}
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+
+                {/* Grade Selection Autocomplete */}
+                <Box sx={{ mb: 3 }}>
+                  <Autocomplete
+                    multiple
+                    id="grade-selection"
+                    options={gradeLevels.filter(grade =>
+                      !gradeAssignments.some(ga => ga.gradeLevelId === grade.id)
+                    )}
+                    getOptionLabel={(option) => `${isRTL ? option.nameAr : option.name} (${t('academic.level')} ${option.level})`}
+                    value={[]}
+                    onChange={(event, newValue) => {
+                      newValue.forEach(grade => handleAddGradeAssignment(grade.id));
+                    }}
+                    loading={loadingGradeLevels}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={t('academic.selectGradesToAssign')}
+                        placeholder={t('academic.searchGrades')}
+                        helperText={t('academic.selectMultipleGrades')}
+                      />
+                    )}
+                    renderTags={() => null}
+                    noOptionsText={t('academic.noAvailableGrades')}
+                    loadingText={t('common.loading')}
+                    sx={{ mb: 2 }}
+                    disableCloseOnSelect
+                    filterOptions={(options, { inputValue }) => {
+                      const searchValue = inputValue.toLowerCase();
+                      return options.filter(option =>
+                        option.name.toLowerCase().includes(searchValue) ||
+                        option.nameAr.toLowerCase().includes(searchValue) ||
+                        option.level.toString().includes(searchValue)
+                      );
+                    }}
+                  />
+                </Box>
+
+                {/* Assigned Grades */}
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {t('academic.assignedGrades')}
+                  </Typography>
+                  {gradeAssignments.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('academic.noGradesAssigned')}
+                    </Typography>
+                  ) : (
+                    <Stack spacing={2}>
+                      {gradeAssignments.map(assignment => {
+                        const grade = gradeLevels.find(g => g.id === assignment.gradeLevelId);
+                        return (
+                          <Box
+                            key={assignment.gradeLevelId}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                              p: 2,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              borderRadius: 1
+                            }}
+                          >
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body1" fontWeight="medium">
+                                {grade ? (isRTL ? grade.nameAr : grade.name) : 'Unknown Grade'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Level {grade?.level}
+                              </Typography>
+                            </Box>
+
+                            <TextField
+                              label={t('academic.weeklyHours')}
+                              type="number"
+                              size="small"
+                              value={assignment.weeklyHours}
+                              onChange={(e) => handleUpdateGradeAssignment(
+                                assignment.gradeLevelId,
+                                'weeklyHours',
+                                parseInt(e.target.value) || 1
+                              )}
+                              inputProps={{ min: 1, max: 10 }}
+                              sx={{ width: 100 }}
+                            />
+
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  checked={assignment.isRequired}
+                                  onChange={(e) => handleUpdateGradeAssignment(
+                                    assignment.gradeLevelId,
+                                    'isRequired',
+                                    e.target.checked
+                                  )}
+                                />
+                              }
+                              label={t('academic.required')}
+                            />
+
+                            <IconButton
+                              color="error"
+                              onClick={() => handleRemoveGradeAssignment(assignment.gradeLevelId)}
+                              size="small"
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        );
+                      })}
+                    </Stack>
+                  )}
+                </Box>
+              </Box>
             </Stack>
           </DialogContent>
           <DialogActions>
