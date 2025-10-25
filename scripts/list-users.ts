@@ -11,6 +11,7 @@ async function main() {
   console.log('Email | Role | Status | PasswordType | PasswordValid(password123) | Notes');
   
   const usersToFix: { email: string; currentPassword: string }[] = [];
+  const resetAll = process.argv.includes('--reset-all');
   
   for (const u of users) {
     let type = 'NONE';
@@ -42,6 +43,29 @@ async function main() {
       notes.push('no password set');
     }
     console.log(`${u.email} | ${u.role} | ${u.status} | ${type} | ${valid} | ${notes.join('; ')}`);
+  }
+
+  // Reset all passwords if --reset-all flag is provided
+  if (resetAll) {
+    console.log('\n' + '='.repeat(80));
+    console.log('Resetting ALL user passwords to default...');
+    for (const u of users) {
+      let newPassword = 'password123';
+      if (u.role === 'STUDENT') newPassword = 'student123';
+      const encryptedPassword = CryptoJS.AES.encrypt(newPassword, AES_SECRET_KEY).toString();
+      await prisma.user.update({
+        where: { email: u.email },
+        data: { password: encryptedPassword }
+      });
+      // Verify
+      const bytes = CryptoJS.AES.decrypt(encryptedPassword, AES_SECRET_KEY);
+      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+      const status = decrypted === newPassword ? '✓' : '✗';
+      console.log(`${status} ${u.email} - password reset to: ${newPassword}`);
+    }
+    console.log('\n' + '='.repeat(80));
+    console.log('All passwords have been reset to default! Run the script again to verify.\n');
+    return;
   }
   
   // Offer to fix users with password issues

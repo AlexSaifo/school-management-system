@@ -147,8 +147,8 @@ export default function StudentTimetable() {
       const timeSlotsData = await timeSlotsResponse.json();
       setTimeSlots(timeSlotsData.data || []);
 
-      // Then get timetable for the student's classroom
-      const timetableResponse = await fetch(`/api/timetable/${student.classRoomId}`);
+      // Then get timetable for the student (automatically uses their class)
+      const timetableResponse = await fetch('/api/timetable');
       if (!timetableResponse.ok) {
         throw new Error(t('timetable.failedToFetchTimetable'));
       }

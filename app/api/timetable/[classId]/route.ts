@@ -59,10 +59,33 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const dayOfWeek = searchParams.get('dayOfWeek');
 
-    // Get active semester from cookies
-    const activeSemesterId = request.cookies.get('active_semester_id')?.value;
-    if (!activeSemesterId) {
-      return NextResponse.json({ error: 'No active semester selected' }, { status: 400 });
+    // Get active semester - for students, get it automatically from DB
+    let activeSemesterId: string | undefined;
+    
+    if (decoded.role === 'STUDENT') {
+      // For students, automatically get the active semester from database
+      const activeSemester = await prisma.semester.findFirst({
+        where: { isActive: true },
+        select: { id: true }
+      });
+      
+      if (!activeSemester) {
+        return NextResponse.json({ error: 'No active semester found in the system' }, { status: 400 });
+      }
+      
+      activeSemesterId = activeSemester.id;
+    } else {
+      // For teachers/admins, check cookies, query params, or headers
+      activeSemesterId = request.cookies.get('active_semester_id')?.value;
+      if (!activeSemesterId) {
+        activeSemesterId = searchParams.get('active_semester_id') || undefined;
+      }
+      if (!activeSemesterId) {
+        activeSemesterId = request.headers.get('x-active-semester-id') || undefined;
+      }
+      if (!activeSemesterId) {
+        return NextResponse.json({ error: 'No active semester selected. Please select an academic semester in the UI or include the `active_semester_id` cookie, query parameter, or `x-active-semester-id` header.' }, { status: 400 });
+      }
     }
 
     // First, get the class details

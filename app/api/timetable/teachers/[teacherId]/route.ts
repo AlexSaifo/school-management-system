@@ -45,9 +45,35 @@ export async function GET(
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
     }
 
+    // Get active semester - for students, get it automatically from DB
+    let activeSemesterId: string | undefined;
+    
+    // For teachers, check cookies, query params, or headers (since this endpoint is typically called by admins or the teacher themselves)
+    activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    if (!activeSemesterId) {
+      activeSemesterId = searchParams.get('active_semester_id') || undefined;
+    }
+    if (!activeSemesterId) {
+      activeSemesterId = request.headers.get('x-active-semester-id') || undefined;
+    }
+    if (!activeSemesterId) {
+      // Fallback: get active semester from database
+      const activeSemester = await prisma.semester.findFirst({
+        where: { isActive: true },
+        select: { id: true }
+      });
+      
+      if (activeSemester) {
+        activeSemesterId = activeSemester.id;
+      } else {
+        return NextResponse.json({ error: 'No active semester found in the system' }, { status: 400 });
+      }
+    }
+
     // Build where clause
     const whereClause: any = {
       teacherId: teacherId,
+      semesterId: activeSemesterId,
       isActive: true
     };
 

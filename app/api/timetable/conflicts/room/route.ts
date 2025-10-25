@@ -18,11 +18,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get active semester from cookies
-    const activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    // Get active semester from cookies, query params, or headers
+    let activeSemesterId = request.cookies.get('active_semester_id')?.value;
+    if (!activeSemesterId) {
+      activeSemesterId = searchParams.get('active_semester_id') || undefined;
+    }
+    if (!activeSemesterId) {
+      activeSemesterId = request.headers.get('x-active-semester-id') || undefined;
+    }
     if (!activeSemesterId) {
       return NextResponse.json(
-        { success: false, error: 'No active semester selected' },
+        { success: false, error: 'No active semester selected. Please select an academic semester in the UI or include the `active_semester_id` cookie, query parameter, or `x-active-semester-id` header.' },
         { status: 400 }
       );
     }
