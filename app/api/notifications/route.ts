@@ -71,18 +71,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Get notifications for this user with proper filtering
-    const userNotifications = await (prisma as any).userNotification.findMany({
-      where: {
-        userId: user.id,
-        ...(isRead !== undefined && { isRead }),
-        // Join with notification and apply filters
-        notification: {
-          AND: [
-            ...(type && type.length > 0 ? [{ type: { in: type } }] : []),
-            ...(priority && priority.length > 0 ? [{ priority: { in: priority } }] : []),
-          ],
-        },
-      },
+    const whereClause: any = {
+      userId: user.id,
+      ...(isRead !== undefined && { isRead }),
+    };
+
+    if (notificationFilters.length > 0) {
+      whereClause.notification = {
+        AND: notificationFilters,
+      };
+    }
+
+    const userNotifications = await prisma.userNotification.findMany({
+      where: whereClause,
       include: {
         notification: true,
       },
