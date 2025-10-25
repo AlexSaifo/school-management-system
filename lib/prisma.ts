@@ -21,12 +21,17 @@ function createPrismaClientProxy() {
       get: (target, prop) => {
         const value = (target as any)[prop];
 
+        // If the model accessor doesn't exist (undefined), fall back to an empty model proxy
+        const isModelAccessor = !prop.toString().startsWith('$');
+        const modelObj = (typeof value === 'object' && value !== null) || typeof value === 'undefined'
+          ? (value ?? createEmptyModelProxy())
+          : value;
+
         // Handle methods like prisma.user, prisma.class, etc.
-        if (typeof value === 'object' && value !== null && !prop.toString().startsWith('$')) {
-          return new Proxy(value, {
+        if (isModelAccessor && modelObj && typeof modelObj === 'object') {
+          return new Proxy(modelObj, {
             get: (modelTarget, modelProp) => {
               const modelMethod = (modelTarget as any)[modelProp];
-              
               // Handle methods like findMany, findUnique, etc.
               if (typeof modelMethod === 'function') {
                 return (...args: any[]) => {
@@ -34,7 +39,7 @@ function createPrismaClientProxy() {
                     return modelMethod.apply(modelTarget, args);
                   } catch (error) {
                     console.error(`Error executing prisma.${String(prop)}.${String(modelProp)}:`, error);
-                    // Return empty result based on the method
+                    // Return empty result based on common methods
                     if (modelProp === 'findMany') return [];
                     if (modelProp === 'count') return 0;
                     return null;
