@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import CryptoJS from 'crypto-js';
+import { AES_SECRET_KEY } from '@/lib/config';
 
-// AES encryption utilities
-const SECRET_KEY = process.env.AES_SECRET_KEY || 'your-secret-key-here';
+// AES encryption utilities — use centralized config to avoid mismatched keys
+const SECRET_KEY = AES_SECRET_KEY;
 
 const encryptPassword = (password: string): string => {
   return CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
